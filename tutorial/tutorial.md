@@ -33,13 +33,13 @@ helpful:
   Internals](http://www.youtube.com/watch?v=ptjedOZEXPM).
 
 - The [Dalvik Executable
-  Format](http://www.netmite.com/android/mydroid/dalvik/docs/dex-format.html)
+  Format](http://source.android.com/tech/dalvik/dex-format.html)
   document describes the structure of `.dex` files.  This format is
   implemented in redexer, so being familiar with it will help in
   understanding redexer.
 
 - [Bytecode for the Dalvik
-  VM](http://www.netmite.com/android/mydroid/dalvik/docs/dalvik-bytecode.html)
+  VM](http://source.android.com/tech/dalvik/dalvik-bytecode.html)
   describes the bytecode instruction format used by Dalvik.
 
 ### Compiling redexer ###
