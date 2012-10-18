@@ -1,0 +1,335 @@
+<html><head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<link rel="Start" href="index.html">
+<link title="Index of types" rel=Appendix href="index_types.html">
+<link title="Index of exceptions" rel=Appendix href="index_exceptions.html">
+<link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of class attributes" rel=Appendix href="index_attributes.html">
+<link title="Index of class methods" rel=Appendix href="index_methods.html">
+<link title="Index of classes" rel=Appendix href="index_classes.html">
+<link title="Index of class types" rel=Appendix href="index_class_types.html">
+<link title="Index of modules" rel=Appendix href="index_modules.html">
+<link title="Index of module types" rel=Appendix href="index_module_types.html">
+<link title="Util" rel="Chapter" href="Util.html">
+<link title="Log" rel="Chapter" href="Log.html">
+<link title="Java" rel="Chapter" href="Java.html">
+<link title="Instr" rel="Chapter" href="Instr.html">
+<link title="Dex" rel="Chapter" href="Dex.html">
+<link title="Parse" rel="Chapter" href="Parse.html">
+<link title="Visitor" rel="Chapter" href="Visitor.html">
+<link title="Android" rel="Chapter" href="Android.html">
+<link title="Unparse" rel="Chapter" href="Unparse.html">
+<link title="Htmlunparse" rel="Chapter" href="Htmlunparse.html">
+<link title="Callgraph" rel="Chapter" href="Callgraph.html">
+<link title="Ctrlflow" rel="Chapter" href="Ctrlflow.html">
+<link title="Dataflow" rel="Chapter" href="Dataflow.html">
+<link title="Liveness" rel="Chapter" href="Liveness.html">
+<link title="Propagation" rel="Chapter" href="Propagation.html">
+<link title="Modify" rel="Chapter" href="Modify.html">
+<link title="Combine" rel="Chapter" href="Combine.html">
+<link title="Dump" rel="Chapter" href="Dump.html">
+<link title="Logging" rel="Chapter" href="Logging.html">
+<link title="Main" rel="Chapter" href="Main.html"><title>Dex</title>
+</head>
+<body>
+<code class="code"><span class="keyword">sig</span><br>
+&nbsp;&nbsp;<span class="keyword">exception</span>&nbsp;<span class="constructor">Wrong_dex</span>&nbsp;<span class="keyword">of</span>&nbsp;string<br>
+&nbsp;&nbsp;<span class="keyword">exception</span>&nbsp;<span class="constructor">Wrong_match</span>&nbsp;<span class="keyword">of</span>&nbsp;string<br>
+&nbsp;&nbsp;<span class="keyword">exception</span>&nbsp;<span class="constructor">NOT_YET</span>&nbsp;<span class="keyword">of</span>&nbsp;string<br>
+&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;dex&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;header&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex_header;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;d_string_ids&nbsp;:&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="constructor">DynArray</span>.t;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;d_type_ids&nbsp;:&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="constructor">DynArray</span>.t;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;d_proto_ids&nbsp;:&nbsp;<span class="constructor">Dex</span>.proto_id_item&nbsp;<span class="constructor">DynArray</span>.t;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;d_field_ids&nbsp;:&nbsp;<span class="constructor">Dex</span>.field_id_item&nbsp;<span class="constructor">DynArray</span>.t;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;d_method_ids&nbsp;:&nbsp;<span class="constructor">Dex</span>.method_id_item&nbsp;<span class="constructor">DynArray</span>.t;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;d_class_defs&nbsp;:&nbsp;<span class="constructor">Dex</span>.class_def_item&nbsp;<span class="constructor">DynArray</span>.t;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;d_data&nbsp;:&nbsp;<span class="constructor">Dex</span>.data_item&nbsp;<span class="constructor">Instr</span>.<span class="constructor">IM</span>.t;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;link&nbsp;=&nbsp;<span class="constructor">Idx</span>&nbsp;<span class="keyword">of</span>&nbsp;int&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">Off</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Instr</span>.offset<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;dex_header&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;magic&nbsp;:&nbsp;string;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;checksum&nbsp;:&nbsp;int64;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;signature&nbsp;:&nbsp;char&nbsp;list;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;file_size&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;header_size&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;endian_tag&nbsp;:&nbsp;<span class="constructor">Dex</span>.endian;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;link&nbsp;:&nbsp;<span class="constructor">Dex</span>.section;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;map_off&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;h_string_ids&nbsp;:&nbsp;<span class="constructor">Dex</span>.section;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;h_type_ids&nbsp;:&nbsp;<span class="constructor">Dex</span>.section;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;h_proto_ids&nbsp;:&nbsp;<span class="constructor">Dex</span>.section;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;h_field_ids&nbsp;:&nbsp;<span class="constructor">Dex</span>.section;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;h_method_ids&nbsp;:&nbsp;<span class="constructor">Dex</span>.section;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;h_class_defs&nbsp;:&nbsp;<span class="constructor">Dex</span>.section;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;h_data&nbsp;:&nbsp;<span class="constructor">Dex</span>.section;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;endian&nbsp;=&nbsp;<span class="constructor">LITTLE</span>&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">BIG</span><br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;section&nbsp;=&nbsp;{&nbsp;size&nbsp;:&nbsp;int;&nbsp;offset&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;proto_id_item&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;shorty&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;return_type&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;parameter_off&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;field_id_item&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;f_class_id&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;f_type_id&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;f_name_id&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;method_id_item&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;m_class_id&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;m_proto_id&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;m_name_id&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;class_def_item&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;c_class_id&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;c_access_flag&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;superclass&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;interfaces&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;source_file&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;annotations&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;class_data&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;static_values&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;data_item&nbsp;=<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="constructor">MAP_LIST</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.map_item&nbsp;list<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_LIST</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;list<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ANNO_SET_REF</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;list<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ANNO_SET</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;list<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">CLASS_DATA</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.class_data_item<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">CODE_ITEM</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.code_item<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">STRING_DATA</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">UTF8</span>.t<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">DEBUG_INFO</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.debug_info_item<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ANNOTATION</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.annotation_item<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">STATIC_VALUE</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.encoded_value&nbsp;list<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ANNO_DIR</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.anno_dir_item<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">INSTRUCTION</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Instr</span>.instr<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">FILL_ARRAY</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.fill_array_data<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">SWITCH</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.switch<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;map_item&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;type_of_item&nbsp;:&nbsp;<span class="constructor">Dex</span>.type_code;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;mi_size&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;mi_offset&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;type_code&nbsp;=<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="constructor">TYPE_HEADER_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_STRING_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_TYPE_ID_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_PROTO_ID_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_FIELD_ID_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_METHOD_ID_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_CLASS_DEF_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_MAP_LIST</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_TYPE_LIST</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_ANNOTATION_SET_REF_LIST</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_ANNOTATION_SET_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_CLASS_DATA_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_CODE_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_STRING_DATA_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_DEBUG_INFO_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_ANNOTATION_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_ENCODED_ARRAY_ITEM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">TYPE_ANNOTATION_DIRECTORY_ITEM</span><br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;class_data_item&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;static_fields&nbsp;:&nbsp;<span class="constructor">Dex</span>.encoded_field&nbsp;list;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;instance_fields&nbsp;:&nbsp;<span class="constructor">Dex</span>.encoded_field&nbsp;list;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;direct_methods&nbsp;:&nbsp;<span class="constructor">Dex</span>.encoded_method&nbsp;list;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;virtual_methods&nbsp;:&nbsp;<span class="constructor">Dex</span>.encoded_method&nbsp;list;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;encoded_field&nbsp;=&nbsp;{&nbsp;field_idx&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;&nbsp;f_access_flag&nbsp;:&nbsp;int;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;encoded_method&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;method_idx&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;m_access_flag&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;code_off&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;code_item&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;registers_size&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;ins_size&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;outs_size&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;tries_size&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;debug_info_off&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;insns_size&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;insns&nbsp;:&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="constructor">DynArray</span>.t;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;tries&nbsp;:&nbsp;<span class="constructor">Dex</span>.try_item&nbsp;list;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;c_handlers&nbsp;:&nbsp;<span class="constructor">Dex</span>.encoded_catch_handler&nbsp;list;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;switch&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;sw_base&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;sw_size&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;sw_keys&nbsp;:&nbsp;int&nbsp;list;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;sw_targets&nbsp;:&nbsp;<span class="constructor">Dex</span>.link&nbsp;list;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;fill_array_data&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ad_width&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ad_size&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ad_data&nbsp;:&nbsp;<span class="constructor">Instr</span>.operand&nbsp;list;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;try_item&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;start_addr&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;end_addr&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;handler_off&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;encoded_catch_handler&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;e_handlers&nbsp;:&nbsp;<span class="constructor">Dex</span>.type_addr_pair&nbsp;list;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;catch_all_addr&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;type_addr_pair&nbsp;=&nbsp;{&nbsp;<span class="keyword">mutable</span>&nbsp;ch_type_idx&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;&nbsp;addr&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;debug_info_item&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;line_start&nbsp;:&nbsp;int;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;parameter_name&nbsp;:&nbsp;<span class="constructor">Dex</span>.link&nbsp;list;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;state_machine&nbsp;:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(<span class="constructor">Dex</span>.state_machine_instr&nbsp;*&nbsp;<span class="constructor">Instr</span>.operand&nbsp;list)&nbsp;list;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;state_machine_instr&nbsp;=<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="constructor">DBG_END_SEQUENCE</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">DBG_ADVANCE_PC</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">DBG_ADVANCE_LINE</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">DBG_START_LOCAL</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">DBG_START_LOCAL_EXTENDED</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">DBG_END_LOCAL</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">DBG_RESTART_LOCAL</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">DBG_SET_PROLOGUE_END</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">DBG_SET_EPILOGUE_BEGIN</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">DBG_SET_FILE</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">DBG_SPECIAL</span><br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;anno_dir_item&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;class_anno_off&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;fields&nbsp;:&nbsp;<span class="constructor">Dex</span>.anno_off&nbsp;list;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;methods&nbsp;:&nbsp;<span class="constructor">Dex</span>.anno_off&nbsp;list;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;parameters&nbsp;:&nbsp;<span class="constructor">Dex</span>.anno_off&nbsp;list;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;anno_off&nbsp;=&nbsp;{&nbsp;target&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;&nbsp;annotation_off&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;annotation_item&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;visible&nbsp;:&nbsp;<span class="constructor">Dex</span>.visibility;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;annotation&nbsp;:&nbsp;<span class="constructor">Dex</span>.encoded_annotation;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;visibility&nbsp;=&nbsp;<span class="constructor">VISIBILITY_BUILD</span>&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VISIBILITY_RUNTIME</span>&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VISIBILITY_SYSTEM</span><br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;encoded_annotation&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;an_type_idx&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;elements&nbsp;:&nbsp;<span class="constructor">Dex</span>.annotation_element&nbsp;list;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;annotation_element&nbsp;=&nbsp;{<br>
+&nbsp;&nbsp;&nbsp;&nbsp;name_idx&nbsp;:&nbsp;<span class="constructor">Dex</span>.link;<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">mutable</span>&nbsp;value&nbsp;:&nbsp;<span class="constructor">Dex</span>.encoded_value;<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;<span class="keyword">and</span>&nbsp;encoded_value&nbsp;=<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="constructor">VALUE_BYTE</span>&nbsp;<span class="keyword">of</span>&nbsp;int64<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_SHORT</span>&nbsp;<span class="keyword">of</span>&nbsp;int64<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_CHAR</span>&nbsp;<span class="keyword">of</span>&nbsp;int64<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_INT</span>&nbsp;<span class="keyword">of</span>&nbsp;int64<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_LONG</span>&nbsp;<span class="keyword">of</span>&nbsp;int64<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_FLOAT</span>&nbsp;<span class="keyword">of</span>&nbsp;int64<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_DOUBLE</span>&nbsp;<span class="keyword">of</span>&nbsp;int64<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_STRING</span>&nbsp;<span class="keyword">of</span>&nbsp;int<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_TYPE</span>&nbsp;<span class="keyword">of</span>&nbsp;int<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_FIELD</span>&nbsp;<span class="keyword">of</span>&nbsp;int<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_METHOD</span>&nbsp;<span class="keyword">of</span>&nbsp;int<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_ENUM</span>&nbsp;<span class="keyword">of</span>&nbsp;int<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_ARRAY</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.encoded_value&nbsp;list<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_ANNOTATION</span>&nbsp;<span class="keyword">of</span>&nbsp;<span class="constructor">Dex</span>.encoded_annotation<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_NULL</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">VALUE_BOOLEAN</span>&nbsp;<span class="keyword">of</span>&nbsp;bool<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;to_idx&nbsp;:&nbsp;int&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;to_off&nbsp;:&nbsp;int&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;of_idx&nbsp;:&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;of_off&nbsp;:&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;opr2idx&nbsp;:&nbsp;<span class="constructor">Instr</span>.operand&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;opr2off&nbsp;:&nbsp;<span class="constructor">Instr</span>.operand&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;idx2opr&nbsp;:&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Instr</span>.operand<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;off2opr&nbsp;:&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Instr</span>.operand<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_off&nbsp;:&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Instr</span>.offset<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;str_to_endian&nbsp;:&nbsp;string&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.endian<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;endian_to_str&nbsp;:&nbsp;<span class="constructor">Dex</span>.endian&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;to_type_code&nbsp;:&nbsp;int&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.type_code<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;of_type_code&nbsp;:&nbsp;<span class="constructor">Dex</span>.type_code&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;type_code_to_str&nbsp;:&nbsp;<span class="constructor">Dex</span>.type_code&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;machine_instr_to_str&nbsp;:&nbsp;<span class="constructor">Dex</span>.state_machine_instr&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string<br>
+&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;access_flag&nbsp;=<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="constructor">ACC_PUBLIC</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_PRIVATE</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_PROTECTED</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_STATIC</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_FINAL</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_SYNCHRONIZED</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_VOLATILE</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_BRIDGE</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_TRANSIENT</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_VARARGS</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_NATIVE</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_INTERFACE</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_ABSTRACT</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_STRICT</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_SYNTHETIC</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_ANNOTATION</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_ENUM</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_CONSTRUCTOR</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_DECLARED_SYNCHRONIZED</span><br>
+&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;acc_kind&nbsp;=&nbsp;<span class="constructor">ACC_FOR_CLASSES</span>&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_FOR_FIELDS</span>&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">ACC_FOR_METHODS</span><br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;to_acc_flag&nbsp;:&nbsp;<span class="constructor">Dex</span>.acc_kind&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.access_flag&nbsp;list&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;is_interface&nbsp;:&nbsp;int&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;bool<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;pub&nbsp;:&nbsp;<span class="constructor">Dex</span>.access_flag&nbsp;list<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;spub&nbsp;:&nbsp;<span class="constructor">Dex</span>.access_flag&nbsp;list<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;no_index&nbsp;:&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;no_offset&nbsp;:&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;no_idx&nbsp;:&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;no_off&nbsp;:&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_data_item&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.data_item<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_ins&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Instr</span>.instr<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;is_ins&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;bool<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_str&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;find_str&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_ty_str&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;find_ty_str&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;ty_comp&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_ty_lst&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;list<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_fit&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.field_id_item<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_mit&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.method_id_item<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_pit&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.method_id_item&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.proto_id_item<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_argv&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.method_id_item&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;list<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_rety&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.method_id_item&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;fld_comp&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.field_id_item&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.field_id_item&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;ty_lst_comp&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;list&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;list&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;ty_lst_comp_relaxed&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;list&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;list&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;mtd_comp&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.method_id_item&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.method_id_item&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;mtd_comp_relaxed&nbsp;:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.method_id_item&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.method_id_item&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_cid_from_fid&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_cid_from_mid&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_fld_name&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_mtd_name&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_cid&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_cdef&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.class_def_item<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_superclass&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_superclasses&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;list<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_interfaces&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;list<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;in_hierarchy&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;(<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;bool)&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;bool<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;is_superclass&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;bool<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_flds&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;(<span class="constructor">Dex</span>.link&nbsp;*&nbsp;<span class="constructor">Dex</span>.field_id_item)&nbsp;list<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_fldS&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;(<span class="constructor">Dex</span>.link&nbsp;*&nbsp;<span class="constructor">Dex</span>.field_id_item)&nbsp;list<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_the_fld&nbsp;:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;*&nbsp;<span class="constructor">Dex</span>.field_id_item<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;own_the_fld&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;bool<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_mtds&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;(<span class="constructor">Dex</span>.link&nbsp;*&nbsp;<span class="constructor">Dex</span>.method_id_item)&nbsp;list<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_mtdS&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;(<span class="constructor">Dex</span>.link&nbsp;*&nbsp;<span class="constructor">Dex</span>.method_id_item)&nbsp;list<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_supermethod&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_the_mtd&nbsp;:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;*&nbsp;<span class="constructor">Dex</span>.method_id_item<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_the_mtd_shorty&nbsp;:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;*&nbsp;<span class="constructor">Dex</span>.method_id_item<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;own_the_mtd&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;bool<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_cdata&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;*&nbsp;<span class="constructor">Dex</span>.class_data_item<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_emtd&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.encoded_method<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;get_citm&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;*&nbsp;<span class="constructor">Dex</span>.code_item<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;calc_this&nbsp;:&nbsp;<span class="constructor">Dex</span>.code_item&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;empty_section&nbsp;:&nbsp;unit&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.section<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;empty_dex&nbsp;:&nbsp;unit&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.dex<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;empty_citm&nbsp;:&nbsp;unit&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.code_item<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;insrt_data&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.data_item&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;unit<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;rm_data&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;unit<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;insrt_ins&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Instr</span>.instr&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;unit<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;insrt_str&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;string&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;unit<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;insrt_ty_lst&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;list&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;unit<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;insrt_stt&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.encoded_value&nbsp;list&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;unit<br>
+&nbsp;&nbsp;<span class="keyword">val</span>&nbsp;insrt_citm&nbsp;:&nbsp;<span class="constructor">Dex</span>.dex&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.link&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="constructor">Dex</span>.code_item&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;unit<br>
+<span class="keyword">end</span></code></body></html>

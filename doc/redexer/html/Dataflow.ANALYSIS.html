@@ -1,0 +1,68 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<link rel="Start" href="index.html">
+<link rel="previous" href="Dataflow.DATAFLOW.html">
+<link rel="Up" href="Dataflow.html">
+<link title="Index of types" rel=Appendix href="index_types.html">
+<link title="Index of exceptions" rel=Appendix href="index_exceptions.html">
+<link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of class attributes" rel=Appendix href="index_attributes.html">
+<link title="Index of class methods" rel=Appendix href="index_methods.html">
+<link title="Index of classes" rel=Appendix href="index_classes.html">
+<link title="Index of class types" rel=Appendix href="index_class_types.html">
+<link title="Index of modules" rel=Appendix href="index_modules.html">
+<link title="Index of module types" rel=Appendix href="index_module_types.html">
+<link title="Util" rel="Chapter" href="Util.html">
+<link title="Log" rel="Chapter" href="Log.html">
+<link title="Java" rel="Chapter" href="Java.html">
+<link title="Instr" rel="Chapter" href="Instr.html">
+<link title="Dex" rel="Chapter" href="Dex.html">
+<link title="Parse" rel="Chapter" href="Parse.html">
+<link title="Visitor" rel="Chapter" href="Visitor.html">
+<link title="Android" rel="Chapter" href="Android.html">
+<link title="Unparse" rel="Chapter" href="Unparse.html">
+<link title="Htmlunparse" rel="Chapter" href="Htmlunparse.html">
+<link title="Callgraph" rel="Chapter" href="Callgraph.html">
+<link title="Ctrlflow" rel="Chapter" href="Ctrlflow.html">
+<link title="Dataflow" rel="Chapter" href="Dataflow.html">
+<link title="Liveness" rel="Chapter" href="Liveness.html">
+<link title="Propagation" rel="Chapter" href="Propagation.html">
+<link title="Modify" rel="Chapter" href="Modify.html">
+<link title="Combine" rel="Chapter" href="Combine.html">
+<link title="Dump" rel="Chapter" href="Dump.html">
+<link title="Logging" rel="Chapter" href="Logging.html">
+<link title="Main" rel="Chapter" href="Main.html"><title>Dataflow.ANALYSIS</title>
+</head>
+<body>
+<div class="navbar"><a class="pre" href="Dataflow.DATAFLOW.html" title="Dataflow.DATAFLOW">Previous</a>
+&nbsp;<a class="up" href="Dataflow.html" title="Dataflow">Up</a>
+&nbsp;</div>
+<h1>Module type <a href="type_Dataflow.ANALYSIS.html">Dataflow.ANALYSIS</a></h1>
+<pre><span class="keyword">module type</span> ANALYSIS = <code class="code">sig</code> <a href="Dataflow.ANALYSIS.html">..</a> <code class="code">end</code></pre>Data-flow analysis<br>
+<hr width="100%">
+<pre><span id="TYPEl"><span class="keyword">type</span> <code class="type"></code>l</span> </pre>
+<div class="info">
+same as <a href="Dataflow.LATTICE.html#TYPEl"><code class="code">Dataflow.LATTICE.l</code></a><br>
+</div>
+
+<pre><span id="TYPEst"><span class="keyword">type</span> <code class="type"></code>st</span> </pre>
+<div class="info">
+same as <a href="Dataflow.SCHEDULER.html#TYPEst"><code class="code">Dataflow.SCHEDULER.st</code></a><br>
+</div>
+
+<pre><span id="VALto_s"><span class="keyword">val</span> to_s</span> : <code class="type"><a href="Dataflow.ANALYSIS.html#TYPEl">l</a> -> string</code></pre><div class="info">
+same as <a href="Dataflow.LATTICE.html#VALto_s"><code class="code">Dataflow.LATTICE.to_s</code></a><br>
+</div>
+<pre><span id="VALinn"><span class="keyword">val</span> inn</span> : <code class="type"><a href="Dataflow.ANALYSIS.html#TYPEst">st</a> -> <a href="Dataflow.ANALYSIS.html#TYPEl">l</a></code></pre><div class="info">
+return <code class="code">IN</code> for the given <a href="Dataflow.ANALYSIS.html#TYPEst"><code class="code">Dataflow.ANALYSIS.st</code></a><br>
+</div>
+<pre><span id="VALout"><span class="keyword">val</span> out</span> : <code class="type"><a href="Dataflow.ANALYSIS.html#TYPEst">st</a> -> <a href="Dataflow.ANALYSIS.html#TYPEl">l</a></code></pre><div class="info">
+return <code class="code">OUT</code> for the given <a href="Dataflow.ANALYSIS.html#TYPEst"><code class="code">Dataflow.ANALYSIS.st</code></a><br>
+</div>
+<pre><span id="VALfixed_pt"><span class="keyword">val</span> fixed_pt</span> : <code class="type">unit -> unit</code></pre><div class="info">
+calculate fixed point<br>
+</div>
+</body></html>

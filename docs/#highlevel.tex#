@@ -1,0 +1,160 @@
+\documentclass{article}
+\author{Kris Micinski\\
+\texttt{micinski@cs.umd.edu}
+}
+
+\newcommand{\rdxr}{\textsc{Redexer}\ }
+\newcommand{\redexer}{\texttt{redexer}}
+\title{A quick overview of \rdxr}
+
+\begin{document}
+
+\maketitle
+\section{Introduction}
+
+\rdxr is a tool used to rewrite Android \texttt{.apk} files (``apps'') at a
+binary level.  The goal of \rdxr is to take apps ``off the shelf'' and rewrite
+them via a series of steps (included in the \rdxr API) for a variety of
+different purposes --- For example: using a new security library in place of the
+standard Android API.  This document explains --- at a high level --- the
+implementation of the \rdxr functionality.
+
+\section{The \textsc{Redexer} toolchain.}
+Although the \rdxr tool is used for binary rewriting of \texttt{.apk} files,
+doing so requires a number of auxiliary steps.  These steps involve (for
+example) unpacking an \texttt{.apk} file into its consitituent resource and
+bytecode files, rewriting of the bytecode, and resealing a signed application
+after it is rewritten.
+
+Figure \ref{dirstruct} gives a description of the files included in
+the toplevel ``redexer'' directory.  One important distinction to be
+made is that \rdxr works not as an application alone, but is called
+through use of the \texttt{cmd.rb} script.  To test the use of this
+script simply call:
+
+\vspace{\baselineskip}
+
+\framebox[\textwidth]{
+\texttt{ruby cmd.rb --help} \hfill
+}
+
+\begin{figure}[h!]
+\label{dirstruct}
+\caption{An overview of the file structure used in \rdxr}
+\begin{description}
+  \item[api] Documentation for the \rdxr OCaml code  \\
+  \item[\texttt{apkfile.rb}] A Ruby module for handling unpacking of
+    \texttt{.apk} files and manipulating the file manifest.  \\
+  \item[\texttt{apktool.jar}] A small Java program which unpacks the
+    \texttt{.apk} files and manipulates them (used by
+    \texttt{apkfile.rb}). \\
+  \item[\texttt{cmd.rb}] The main Ruby module used to control \rdxr.
+    Defines toplevel arguments, does basic processing, and uses the
+    other Ruby modules to control the rewriting process. \\
+  \item[dat] This folder contains some basic information used by
+    \rdxr, mostly auxiliary files such as the \texttt{dex-format.css}
+    stylesheet used for displaying HTML output of processed
+    \texttt{.apk} files. \\
+
+  \item[\texttt{dex.rb}] The Ruby module which handles all
+    manipulation of \texttt{.dex} files.  These are files which
+    contain Dalvik bytecode, and are immediately processed by the
+    texttt{redexer} OCaml program. \\
+
+  \item[\texttt{keystore.name}] Used for resigning \texttt{.apk} files
+    after they are rewritten. \\
+
+  \item[\texttt{manifest.rb}] A Ruby module which is used for
+    manipulating \texttt{.apk} Manifest files.  Manifest files contain
+    lists of Activities in the apps, along with lists of permissions.
+    This module is used to ``strip'' permissions from an app, along
+    with ascertaining its list of Activities (information needed by
+    the \redexer\ program). \\
+  \item[output] If generated, HTML unparsing for apps have their
+    output put in this directory.
+  \item[results] By default, \rdxr outputs its results (rewritten
+    \texttt{.apk}s, for example), in this directory.
+  \item[src] The OCaml source for the \redexer.
+\end{description}
+\end{figure}
+
+\subsection{How the \texttt{cmd.rb} script rewrites apps}
+
+The \texttt{cmd.rb} script takes an \texttt{.apk} file as an argument,
+and uses the other modules in the directory .  The script can take an
+\texttt{.apk} (full Android application) or \texttt{.dex} file (just
+application bytecode) as an argument.  If given an \texttt{.apk} file,
+it is first unpacked by use of the \texttt{apktool.jar} program.
+
+When rewriting apps, \texttt{cmd.rb} uses \texttt{dex.rb} and
+\texttt{apkfile.rb}.  This module rewrites the application manifest
+using \texttt{manifest.rb} (since apps store their permissions lists
+in manifests, this means removing and adding permissions to the app).
+The \redexer\ tool is then used to rewrite the apps, but the Ruby
+modules collect information needed for this program to work.
+
+\subsection{How the \redexer\ program is used to rewrite \texttt{.dex} files}
+
+The actual rewriting work is done by an OCaml program named \redexer.
+This program does the necessary steps to transform an input app into a
+rewritten output app, but works only at the bytecode level.  Because
+of this, it takes a set of arguments which are used to inform the
+program what needs to be rewritten.  
+
+\vspace{\baselineskip}
+
+\framebox[\textwidth]{
+\texttt{./redexer -rewrite -lib droidLibFULL.dex} \\ \hfill
+
+\texttt{-src target.url -des droidlib.url -act activity.dat file.dex}
+}
+
+Here we show an example of how redexer is used to rewrite a bytecode
+file (\texttt{file.dex}).  It is given a library (``-lib''), which is
+combined with the code in \texttt{file.dex}.  It is also given a set
+of classes to replace with other classes.  The sought class names are
+given in \texttt{target.url}, and the classes with which to rewrite
+them are in \texttt{droidlib.url}.  The tool is also passed a list of
+Activities.  The result of calling \redexer\ is to produce a new
+\texttt{.dex} file, which is then used by the Ruby modules to produce
+a new \texttt{.apk} (this process involves resigning and sealing the
+app).
+
+\section{The structure of the \redexer\ source}
+
+The \redexer\ source code is in the ``src'' directory and contains a
+few thousand lines of OCaml code.  Figure \ref{source} contains a
+listing of all the code used in \redexer.  
+
+\begin{figure}[h!]
+\label{source}
+\caption{An overview of the file structure used in \rdxr}
+\begin{description}
+  \item[\texttt{acplib.ml}] Code used to rewrite apps to use ACPlib \\
+  \item[\texttt{combine.ml}] Code used to combine \texttt{.dex} files \\
+  \item[\texttt{dex.ml}] An OCaml representation of the \texttt{.dex}
+    file structure, along with code to do basic manipulation on these files. \\
+  \item[\texttt{dump.ml}] Taking an internal DEX structure and outputting a new \texttt{.dex} file. \\
+  \item[\texttt{instr.ml}] Representations of instructions in \texttt{.dex} bytecode \\
+  \item[\texttt{java.ml}] Utilities for working with Java types. \\
+  \item[\texttt{main.ml}] The main driver for the \redexer\ program.  \\
+  \item[\texttt{modify.ml}] Code to manipulate DEX structures,
+    including manipulating class structures, replacing interfaces, etc\dots. \\
+  \item[\texttt{parse.ml}] Parsing \texttt{.dex} files into the DEX
+    structures used throughout the program. \\
+  \item[\texttt{visitor.ml}] High level pattern for visiting elements of DEX structures. \\
+  \item[ext] Auxiliary files used for experimental or non-rewriting purposes: \\
+    \begin{description}
+      \item[\texttt{callgraph.ml}] Program callgraphs. \\
+      \item[\texttt{ctrlflow.ml}] Program control flow. \\
+      \item[\texttt{dataflow.ml}] Dataflow analysis framework. \\
+      \item[\texttt{htmlunparse.ml}] Code for rendering a DEX structure as a directory of pretty printed HTML files. \\
+      \item[\texttt{liveness.ml}] Example dataflow anlysis. \\
+      \item[\texttt{unparse.ml}] Code for rendering DEX structures as text output.
+    \end{description}
+\end{description}
+\end{figure}
+
+
+
+\end{document}

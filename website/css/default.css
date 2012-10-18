@@ -1,0 +1,55 @@
+p {
+    font-family: sans-serif; /*‘Palatino Linotype’, ‘Book Antiqua’, Palatino, serif;*/
+    font-size:1.1em;
+}
+
+a { 
+    font-size:1.1em;
+}
+
+h1 {
+   font-size: 2em;
+   font-variant: small-caps;
+}
+
+h2 {
+   font-size:1.8em;
+   margin:0;
+   border:0;
+   padding:0;
+}
+
+body {
+  background-color: fdfdf0;
+}
+
+h3 {
+   font-size:1.4em;
+   margin:0;
+   border:0;
+   padding:0;
+}
+
+p.title {
+    font-family: ‘Palatino Linotype’, ‘Book Antiqua’, Palatino, serif;
+    font-variant: small-caps;
+    font-size:4em;
+    color:black;
+    margin:0;
+    border:0;
+    padding-bottom:4px;
+}
+
+p.subtitle {
+    font-size:1.4em;
+    color:darkslategrey;
+    margin:0;
+    border:0;
+    padding-bottom:2px;
+}
+
+#maincontainer{ 
+    width: 840px; /*Width of main container*/ 
+    margin: 0
+    auto; /*Center container on page*/ 
+}

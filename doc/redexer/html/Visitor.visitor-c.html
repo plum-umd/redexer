@@ -1,0 +1,89 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<link rel="Start" href="index.html">
+<link rel="Up" href="Visitor.html">
+<link title="Index of types" rel=Appendix href="index_types.html">
+<link title="Index of exceptions" rel=Appendix href="index_exceptions.html">
+<link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of class attributes" rel=Appendix href="index_attributes.html">
+<link title="Index of class methods" rel=Appendix href="index_methods.html">
+<link title="Index of classes" rel=Appendix href="index_classes.html">
+<link title="Index of class types" rel=Appendix href="index_class_types.html">
+<link title="Index of modules" rel=Appendix href="index_modules.html">
+<link title="Index of module types" rel=Appendix href="index_module_types.html">
+<link title="Util" rel="Chapter" href="Util.html">
+<link title="Log" rel="Chapter" href="Log.html">
+<link title="Java" rel="Chapter" href="Java.html">
+<link title="Instr" rel="Chapter" href="Instr.html">
+<link title="Dex" rel="Chapter" href="Dex.html">
+<link title="Parse" rel="Chapter" href="Parse.html">
+<link title="Visitor" rel="Chapter" href="Visitor.html">
+<link title="Android" rel="Chapter" href="Android.html">
+<link title="Unparse" rel="Chapter" href="Unparse.html">
+<link title="Htmlunparse" rel="Chapter" href="Htmlunparse.html">
+<link title="Callgraph" rel="Chapter" href="Callgraph.html">
+<link title="Ctrlflow" rel="Chapter" href="Ctrlflow.html">
+<link title="Dataflow" rel="Chapter" href="Dataflow.html">
+<link title="Liveness" rel="Chapter" href="Liveness.html">
+<link title="Propagation" rel="Chapter" href="Propagation.html">
+<link title="Modify" rel="Chapter" href="Modify.html">
+<link title="Combine" rel="Chapter" href="Combine.html">
+<link title="Dump" rel="Chapter" href="Dump.html">
+<link title="Logging" rel="Chapter" href="Logging.html">
+<link title="Main" rel="Chapter" href="Main.html"><title>Visitor.visitor</title>
+</head>
+<body>
+<div class="navbar">&nbsp;<a class="up" href="Visitor.html" title="Visitor">Up</a>
+&nbsp;</div>
+<h1>Class type <a href="type_Visitor.visitor.html">Visitor.visitor</a></h1>
+<pre><span id="TYPEvisitor"><span class="keyword">class type</span> visitor</span> = <code class="code">object</code> <a href="Visitor.visitor-c.html">..</a> <code class="code">end</code></pre>visitor<br>
+<hr width="100%">
+<pre><span id="ATTdx"><span class="keyword">val</span> dx</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a></code></pre><pre><span id="METHODget_dx"><span class="keyword">method</span> get_dx</span> : <code class="type">unit -> <a href="Dex.html#TYPEdex">Dex.dex</a></code></pre><div class="info">
+invoke if you want to get modified <a href="Dex.html#TYPEdex"><code class="code">Dex.dex</code></a><br>
+</div>
+<pre><span id="METHODv_fit"><span class="keyword">method</span> v_fit</span> : <code class="type"><a href="Dex.html#TYPEfield_id_item">Dex.field_id_item</a> -> unit</code></pre><div class="info">
+visiting <a href="Dex.html#TYPEfield_id_item"><code class="code">Dex.field_id_item</code></a><br>
+</div>
+<pre><span id="METHODv_mit"><span class="keyword">method</span> v_mit</span> : <code class="type"><a href="Dex.html#TYPEmethod_id_item">Dex.method_id_item</a> -> unit</code></pre><div class="info">
+visiting <a href="Dex.html#TYPEmethod_id_item"><code class="code">Dex.method_id_item</code></a><br>
+</div>
+<pre><span id="METHODv_cdef"><span class="keyword">method</span> v_cdef</span> : <code class="type"><a href="Dex.html#TYPEclass_def_item">Dex.class_def_item</a> -> unit</code></pre><div class="info">
+visiting <a href="Dex.html#TYPEclass_def_item"><code class="code">Dex.class_def_item</code></a><br>
+</div>
+<pre><span id="METHODr_eval"><span class="keyword">method</span> r_eval</span> : <code class="type"><a href="Dex.html#TYPEencoded_value">Dex.encoded_value</a> -> <a href="Dex.html#TYPEencoded_value">Dex.encoded_value</a></code></pre><div class="info">
+remapping <a href="Dex.html#TYPEencoded_value"><code class="code">Dex.encoded_value</code></a> stored at <code class="code">STATIC_VALUE</code><br>
+</div>
+<pre><span id="METHODv_anno"><span class="keyword">method</span> v_anno</span> : <code class="type"><a href="Dex.html#TYPEencoded_annotation">Dex.encoded_annotation</a> -> unit</code></pre><div class="info">
+visiting <a href="Dex.html#TYPEencoded_annotation"><code class="code">Dex.encoded_annotation</code></a> stored at <code class="code">ANNOTATION</code><br>
+</div>
+<pre><span id="METHODv_cdat"><span class="keyword">method</span> v_cdat</span> : <code class="type"><a href="Dex.html#TYPEclass_data_item">Dex.class_data_item</a> -> unit</code></pre><div class="info">
+visiting <a href="Dex.html#TYPEclass_data_item"><code class="code">Dex.class_data_item</code></a><br>
+</div>
+<pre><span id="METHODv_efld"><span class="keyword">method</span> v_efld</span> : <code class="type"><a href="Dex.html#TYPEencoded_field">Dex.encoded_field</a> -> unit</code></pre><div class="info">
+visiting <a href="Dex.html#TYPEencoded_field"><code class="code">Dex.encoded_field</code></a><br>
+</div>
+<pre><span id="METHODv_emtd"><span class="keyword">method</span> v_emtd</span> : <code class="type"><a href="Dex.html#TYPEencoded_method">Dex.encoded_method</a> -> unit</code></pre><div class="info">
+visiting <a href="Dex.html#TYPEencoded_method"><code class="code">Dex.encoded_method</code></a><br>
+</div>
+<pre><span id="METHODv_citm"><span class="keyword">method</span> v_citm</span> : <code class="type"><a href="Dex.html#TYPEcode_item">Dex.code_item</a> -> unit</code></pre><div class="info">
+visiting <a href="Dex.html#TYPEcode_item"><code class="code">Dex.code_item</code></a><br>
+</div>
+<pre><span id="METHODv_ins"><span class="keyword">method</span> v_ins</span> : <code class="type"><a href="Dex.html#TYPElink">Dex.link</a> -> unit</code></pre><div class="info">
+visiting <code class="code">INSTRUCTION</code><br>
+</div>
+<pre><span id="METHODv_try"><span class="keyword">method</span> v_try</span> : <code class="type"><a href="Dex.html#TYPEtry_item">Dex.try_item</a> -> unit</code></pre><div class="info">
+visiting <a href="Dex.html#TYPEtry_item"><code class="code">Dex.try_item</code></a><br>
+</div>
+<pre><span id="METHODv_hdl"><span class="keyword">method</span> v_hdl</span> : <code class="type"><a href="Dex.html#TYPEencoded_catch_handler">Dex.encoded_catch_handler</a> -> unit</code></pre><div class="info">
+visiting <a href="Dex.html#TYPEencoded_catch_handler"><code class="code">Dex.encoded_catch_handler</code></a><br>
+</div>
+<pre><span id="METHODv_dbg"><span class="keyword">method</span> v_dbg</span> : <code class="type"><a href="Dex.html#TYPEdebug_info_item">Dex.debug_info_item</a> -> unit</code></pre><div class="info">
+visiting <a href="Dex.html#TYPEdebug_info_item"><code class="code">Dex.debug_info_item</code></a><br>
+</div>
+<pre><span id="METHODfinish"><span class="keyword">method</span> finish</span> : <code class="type">unit -> unit</code></pre><div class="info">
+invoked after traversing <a href="Dex.html#TYPEdex"><code class="code">Dex.dex</code></a><br>
+</div>
+</body></html>

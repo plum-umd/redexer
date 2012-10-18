@@ -1,0 +1,153 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<link rel="Start" href="index.html">
+<link rel="previous" href="Propagation.html">
+<link rel="next" href="Combine.html">
+<link rel="Up" href="index.html">
+<link title="Index of types" rel=Appendix href="index_types.html">
+<link title="Index of exceptions" rel=Appendix href="index_exceptions.html">
+<link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of class attributes" rel=Appendix href="index_attributes.html">
+<link title="Index of class methods" rel=Appendix href="index_methods.html">
+<link title="Index of classes" rel=Appendix href="index_classes.html">
+<link title="Index of class types" rel=Appendix href="index_class_types.html">
+<link title="Index of modules" rel=Appendix href="index_modules.html">
+<link title="Index of module types" rel=Appendix href="index_module_types.html">
+<link title="Util" rel="Chapter" href="Util.html">
+<link title="Log" rel="Chapter" href="Log.html">
+<link title="Java" rel="Chapter" href="Java.html">
+<link title="Instr" rel="Chapter" href="Instr.html">
+<link title="Dex" rel="Chapter" href="Dex.html">
+<link title="Parse" rel="Chapter" href="Parse.html">
+<link title="Visitor" rel="Chapter" href="Visitor.html">
+<link title="Android" rel="Chapter" href="Android.html">
+<link title="Unparse" rel="Chapter" href="Unparse.html">
+<link title="Htmlunparse" rel="Chapter" href="Htmlunparse.html">
+<link title="Callgraph" rel="Chapter" href="Callgraph.html">
+<link title="Ctrlflow" rel="Chapter" href="Ctrlflow.html">
+<link title="Dataflow" rel="Chapter" href="Dataflow.html">
+<link title="Liveness" rel="Chapter" href="Liveness.html">
+<link title="Propagation" rel="Chapter" href="Propagation.html">
+<link title="Modify" rel="Chapter" href="Modify.html">
+<link title="Combine" rel="Chapter" href="Combine.html">
+<link title="Dump" rel="Chapter" href="Dump.html">
+<link title="Logging" rel="Chapter" href="Logging.html">
+<link title="Main" rel="Chapter" href="Main.html"><link title="Utilities" rel="Section" href="#2_Utilities">
+<link title="Modification" rel="Section" href="#2_Modification">
+<link title="Application" rel="Section" href="#2_Application">
+<title>Modify</title>
+</head>
+<body>
+<div class="navbar"><a class="pre" href="Propagation.html" title="Propagation">Previous</a>
+&nbsp;<a class="up" href="index.html" title="Index">Up</a>
+&nbsp;<a class="post" href="Combine.html" title="Combine">Next</a>
+</div>
+<h1>Module <a href="type_Modify.html">Modify</a></h1>
+<pre><span class="keyword">module</span> Modify: <code class="code">sig</code> <a href="Modify.html">..</a> <code class="code">end</code></pre>This module provides utility functions for modifying a DEX binary.<br>
+<hr width="100%">
+<br>
+<span id="2_Utilities"><h2>Utilities</h2></span><br>
+<pre><span id="VALseed_addr"><span class="keyword">val</span> seed_addr</span> : <code class="type">int -> unit</code></pre><div class="info">
+set the start address for fresh ones<br>
+</div>
+<br>
+<span id="2_Modification"><h2>Modification</h2></span><br>
+<pre><span id="VALnew_str"><span class="keyword">val</span> new_str</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> string -> <a href="Dex.html#TYPElink">Dex.link</a></code></pre><div class="info">
+add a new <code class="code">string</code><br>
+</div>
+<pre><span id="VALreplace_str"><span class="keyword">val</span> replace_str</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> string -> string -> bool</code></pre><div class="info">
+replace old <code class="code">string</code> with new one;
+ <code class="code">true</code> if replaced, <code class="code">false</code> if newly added<br>
+</div>
+<pre><span id="VALreport_str_repl_cnt"><span class="keyword">val</span> report_str_repl_cnt</span> : <code class="type">unit -> unit</code></pre><div class="info">
+report <code class="code">string</code> replacement counts<br>
+</div>
+<pre><span id="VALnew_ty"><span class="keyword">val</span> new_ty</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> string -> <a href="Dex.html#TYPElink">Dex.link</a></code></pre><div class="info">
+add a new type<br>
+</div>
+<pre><span id="VALnew_class"><span class="keyword">val</span> new_class</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> ?super:string -> string -> <a href="Dex.html#TYPEaccess_flag">Dex.access_flag</a> list -> <a href="Dex.html#TYPElink">Dex.link</a></code></pre><div class="info">
+add a new class definition;
+ pass superclass name, its name, and <a href="Dex.html#TYPEaccess_flag"><code class="code">Dex.access_flag</code></a>s<br>
+</div>
+<pre><span id="VALmake_class_overridable"><span class="keyword">val</span> make_class_overridable</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPElink">Dex.link</a> -> unit</code></pre><div class="info">
+rip off the <code class="code">final</code> qualifier on <a href="Dex.html#TYPEclass_def_item"><code class="code">Dex.class_def_item</code></a><br>
+</div>
+<pre><span id="VALadd_interface"><span class="keyword">val</span> add_interface</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPElink">Dex.link</a> -> string -> unit</code></pre><div class="info">
+add an interface to a class.<br>
+</div>
+<pre><span id="VALnew_field"><span class="keyword">val</span> new_field</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPElink">Dex.link</a> -> string -> <a href="Dex.html#TYPEaccess_flag">Dex.access_flag</a> list -> string -> <a href="Dex.html#TYPElink">Dex.link</a></code></pre><div class="info">
+add a new field definition;
+ pass class id, its name, <a href="Dex.html#TYPEaccess_flag"><code class="code">Dex.access_flag</code></a>s, and type<br>
+</div>
+<pre><span id="VALnew_method"><span class="keyword">val</span> new_method</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -><br>       <a href="Dex.html#TYPElink">Dex.link</a> -><br>       string -> <a href="Dex.html#TYPEaccess_flag">Dex.access_flag</a> list -> string -> string list -> <a href="Dex.html#TYPElink">Dex.link</a></code></pre><div class="info">
+add a new method definition;
+ pass class id, its name, <a href="Dex.html#TYPEaccess_flag"><code class="code">Dex.access_flag</code></a>s, return type, and arguments<br>
+</div>
+<pre><span id="VALmake_method_overridable"><span class="keyword">val</span> make_method_overridable</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPElink">Dex.link</a> -> <a href="Dex.html#TYPElink">Dex.link</a> -> unit</code></pre><div class="info">
+rip off the <code class="code">final</code> qualifer on <a href="Dex.html#TYPEencoded_method"><code class="code">Dex.encoded_method</code></a><br>
+</div>
+<pre><span id="TYPEcursor"><span class="keyword">type</span> <code class="type"></code>cursor</span> </pre>
+<div class="info">
+instruction inserting point<br>
+</div>
+
+<pre><span id="VALprev"><span class="keyword">val</span> prev</span> : <code class="type"><a href="Modify.html#TYPEcursor">cursor</a> -> <a href="Modify.html#TYPEcursor">cursor</a></code></pre><div class="info">
+previous instruction<br>
+</div>
+<pre><span id="VALnext"><span class="keyword">val</span> next</span> : <code class="type"><a href="Modify.html#TYPEcursor">cursor</a> -> <a href="Modify.html#TYPEcursor">cursor</a></code></pre><div class="info">
+next instruction<br>
+</div>
+<pre><span id="VALget_fst_ins"><span class="keyword">val</span> get_fst_ins</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPEcode_item">Dex.code_item</a> -> <a href="Instr.html#TYPEinstr">Instr.instr</a></code></pre><div class="info">
+get the first <a href="Instr.html#TYPEinstr"><code class="code">Instr.instr</code></a><br>
+</div>
+<pre><span id="VALinsrt_ins"><span class="keyword">val</span> insrt_ins</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPEcode_item">Dex.code_item</a> -> <a href="Modify.html#TYPEcursor">cursor</a> -> <a href="Instr.html#TYPEinstr">Instr.instr</a> -> <a href="Modify.html#TYPEcursor">cursor</a></code></pre><div class="info">
+insert an instruction at <a href="Modify.html#TYPEcursor"><code class="code">Modify.cursor</code></a> point; <a href="Modify.html#TYPEcursor"><code class="code">Modify.cursor</code></a> would be advanced<br>
+</div>
+<pre><span id="VALrm_ins"><span class="keyword">val</span> rm_ins</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPEcode_item">Dex.code_item</a> -> <a href="Modify.html#TYPEcursor">cursor</a> -> <a href="Modify.html#TYPEcursor">cursor</a></code></pre><div class="info">
+remove an instruction at <a href="Modify.html#TYPEcursor"><code class="code">Modify.cursor</code></a> point; <a href="Modify.html#TYPEcursor"><code class="code">Modify.cursor</code></a> would remain as same<br>
+</div>
+<pre><span id="VALinsrt_insns"><span class="keyword">val</span> insrt_insns</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -><br>       <a href="Dex.html#TYPEcode_item">Dex.code_item</a> -> <a href="Modify.html#TYPEcursor">cursor</a> -> <a href="Instr.html#TYPEinstr">Instr.instr</a> list -> <a href="Modify.html#TYPEcursor">cursor</a></code></pre><div class="info">
+insert instructions at <a href="Modify.html#TYPEcursor"><code class="code">Modify.cursor</code></a> point: <a href="Modify.html#TYPEcursor"><code class="code">Modify.cursor</code></a> will be advanced<br>
+</div>
+<pre><span id="VALinsrt_insns_before_start"><span class="keyword">val</span> insrt_insns_before_start</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPEcode_item">Dex.code_item</a> -> <a href="Instr.html#TYPEinstr">Instr.instr</a> list -> <a href="Modify.html#TYPEcursor">cursor</a></code></pre><div class="info">
+insert instructions before the start of some <a href="Dex.html#TYPEcode_item"><code class="code">Dex.code_item</code></a><br>
+</div>
+<pre><span id="VALinsrt_insns_after_start"><span class="keyword">val</span> insrt_insns_after_start</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPEcode_item">Dex.code_item</a> -> <a href="Instr.html#TYPEinstr">Instr.instr</a> list -> <a href="Modify.html#TYPEcursor">cursor</a></code></pre><div class="info">
+insert instructions after the start of some <a href="Dex.html#TYPEcode_item"><code class="code">Dex.code_item</code></a><br>
+</div>
+<pre><span id="VALinsrt_insns_before_end"><span class="keyword">val</span> insrt_insns_before_end</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPEcode_item">Dex.code_item</a> -> <a href="Instr.html#TYPEinstr">Instr.instr</a> list -> <a href="Modify.html#TYPEcursor">cursor</a></code></pre><div class="info">
+insert instructions before the end of some <a href="Dex.html#TYPEcode_item"><code class="code">Dex.code_item</code></a><br>
+</div>
+<pre><span id="VALinsrt_insns_after_end"><span class="keyword">val</span> insrt_insns_after_end</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPEcode_item">Dex.code_item</a> -> <a href="Instr.html#TYPEinstr">Instr.instr</a> list -> <a href="Modify.html#TYPEcursor">cursor</a></code></pre><div class="info">
+insert instructions after the end of some <a href="Dex.html#TYPEcode_item"><code class="code">Dex.code_item</code></a><br>
+</div>
+<pre><span id="VALinsrt_return_void"><span class="keyword">val</span> insrt_return_void</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPElink">Dex.link</a> -> string -> unit</code></pre><div class="info">
+insert <a href="Instr.html#VALrv"><code class="code">Instr.rv</code></a> at the end of the method<br>
+</div>
+<pre><span id="VALupdate_reg_usage"><span class="keyword">val</span> update_reg_usage</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPEcode_item">Dex.code_item</a> -> unit</code></pre><div class="info">
+update register usage: <code class="code">registers_size</code> and <code class="code">outs_size</code><br>
+</div>
+<pre><span id="VALimplements"><span class="keyword">val</span> implements</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPElink">Dex.link</a> -> <a href="Dex.html#TYPElink">Dex.link</a> -> string -> bool</code></pre><div class="info">
+<code class="code">true</code>, adding an abstract method if given class doesn't implement it<br>
+</div>
+<pre><span id="VALoverride"><span class="keyword">val</span> override</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> <a href="Dex.html#TYPElink">Dex.link</a> -> string -> bool</code></pre><div class="info">
+<code class="code">true</code>, adding an overriding method if given class doesn't override it<br>
+</div>
+<br>
+<span id="2_Application"><h2>Application</h2></span><br>
+<pre><span id="VALsubst_cls"><span class="keyword">val</span> subst_cls</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> string list -> string list -> unit</code></pre><div class="info">
+substitute the given class usage into the new one<br>
+</div>
+<pre><span id="VALdiscard_cls"><span class="keyword">val</span> discard_cls</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> string list -> unit</code></pre><div class="info">
+discard anythings related to specific classes<br>
+</div>
+<pre><span id="VALcall_trace"><span class="keyword">val</span> call_trace</span> : <code class="type"><a href="Dex.html#TYPEdex">Dex.dex</a> -> string list -> unit</code></pre><div class="info">
+trace call stack by modifying methods of specific classes in the dex<br>
+</div>
+<pre><span id="VALhello"><span class="keyword">val</span> hello</span> : <code class="type">unit -> <a href="Dex.html#TYPEdex">Dex.dex</a></code></pre><div class="info">
+API test<br>
+</div>
+</body></html>
