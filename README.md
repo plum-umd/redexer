@@ -15,17 +15,7 @@ Publications
   Jinseong Jeon, Kristopher K. Micinski, Jeffrey A. Vaughan, Ari Fogel, Nikhilesh Reddy, Jeffrey S. Foster, and Todd Millstein.
   In ACM CCS Workshop on Security and Privacy in Smartphones and Mobile Devices (SPSM '12), Oct 2012.
 
-* [Dr. Android and Mr. Hide: Fine-grained security policies on unmodified Android.][tr2]
-  Jinseong Jeon, Kristopher K. Micinski, Jeffrey A. Vaughan, Nikhilesh Reddy, Yixin Zhu, Jeffrey S. Foster, and Todd Millstein.
-  CS-TR-5006, Department of Computer Science, University of Maryland, College Park, Dec 2011.
-
-* [Application-centric security policies on unmodified Android.][tr1]
-  Nikhilesh Reddy, Jinseong Jeon, Jeffrey A. Vaughan, Todd Millstein, and Jeffrey S. Foster.
-  UCLA TR #110017, Jul 2011.
-
 [spsm]: http://...
-[tr2]: http://hdl.handle.net/1903/12852
-[tr1]: http://fmdb.cs.ucla.edu/Treports/110017.pdf
 
 Requirements
 ------------
