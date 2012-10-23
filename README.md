@@ -15,7 +15,7 @@ Publications
   Jinseong Jeon, Kristopher K. Micinski, Jeffrey A. Vaughan, Ari Fogel, Nikhilesh Reddy, Jeffrey S. Foster, and Todd Millstein.
   In ACM CCS Workshop on Security and Privacy in Smartphones and Mobile Devices (SPSM '12), Oct 2012.
 
-[spsm]: http://...
+[spsm]: http://dx.doi.org/10.1145/2381934.2381938
 
 Requirements
 ------------

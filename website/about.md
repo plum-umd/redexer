@@ -27,7 +27,7 @@ Publications
   Nikhilesh Reddy, Jinseong Jeon, Jeffrey A. Vaughan, Todd Millstein, and Jeffrey S. Foster.
   UCLA TR #110017, Jul 2011.
 
-[spsm]: http://...
+[spsm]: http://dx.doi.org/10.1145/2381934.2381938
 [tr2]: http://hdl.handle.net/1903/12852
 [tr1]: http://fmdb.cs.ucla.edu/Treports/110017.pdf
 
