@@ -46,7 +46,7 @@ require "#{HERE}/apk"
 
 cmds = [
   "unparse", "htmlunparse", "id", "combine",
-  "info", "classes", "opstat",
+  "info", "classes", "api", "opstat",
   "cg", "cfg", "dom", "pdom",
   "dump_method", "dependants", "live", "const",
   "sdk", "launcher", "rpc_stubs", "hello", "logging"
@@ -158,7 +158,7 @@ when "combine"
     Dex.combine(dex, lib)
     system("mv -f #{HOME}/classes.dex #{RES}") if dex.succ
   end
-when "info", "classes",
+when "info", "classes", "api"
   Dex.send(cmd.to_sym, dex)
   puts Dex.out if dex_succ?(apk, cmd)
 when "opstat"

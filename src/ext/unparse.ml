@@ -38,25 +38,28 @@
 
 module DA = DynArray
 
-module I  = Instr
-module J  = Java
-module D  = Dex
-module V  = Visitor
+module U = Util
 
+module I  = Instr
+module D  = Dex
+module J  = Java
+
+module V  = Visitor
 module IM = I.IM
 
 module I32 = Int32
 module I64 = Int64
 
-module P = Printf
 module L = List
 module S = String
+
+module Pf = Printf
 
 (***********************************************************************)
 (* Basic Types/Elements                                                *)
 (***********************************************************************)
 
-let pp = P.printf
+let pp = Pf.printf
 
 (***********************************************************************)
 (* Utilities                                                           *)
@@ -471,7 +474,7 @@ let rec extract_cls str =
   | 'L' -> (* Ljava/lang/Object; *)
     J.of_java_ty str
   | '[' -> (* [...*)
-    extract_cls (S.sub str 1 (len - 1))
+    extract_cls (U.trim_1st str)
   | _ -> ""
 
 class cls_visitor (dx: D.dex) =
@@ -487,3 +490,4 @@ end
 (* print_classes : D.dex -> unit *)
 let print_classes (dx: D.dex) : unit =
   V.iter (new cls_visitor dx)
+

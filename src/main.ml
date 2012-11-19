@@ -41,6 +41,7 @@ module St = Stats
 module U = Util
 
 module J  = Java
+module Ad = Android
 module D  = Dex
 module P  = Parse
 
@@ -150,7 +151,6 @@ let do_dfa (tag: string) (tx: D.dex) : unit =
 (***********************************************************************)
 
 let instrument_logging (tx: D.dex) : unit =
-  let logging_library = "./tutorial/logging/bin/classes.dex" in
   (* parse logging library *)
   let chan = open_in_bin !lib in
   let liblog = P.parse chan in
@@ -173,6 +173,7 @@ let task = ref None
 let do_unparse       () = task := Some (St.time "unparse" Up.unparse)
 let do_info          () = task := Some (St.time "info."   Up.print_info)
 let do_classes       () = task := Some (St.time "class"   Up.print_classes)
+let do_api           () = task := Some (St.time "api"     Ad.api_usage)
 
 let do_dump          () = task := Some dump
 let do_hello         () = task := Some dump_hello
@@ -196,28 +197,37 @@ let do_logging       () = task := Some instrument_logging
 let arg_specs = A.align
   [
     ("-log", A.String Log.set_level, " set logging level");
+
     ("-unparse", A.Unit do_unparse, " print dex in yaml format");
     ("-info",    A.Unit do_info,    " print info about dex file");
     ("-classes", A.Unit do_classes, " print class names in dex file");
+    ("-api",     A.Unit do_api,     " print API usage in dex file");
+
     ("-out",   A.Set_string dex, " output file name (default: "^(!dex)^")");
     ("-dump",  A.Unit do_dump,   " dump dex binary");
     ("-hello", A.Unit do_hello,  " API test");
+
     ("-outputdir",   A.Set_string outputdir,
      " directory in which to place generated htmls (default: "^(!outputdir)^")");
     ("-htmlunparse", A.Unit do_htmlunparse, " format dex in an html document");
+
     ("-lib",     A.Set_string lib,  " library dex name (default: "^(!lib)^")");
     ("-combine", A.Unit do_combine, " combine two dex files");
+
     ("-cls",  A.Set_string cls, " target class name");
     ("-mtd",  A.Set_string mtd, " target method name");
     ("-dump_method", A.Unit do_dumpmethod, 
      " dump instructions for a specified method");
     ("-cg",   A.Unit do_cg,     " call graph in dot format");
     ("-cfg",  A.Unit do_cfg,    " control-flow graph in dot format");
+
     ("-dom",  A.Unit do_dom,    " dominator tree in dot format");
     ("-pdom", A.Unit do_pdom,   " post dominator tree in dot format");
+
     ("-dependants", A.Unit do_dependants, " find dependent classes");
     ("-live",       A.Unit do_live,       " liveness analysis");
     ("-const",      A.Unit do_const,      " constant propagation");
+
     ("-logging", A.Unit do_logging,
      " instrument logging feature into the given dex");
   ]

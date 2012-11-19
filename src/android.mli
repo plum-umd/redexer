@@ -287,3 +287,9 @@ sig
   val change_network_state : string
 
 end
+
+(** {2 Utilities} *)
+
+(** report API usage (including overrides) in the dex file *)
+val api_usage : Dex.dex -> unit
+

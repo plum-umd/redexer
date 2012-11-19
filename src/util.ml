@@ -84,7 +84,6 @@ let explode s =
     if i < 0 then l else
       expl (i - 1) (s.[i] :: l) in
   expl (S.length s - 1) []
-
     
 let implode l =
   let result = S.create (L.length l) in
@@ -93,6 +92,7 @@ let implode l =
     | c :: l -> result.[i] <- c; imp (i + 1) l in
   imp 0 l
 
+(* split_string : string -> char -> string list *)
 let split_string str (split: char) : string list =
   let rec helper (str: char list) (cur_accum: char list) accums : string list =
     match str with
@@ -114,6 +114,7 @@ let split_string str (split: char) : string list =
   in
   helper (explode str) [] []
 
+(* begins_with : string -> string -> bool *)
 let begins_with (str: string) (prefix: string) : bool =
   let rec h a b =
     match a with

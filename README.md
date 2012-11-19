@@ -130,6 +130,11 @@ It may be useful to search specific third-party libraries, e.g.,
 
     $ ruby scripts/cmd.rb target.(apk|dex) --cmd classes | egrep 'apache'
 
+- api
+This option prints out API usage in the dex file.
+
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd api
+
 - opcode statistics
 Aren't you curious how rarely some opcodes are used in Dalvik bytecodes?
 It will show you the histogram of entire opcodes, or you can look up

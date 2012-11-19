@@ -38,6 +38,8 @@
 
 module St = Stats
 
+module U = Util
+
 module J = Java
 module I = Instr
 module D = Dex
@@ -46,6 +48,8 @@ module V = Visitor
 
 module L = List
 module S = String
+
+module Pf = Printf
 
 (***********************************************************************)
 (* Libraries                                                           *)
@@ -231,3 +235,49 @@ struct
   let access_network_state   = perm^"ACCESS_NETWORK_STATE"
   let change_network_state   = perm^"CHANGE_NETWORK_STATE"
 end
+
+(***********************************************************************)
+(* API usage                                                           *)
+(***********************************************************************)
+
+let begins_w_adr cname : bool =
+  U.begins_with cname adr
+
+class api_visitor (dx: D.dex) =
+object
+  inherit V.iterator dx
+
+  method v_emtd (emtd: D.encoded_method) : unit =
+    let mid = emtd.D.method_idx in
+    let cid = D.get_cid_from_mid dx mid in
+    let s_mid = D.get_supermethod dx cid mid in
+    if s_mid <> D.no_idx then
+    (
+      let s_cid = D.get_cid_from_mid dx s_mid in
+      let s_cname = J.of_java_ty (D.get_ty_str dx s_cid) in
+      let s_mname = D.get_mtd_name dx s_mid in
+      if begins_w_adr s_cname && 0 <> S.compare s_mname J.init then
+        Log.i (Pf.sprintf "override: %s->%s" s_cname s_mname)
+    )
+
+  method v_ins (ins: D.link) : unit =
+    if not (D.is_ins dx ins) then () else
+      let op, opr = D.get_ins dx ins in
+      match I.access_link op with
+      | I.METHOD_IDS (* super call would be captured as 'override' *)
+        when op <> I.OP_INVOKE_SUPER && op <> I.OP_INVOKE_SUPER_RANGE ->
+      (
+        let mid = D.opr2idx (L.hd (L.rev opr)) in
+        let cid = D.get_cid_from_mid dx mid in
+        let cname = J.of_java_ty (D.get_ty_str dx cid) in
+        let mname = D.get_mtd_name dx mid in
+        if begins_w_adr cname && 0 <> S.compare mname J.init then
+          Log.i (Pf.sprintf "invoke: %s->%s" cname mname)
+      )
+      | _ -> ()
+end
+
+(* api_usage : D.dex -> unit *)
+let api_usage (dx: D.dex) : unit =
+  V.iter (new api_visitor dx)
+
