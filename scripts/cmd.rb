@@ -40,6 +40,7 @@ require 'pp'
 THIS_FILE = Pathname.new(__FILE__).realpath.to_s
 HERE = File.dirname(THIS_FILE)
 HOME = HERE + "/.."
+RES = HOME + "/results/"
 tmp_dir = "tmp_dir_" + rand(36**8).to_s(36) # random string with size 8
 
 require "#{HERE}/apk"
@@ -209,11 +210,31 @@ when "permissions", "sdk", "launcher"
     puts res
   end
 when "logging"
-  res = apk.send(cmd.to_sym)
-  if res != []
-    puts ARGV[0]
-    puts res
+  apk.send(cmd.to_sym)
+  if not apk.succ
+    puts apk.out
+    close(apk)
+    raise "rewriting dex failed"
   end
+  if to
+    apk.repack(to)
+  else
+    apk.repack
+  end
+  if not apk.succ
+    puts apk.out
+    close(apk)
+    raise "repacking apk failed"
+  end
+  # for debugging, leave rewritten dex and xml files
+  system("cp -f #{tmp_dir}/classes.dex #{RES}")
+  system("cp -f #{tmp_dir}/AndroidManifest.xml #{RES}")
+  # and move the rewritten apk
+  if not to
+    rewritten = File.basename(ARGV[0])
+    system("mv -f #{rewritten} #{RES}") if apk.succ
+  end
+  puts apk.out if apk.succ
 when "hello"
   Dex.hello
   system("mv -f #{HOME}/classes.dex #{RES}") if dex_succ?(apk, cmd)

@@ -193,6 +193,7 @@ private
   @@online = true
 
   def self.runcmd(cmd)
+    @@out = ""
     @@out << cmd + "\n"
     @@out << `#{cmd}`
     @@succ = $?.exitstatus == 0
