@@ -84,7 +84,9 @@ class Apk
   end
   
   def logging()
-    Dex.logging(dex)
+    Dex.logging(dex, dex)
+    @out << Dex.out
+    @succ = Dex.succ
   end
   
   JAR = TOOL + "/signapk.jar"

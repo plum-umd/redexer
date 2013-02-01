@@ -160,7 +160,7 @@ let instrument_logging (tx: D.dex) : unit =
   (* seed new addresses for modification *)
   Md.seed_addr cx.D.header.D.file_size;
   (* modify target dex accordingly *)
-  Lgg.modify tx;
+  Lgg.modify cx;
   (* finally, dump the rewritten dex *)
   St.time "dump" (Dp.dump !dex) cx
 

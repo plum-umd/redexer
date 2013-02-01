@@ -182,6 +182,16 @@ object
 end
 
 let log_transition (dx: D.dex) : unit =
+  (* insert method signatures first *)
+  let per_comp (comp: string) : unit =
+    let cid = M.new_class dx comp D.pub in
+    let _ = M.new_method dx cid Ap.onCreate D.pub J.v [Ao.bundle] in
+    let insrt_void_no_arg mname =
+      ignore (M.new_method dx cid mname D.pub J.v [])
+    in
+    L.iter insrt_void_no_arg (L.tl act_trans)
+  in
+  L.iter per_comp tgt_comps;
   V.iter (new trans_logger dx);
   Log.i ("# of method overriding(s): "^(Log.of_i !override_cnt));
   Log.i ("# of transition logging(s): "^(Log.of_i !trans_cnt))

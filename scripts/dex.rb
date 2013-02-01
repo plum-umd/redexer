@@ -77,8 +77,9 @@ class Dex
     self.runcmd("#{REDEXER} #{opt} -lib #{lib} -combine #{dex_name} #{QUIET}")
   end
   
-  def self.logging(dex_name=DEX)
-    self.runcmd("#{REDEXER} #{dex_name} -logging #{QUIET}")
+  def self.logging(dex_name=DEX, *out_name)
+    opt = self.out_opt(out_name)
+    self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging")
   end
   
   CSS = DAT + "/dex-format.css"
