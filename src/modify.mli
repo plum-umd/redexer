@@ -132,8 +132,11 @@ val override : Dex.dex -> Dex.link -> string -> bool
 (** substitute the given class usage into the new one *)
 val subst_cls : Dex.dex -> string list -> string list -> unit
 
-(** discard anythings related to specific classes *)
-val discard_cls : Dex.dex -> string list -> unit
+(** rename specific classes *)
+val rename_cls : Dex.dex -> string list -> unit
+
+(** discard calls related to specific classes *)
+val discard_cls_calls : Dex.dex -> string list -> unit
 
 (** trace call stack by modifying methods of specific classes in the dex *)
 val call_trace : Dex.dex -> string list -> unit

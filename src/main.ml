@@ -146,11 +146,15 @@ let do_dfa (tag: string) (tx: D.dex) : unit =
   let module DFA = (val dfa: Dataflow.ANALYSIS with type st = D.link) in
   St.time tag DFA.fixed_pt ()
 
+let dat = ref "data"
+
 (***********************************************************************)
 (* Logging                                                             *)
 (***********************************************************************)
 
 let instrument_logging (tx: D.dex) : unit =
+  let rnm = !dat^"/rename" in
+try (
   (* parse logging library *)
   let chan = open_in_bin !lib in
   let liblog = P.parse chan in
@@ -161,8 +165,16 @@ let instrument_logging (tx: D.dex) : unit =
   Md.seed_addr cx.D.header.D.file_size;
   (* modify target dex accordingly *)
   Lgg.modify cx;
+  (* rename specific classes *)
+  let rnm' = rnm ^ "." ^ "cls" in
+  let ch = open_in rnm' in
+  let res = U.read_lines ch in
+  close_in ch;
+  St.time "rename" (Md.rename_cls cx) res;
   (* finally, dump the rewritten dex *)
   St.time "dump" (Dp.dump !dex) cx
+)
+with End_of_file -> prerr_endline "EOF"
 
 (***********************************************************************)
 (* Arguments                                                           *)

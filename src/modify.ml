@@ -58,7 +58,7 @@ module I32 = Int32
 module L  = List
 module H  = Hashtbl
 module S  = String
-module Re = Str
+module RE = Str
 
 (***********************************************************************)
 (* Basic Types/Elements                                                *)
@@ -88,8 +88,6 @@ let call_vrt = I.op_to_hx I.OP_INVOKE_VIRTUAL
 let call_stt = I.op_to_hx I.OP_INVOKE_STATIC
 let call_sup = I.op_to_hx I.OP_INVOKE_SUPER
 let call_dir = I.op_to_hx I.OP_INVOKE_DIRECT
-
-let final_mask = 0x7FFFFFEF
 
 (***********************************************************************)
 (* Utilities                                                           *)
@@ -130,11 +128,17 @@ let get_last (l: 'a list) : 'a =
 
 (* try matching regular expression *)
 let regexp_folder target acc re =
-  acc || Re.string_match re target 0
+  acc || RE.string_match re target 0
 
 (* retreive human-readable type notation *)
 let get_ty_str (dx: D.dex) (tid: D.link) : string =
   J.of_type_descr (D.get_ty_str dx tid)
+
+(* wipe off final modifier *)
+let wipe_off_final (access_flag: int) : int =
+  (* any {!Dex.acc_kind}s are fine *)
+  let final_flag = D.to_acc_flag D.ACC_FOR_CLASSES [D.ACC_FINAL] in
+  access_flag land (lnot final_flag)
 
 (***********************************************************************)
 (* Dex modification                                                    *)
@@ -217,7 +221,7 @@ let new_class (dx: D.dex) ?(super=Java.Lang.obj) (cname: string)
 (* make_class_overridable : D.dex -> D.link -> unit *)
 let make_class_overridable (dx: D.dex) (cid: D.link) : unit =
   let cdef = D.get_cdef dx cid in
-  cdef.D.c_access_flag <- final_mask land cdef.D.c_access_flag
+  cdef.D.c_access_flag <- wipe_off_final cdef.D.c_access_flag
 
 (* find or make new TYPE_LIST *)
 let find_or_new_ty_lst (dx: D.dex) (tl: D.link list) : D.link =
@@ -399,7 +403,7 @@ let new_method (dx: D.dex) (cid: D.link) (mname: string)
 (* make_method_overridable : D.dex -> D.link -> D.link -> unit *)
 let make_method_overridable (dx: D.dex) (cid: D.link) (mid: D.link) : unit =
   let emtd = D.get_emtd dx cid mid in
-  emtd.D.m_access_flag <- final_mask land emtd.D.m_access_flag
+  emtd.D.m_access_flag <- wipe_off_final emtd.D.m_access_flag
 
 (* instruction inserting point *)
 type cursor = int
@@ -696,7 +700,6 @@ object (self)
   method v_mit (mit: D.method_id_item) : unit =
     let cname = D.get_ty_str dx mit.D.m_class_id in
     if target_in_hierarchy dx maps.cmap mit.D.m_class_id
-    (* TODO: configurable: replace obfuscated ads classes *)
     then
     (
       let pit = D.get_pit dx mit in
@@ -910,6 +913,29 @@ let subst_cls (dx: D.dex) (xs: string list) (ys: string list) : unit =
   subst_cls_helper dx l
 
 (***********************************************************************)
+(* Rename specific things                                              *)
+(***********************************************************************)
+
+(*
+  renaming is a less error-prone way to avoid dupicates
+  e.g., we can rip off pesky annotations classes:
+    android.annotation.SuppressLint and ...TargetApi
+*)
+
+(* rename_cls : D.dex -> string list -> unit *)
+let rename_cls (dx: D.dex) (res: string list) : unit =
+  let re = RE.regexp "\\(.+\\) -> \\(.+\\)" in
+  let each (str: string) : unit =
+    try
+      let _ = RE.search_forward re str 0 in
+      let old = J.to_java_ty (RE.matched_group 1 str)
+      and sub = J.to_java_ty (RE.matched_group 2 str) in
+      ignore (replace_str dx old sub)
+    with Not_found -> ()
+  in
+  L.iter each res
+
+(***********************************************************************)
 (* Discard specific things                                             *)
 (***********************************************************************)
 
@@ -956,8 +982,8 @@ object
     with D.Wrong_match _ -> ()
 end
 
-(* discard_cls : D.dex -> string list -> unit *)
-let discard_cls (dx: D.dex) (re: string list) : unit =
+(* discard_cls_calls : D.dex -> string list -> unit *)
+let discard_cls_calls (dx: D.dex) (re: string list) : unit =
   let mock_cid = new_class  dx "umd.redexer.MockClass" D.pub in
   let mock_mid = new_method dx mock_cid "mockMethod" D.spub JL.obj [] in
   let ins0 = I.new_const 0 0
@@ -965,7 +991,7 @@ let discard_cls (dx: D.dex) (re: string list) : unit =
   let _, citm = D.get_citm dx mock_cid mock_mid in
   let _ = insrt_insns_before_start dx citm [ins0; ins1] in
   update_reg_usage dx citm;
-  let res = L.map Re.regexp re in
+  let res = L.map RE.regexp re in
   V.iter (new discarder dx mock_mid res);
   Log.i ("# of discard(s): "^(Log.of_i !dis_cnt))
 
@@ -1038,7 +1064,7 @@ let call_trace (dx: D.dex) (re: string list) : unit =
   let _, citm = D.get_citm dx trc_cid trc_mid in
   let _ = insrt_insns_before_start dx citm inss_trc in
   update_reg_usage dx citm;
-  let res = L.map Re.regexp re in
+  let res = L.map RE.regexp re in
   V.iter (new insrt_tracer_call dx trc_mid res);
   Log.i ("# of call trace(s): "^(Log.of_i (!trc_cnt + L.length inss_trc)))
 
