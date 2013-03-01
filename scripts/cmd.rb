@@ -50,7 +50,7 @@ cmds = [
   "info", "classes", "api", "opstat",
   "cg", "cfg", "dom", "pdom",
   "dump_method", "dependants", "live", "const",
-  "sdk", "launcher", "rpc_stubs", "hello", "logging"
+  "sdk", "launcher", "hello", "logging"
 ]
 
 cmd = ""
