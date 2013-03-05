@@ -417,9 +417,6 @@ let next cur : cursor = cur + 1
 (* get the cursor of the first instruction *)
 let get_fst_cursor () : cursor = 0
 
-(* get the cursor of the second instruction *)
-let get_snd_cursor () : cursor = next (get_fst_cursor ())
-
 (* get the cursor of the last instruction *)
 let get_last_cursor (dx: D.dex) (citm: D.code_item) : cursor =
   let cfg  = St.time "cfg"  (Cf.make_cfg dx) citm in
@@ -474,25 +471,40 @@ let insrt_insns_before_start dx (citm: D.code_item) (insns: I.instr list) =
     insrt_insns dx citm (get_fst_cursor ()) insns
   else (* not to change base addr for try-catch *)
     let hd::tl  = insns
+    and fst_cur = get_fst_cursor () in
+    let nxt_cur = next fst_cur
     and fst_off = DA.get citm.D.insns 0 in
     let fst_ins = D.get_ins dx fst_off
-    and snd_off = next_off fst_off in
+    and sft_off = next_off fst_off in
     (* shift the first ins *)
-    D.insrt_ins dx snd_off fst_ins;
-    DA.insert citm.D.insns (get_snd_cursor ()) snd_off;
+    D.insrt_ins dx sft_off fst_ins;
+    DA.insert citm.D.insns nxt_cur sft_off;
     (* overwrite the first ins with new one *)
     D.insrt_ins dx fst_off hd;
     incr_insns_size citm hd;
-    (* insert the remaining instructions from the second position *)
-    insrt_insns dx citm (get_snd_cursor ()) tl
+    (* insert the remaining instructions from the next position *)
+    insrt_insns dx citm nxt_cur tl
 
 (* insrt_insns_after_start : D.dex -> D.code_item -> I.instr list -> cursor *)
 let insrt_insns_after_start dx (citm: D.code_item) (insns: I.instr list) =
-  insrt_insns dx citm (get_snd_cursor ()) insns
+  insrt_insns dx citm (next (get_fst_cursor ())) insns
 
 (* insrt_insns_before_end : D.dex -> D.code_item -> I.instr list -> cursor *)
 let insrt_insns_before_end dx (citm: D.code_item) (insns: I.instr list) =
-  insrt_insns dx citm (get_last_cursor dx citm) insns
+  let hd::tl  = insns
+  and lst_cur = get_last_cursor dx citm in
+  let nxt_cur = next lst_cur
+  and lst_off = DA.get citm.D.insns lst_cur in
+  let lst_ins = D.get_ins dx lst_off
+  and sft_off = next_off lst_off in
+  (* shift the last ins *)
+  D.insrt_ins dx sft_off lst_ins;
+  DA.insert citm.D.insns nxt_cur sft_off;
+  (* overwrite the last ins with new one *)
+  D.insrt_ins dx lst_off hd;
+  incr_insns_size citm hd;
+  (* insert the remaining instructions from the next position *)
+  insrt_insns dx citm nxt_cur tl
 
 (* insrt_insns_after_end : D.dex -> D.code_item -> I.instr list -> cursor *)
 let insrt_insns_after_end dx (citm: D.code_item) (insns: I.instr list) =
@@ -511,22 +523,18 @@ let update_reg_usage dx (citm: D.code_item) : unit =
   let ins_folder (regs, outs) (off: D.link) =
     if not (D.is_ins dx off) then (regs, outs) else
     let op, opr = D.get_ins dx off in
-    let a_sort = I.access_link op in
     let opr_folder_regs acc opr =
       match opr with
       | I.OPR_REGISTER n -> IS.add (I32.of_int n) acc
       | _ -> acc
-    and opr_folder_outs acc opr =
-      match opr, a_sort with
-      | I.OPR_REGISTER n, I.METHOD_IDS -> IS.add (I32.of_int n) acc
-      | _, _ -> acc
     in
     L.fold_left opr_folder_regs regs opr,
-    L.fold_left opr_folder_outs outs opr
+    if I.access_link op <> I.METHOD_IDS then outs else
+      max outs ((L.length opr) - 1) (* excluding the method id *)
   in
-  let regs, outs = DA.fold_left ins_folder (IS.empty, IS.empty) citm.D.insns in
+  let regs, outs = DA.fold_left ins_folder (IS.empty, 0) citm.D.insns in
   citm.D.registers_size <- max (IS.cardinal regs) citm.D.registers_size;
-  citm.D.outs_size      <- max (IS.cardinal outs) citm.D.outs_size;
+  citm.D.outs_size      <- max outs citm.D.outs_size;
   (* this pointer may be altered; update old usage *)
   let new_this = D.calc_this citm in
   let ins_iter (off: D.link) =
