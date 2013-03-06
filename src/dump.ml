@@ -404,6 +404,20 @@ let adler32_update (x: adler32) (c: char) : adler32 =
 let adler32_crc (x: adler32) : int64 =
   I64.logor (I64.shift_left (to_i64 x.b) 16) (to_i64 x.a)
 
+(* to calculate relative address diff from the base address of code_item
+ * used for all addresses in try-catch-relevant data structures
+ *)
+let from_base insns hsh (off: D.link) : int =
+  let folder (reach, cnt) (l: D.link) =
+    let reach' = reach || l = off in
+    match snd (H.find hsh (D.get_off l)) with
+    | D.INSTRUCTION (op, _) when not reach' ->
+      reach', cnt + snd (I.op_to_hx_and_size op)
+    | _ -> reach', cnt
+  in
+  snd (DA.fold_left folder (false, 0) insns)
+
+
 (***********************************************************************)
 (* Collecting                                                          *)
 (***********************************************************************)
@@ -935,8 +949,7 @@ and chg_abs_rel abs hsh lmap : D.data_item IM.t =
       let cur = !offset in
       offset := !offset + 2 * 4 + 4 * 2;
       let s_byt = !offset in
-      let s_ins = DA.map fi ci.D.insns
-      and base  = D.of_off (DA.get ci.D.insns 0) in
+      let s_ins = DA.map fi ci.D.insns in
       let insns = chg_abs_rel_ins abs hsh lmap s_ins acc in
       let e_byt = !offset in
       if ci.D.tries_size <> 0 then
@@ -947,10 +960,11 @@ and chg_abs_rel abs hsh lmap : D.data_item IM.t =
           } in
           { h with D.e_handlers = L.map fp' h.D.e_handlers }
         in
-        let typ_chged_hdler = L.map fh' ci.D.c_handlers in
+        let ty_chged_hdler = L.map fh' ci.D.c_handlers in
         offset := align !offset 4;
         offset := !offset + (L.length ci.D.tries) * 4 * 2;
-        offset := !offset + (CL.length (trans_handle base typ_chged_hdler))
+        let from_b = from_base ci.D.insns hsh.h_instrct in
+        offset := !offset + (CL.length (trans_handle from_b ty_chged_hdler))
       );
       let ci' = { ci with
         D.debug_info_off = dbg;
@@ -1552,33 +1566,33 @@ and trans_code_item insns (ci: D.code_item) : char CL.clist =
   and dff = write_off ci.D.debug_info_off
   and nsz = write32  (ci.D.insns_size / 2)
   in
-  let base = D.of_off (DA.get ci.D.insns 0)
-  and ins  = trans_ins insns ci.D.insns in
+  let ins  = trans_ins insns ci.D.insns in
   let tri, hdl = if ci.D.tries_size = 0 then CL.empty, CL.empty else
+    let from_b = from_base ci.D.insns insns in
     let pad = if (ci.D.insns_size / 2) mod 2 = 0 then CL.empty
               else let il = CL.length ins in fill null ((align il 4) - il)
-    and pos = make_hdl_pos base ci.D.c_handlers in
-    pad @@ flatten (L.map (trans_try insns base pos) ci.D.tries),
-    trans_handle base ci.D.c_handlers
+    and pos = make_hdl_pos from_b ci.D.c_handlers in
+    pad @@ flatten (L.map (trans_try insns from_b pos) ci.D.tries),
+    trans_handle from_b ci.D.c_handlers
   in
   rsz @@ isz @@ osz @@ tsz @@ dff @@ nsz @@ ins @@ tri @@ hdl
 
-and trans_try insns base pos (ti: D.try_item) : char CL.clist =
-  let addr = ((D.of_off ti.D.start_addr) - base) / 2
-  and _, end_sz =
-    match H.find insns (D.get_off ti.D.end_addr) with
-    | _, D.INSTRUCTION (op,_) -> I.op_to_hx_and_size op
-    | _, _ -> raise (D.Wrong_match "trans_try")
-  and btw = (D.of_off ti.D.end_addr) - (D.of_off ti.D.start_addr)
+and trans_try insns from_b pos (ti: D.try_item) : char CL.clist =
+  let addr = (from_b ti.D.start_addr) / 2
+  and end_sz =
+    match snd (H.find insns (D.get_off ti.D.end_addr)) with
+    | D.INSTRUCTION (op, _) -> snd (I.op_to_hx_and_size op)
+    | _ -> raise (D.Wrong_match "trans_try")
+  and btw = (from_b ti.D.end_addr) - (from_b ti.D.start_addr)
   in
   let sta = write32u (to_i64 addr)
   and cnt = write16 ((btw + end_sz) / 2)
   and off = write16 pos.(D.of_idx ti.D.handler_off)
   in sta @@ cnt @@ off
 
-and make_hdl_pos base (hdls: D.encoded_catch_handler list) : int array =
+and make_hdl_pos from_b (hdls: D.encoded_catch_handler list) : int array =
   let blist = (write_uleb128 (L.length hdls))
-           :: (L.map (trans_e_handle base) hdls) in
+           :: (L.map (trans_e_handle from_b) hdls) in
   let slist = L.map CL.length blist in
   let acc = ref 0 in
   let acc_sz sz : int =
@@ -1586,25 +1600,23 @@ and make_hdl_pos base (hdls: D.encoded_catch_handler list) : int array =
   in
   A.of_list (L.tl (L.map acc_sz slist))
 
-and trans_e_handle base (h: D.encoded_catch_handler) : char CL.clist =
-  let ch_all_off = D.of_off h.D.catch_all_addr in
+and trans_e_handle from_b (h: D.encoded_catch_handler) : char CL.clist =
   let sz = (L.length h.D.e_handlers)
-           * (if ch_all_off <> 0 then -1 else 1) in
+           * (if (D.of_off h.D.catch_all_addr) <> 0 then -1 else 1) in
   let ch_all = if sz > 0 then CL.empty else
-    write_uleb128 ((ch_all_off - base) / 2)
+    write_uleb128 ((from_b h.D.catch_all_addr) / 2)
   in
   let p_folder (p: D.type_addr_pair) acc' =
-    let paddr = D.of_off p.D.addr in
     let ty_id = write_uleb128 (D.of_idx p.D.ch_type_idx)
-    and uaddr = write_uleb128 ((paddr - base) / 2) in
+    and uaddr = write_uleb128 ((from_b p.D.addr) / 2) in
     ty_id @@ uaddr @@ acc'
   in
   let handlers = L.fold_right p_folder h.D.e_handlers CL.empty
   in (write_sleb128 sz) @@ handlers @@ ch_all
 
-and trans_handle base (hdls: D.encoded_catch_handler list) : char CL.clist =
+and trans_handle from_b (hdls: D.encoded_catch_handler list) : char CL.clist =
   let h_folder (h: D.encoded_catch_handler) acc =
-    (trans_e_handle base h) @@ acc
+    (trans_e_handle from_b h) @@ acc
   in
   (write_uleb128 (L.length hdls)) @@ (L.fold_right h_folder hdls CL.empty)
 
