@@ -36,10 +36,8 @@
 (* Dex                                                                 *)
 (***********************************************************************)
 
-(** This module provides utilities for manipulating Dalvik bytecode
-    and DEX files, including functions for navigating bytecode file
-    structures and generating new instruction sequences.
-*)
+(** This module defines types for DEX binary and provides utility functions
+ for traversing DEX file and getting info from DEX file. *)
 
 (** {2 Types} *)
 
@@ -406,8 +404,17 @@ type acc_kind =
 (** make [int] representation from bitfields of {!access_flag} *)
 val to_acc_flag : acc_kind -> access_flag list -> int
 
+(** check certain flags are set *)
+val chk_acc_flag : acc_kind -> access_flag list -> int -> bool
+
+(** [true] if [ACC_STATIC] is set *)
+val is_static : int -> bool
+
 (** [true] if [ACC_INTERFACE] is set *)
 val is_interface : int -> bool
+
+(** [true] if [ACC_SYNTHETIC] is set *)
+val is_synthetic : int -> bool
 
 (** [ACC_FOR_PUBLIC] *)
 val pub : access_flag list

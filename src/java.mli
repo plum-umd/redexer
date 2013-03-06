@@ -36,9 +36,7 @@
 (* Java                                                                *)
 (***********************************************************************)
 
-(** This module provides utility functions for handling bytecode that
-    utilitizes the [Java] standard library
-*)
+(** This module provides utility functions for handling [Java] language *)
 
 (** {2 Basic Types} *)
 
@@ -68,6 +66,9 @@ val f : string
 
 (** [double] *)
 val d : string
+
+(** list of all short type descriptors *)
+val shorties : string list
 
 (** [<init>] *)
 val init : string
@@ -133,6 +134,33 @@ sig
   (** [java.lang.StackTraceElement] *)
   val stk : string
 
+  (** [java.lang.Void] *)
+  val c_void : string
+
+  (** [java.lang.Boolean] *)
+  val c_bool : string
+
+  (** [java.lang.Character] *)
+  val c_char : string
+
+  (** [java.lang.Byte] *)
+  val c_byte : string
+
+  (** [java.lang.Short] *)
+  val c_short : string
+
+  (** [java.lang.Integer] *)
+  val c_int : string
+
+  (** [java.lang.Long] *)
+  val c_long : string
+
+  (** [java.lang.Float] *)
+  val c_float : string
+
+  (** [java.lang.Double] *)
+  val c_doubl : string
+
   (** [getClass] *)
   val get_cls : string
 
@@ -162,6 +190,9 @@ sig
 
   (** [valueOf] *)
   val v_of : string
+
+  (** all wrapper classes for primitive types *)
+  val wrappers : unit -> string list
 
 end
 

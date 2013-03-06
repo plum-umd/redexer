@@ -510,9 +510,21 @@ let rec to_acc_flag (k: acc_kind) = function
     v lor (to_acc_flag k t)
   )
 
+(* chk_acc_flag : acc_kind -> access_flag list -> int -> bool *)
+let chk_acc_flag (k: acc_kind) (flags: access_flag list) (flag: int) : bool =
+  0 <> flag land (to_acc_flag k flags)
+
+(* is_static : int -> bool *)
+let is_static (flag: int) : bool =
+  chk_acc_flag ACC_FOR_METHODS [ACC_STATIC] flag
+
 (* is_interface : int -> bool *)
 let is_interface (flag: int) : bool =
-  0 <> flag land 0x200
+  chk_acc_flag ACC_FOR_CLASSES [ACC_INTERFACE] flag
+
+(* is_synthetic : int -> bool *)
+let is_synthetic (flag: int) : bool =
+  chk_acc_flag ACC_FOR_METHODS [ACC_SYNTHETIC] flag
 
 (* pub : access_flag list *)
 let pub = [ACC_PUBLIC]

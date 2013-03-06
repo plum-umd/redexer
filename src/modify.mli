@@ -36,7 +36,7 @@
 (* Modify                                                              *)
 (***********************************************************************)
 
-(** This module provides utility functions for modifying a DEX binary. *)
+(** This module provides utility functions for modifying DEX binary. *)
 
 (** {2 Utilities} *)
 
@@ -91,8 +91,17 @@ val prev : cursor -> cursor
 (** next instruction *)
 val next : cursor -> cursor
 
+(** get the first {!cursor} *)
+val get_fst_cursor : unit -> cursor
+
+(** get the last {!cursor} *)
+val get_last_cursor : Dex.dex -> Dex.code_item -> cursor
+
 (** get the first {!Instr.instr} *)
 val get_fst_ins : Dex.dex -> Dex.code_item -> Instr.instr
+
+(** get the last {!Instr.instr} *)
+val get_last_ins : Dex.dex -> Dex.code_item -> Instr.instr
 
 (** insert an instruction at {!cursor} point; {!cursor} would be advanced *)
 val insrt_ins : Dex.dex -> Dex.code_item -> cursor -> Instr.instr -> cursor
@@ -117,6 +126,9 @@ val insrt_insns_after_end : Dex.dex -> Dex.code_item -> Instr.instr list -> curs
 
 (** insert {!Instr.rv} at the end of the method *)
 val insrt_return_void : Dex.dex -> Dex.link -> string -> unit
+
+(** shift register usage so as to secure free registers *)
+val shift_reg_usage : Dex.dex -> Dex.code_item -> int -> unit
 
 (** update register usage: [registers_size] and [outs_size] *)
 val update_reg_usage : Dex.dex -> Dex.code_item -> unit

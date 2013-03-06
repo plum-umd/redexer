@@ -1953,7 +1953,7 @@ let new_const (r: int) (const: int) : instr =
     else OP_CONST
   and opr = [OPR_REGISTER r; OPR_CONST (to_i64 const)] in op, opr
 
-(* wrap REGISTER except for the last thing (type, method, field) *)
+(* wrap REGISTER except for the last thing (type, method, or field id) *)
 let refer_last (hx: int) (args: int list) : instr =
   let rec ex_last = function
     | []   -> []
@@ -1989,6 +1989,11 @@ let new_obj (dst: int) (typ: int) : instr =
 let new_arr (dst: int) (sz: int) (typ: int) : instr =
   let hx = op_to_hx OP_NEW_ARRAY in
   refer_last hx [dst; sz; typ]
+
+(* new_goto : int -> offset -> instr *)
+let new_goto (hx: int) (dst: offset) : instr =
+  let op = hx_to_op hx
+  and opr = [OPR_OFFSET dst] in op, opr
 
 (* new_arr_op : int -> int list -> instr *)
 let new_arr_op (hx: int) (argv: int list) : instr =

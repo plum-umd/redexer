@@ -429,6 +429,11 @@ let get_fst_ins (dx: D.dex) (citm: D.code_item) : I.instr =
   let fst_off = DA.get citm.D.insns (get_fst_cursor ()) in
   D.get_ins dx fst_off
 
+(* get_last_ins : D.dex -> D.code_item -> I.instr *)
+let get_last_ins (dx: D.dex) (citm: D.code_item) : I.instr =
+  let last_off = DA.get citm.D.insns (get_last_cursor dx citm) in
+  D.get_ins dx last_off
+
 let next_off off : D.link =
   D.to_off ((D.of_off off) + 1)
 
@@ -496,7 +501,7 @@ let insrt_insns_before_end dx (citm: D.code_item) (insns: I.instr list) =
   let nxt_cur = next lst_cur
   and lst_off = DA.get citm.D.insns lst_cur in
   let lst_ins = D.get_ins dx lst_off
-  and sft_off = next_off lst_off in
+  and sft_off = get_fresh_addr () in
   (* shift the last ins *)
   D.insrt_ins dx sft_off lst_ins;
   DA.insert citm.D.insns nxt_cur sft_off;
@@ -516,10 +521,25 @@ let insrt_return_void dx (cid: D.link) (mname: string) : unit =
   let _,citm = D.get_citm dx cid mid in
   ignore (insrt_insns_after_end dx citm [I.rv])
 
+(* shift_reg_usage : D.dex -> D.code_item -> int -> unit *)
+let shift_reg_usage dx (citm: D.code_item) (sft: int) : unit =
+  let ins_iter (off: D.link) =
+    if D.is_ins dx off then
+    (
+      let op, opr = D.get_ins dx off in
+      let opr_alter opr =
+        match opr with
+        | I.OPR_REGISTER n -> I.OPR_REGISTER (n + sft)
+        | _ -> opr
+      in
+      D.insrt_ins dx off (op, L.map opr_alter opr)
+    )
+  in
+  DA.iter ins_iter citm.D.insns;
+  citm.D.registers_size <- citm.D.registers_size + sft
+
 (* update_reg_usage : D.dex -> D.code_item -> unit *)
 let update_reg_usage dx (citm: D.code_item) : unit =
-  let old_this = D.calc_this citm in
-  (* update register usage and outs size *)
   let ins_folder (regs, outs) (off: D.link) =
     if not (D.is_ins dx off) then (regs, outs) else
     let op, opr = D.get_ins dx off in
@@ -534,28 +554,7 @@ let update_reg_usage dx (citm: D.code_item) : unit =
   in
   let regs, outs = DA.fold_left ins_folder (IS.empty, 0) citm.D.insns in
   citm.D.registers_size <- max (IS.cardinal regs) citm.D.registers_size;
-  citm.D.outs_size      <- max outs citm.D.outs_size;
-  (* this pointer may be altered; update old usage *)
-  let new_this = D.calc_this citm in
-  let ins_iter (off: D.link) =
-    if D.is_ins dx off then
-    (
-      let op, opr = D.get_ins dx off in
-      match I.access_link op with
-      | I.METHOD_IDS
-        when op <> I.OP_INVOKE_STATIC && op <> I.OP_INVOKE_STATIC_RANGE ->
-      (
-        let opr_alter opr =
-          match opr with
-          | I.OPR_REGISTER n when n = old_this -> I.OPR_REGISTER new_this
-          | _ -> opr
-        in
-        D.insrt_ins dx off (op, L.map opr_alter opr)
-      )
-      | _ -> ()
-    )
-  in
-  if old_this <> new_this then DA.iter ins_iter citm.D.insns
+  citm.D.outs_size      <- max outs citm.D.outs_size
 
 (* implements : D.dex -> D.link -> D.link -> string -> bool *)
 let implements (dx: D.dex) (cid: D.link) (itf: D.link) (mname: string) : bool =
@@ -642,7 +641,6 @@ let make_mmap maps (dx: D.dex) xl yl cro : unit =
     let s_name = D.get_str dx s_mit.D.m_name_id
     and s_argv = L.map (l2l maps.cmap) (D.get_argv dx s_mit)
     and s_rety = l2l maps.cmap (D.get_rety dx s_mit) in
-    (* if it's in ads packages, do not check method name *)
     let cname = D.get_ty_str dx s_mit.D.m_class_id in
     let t =
       match cro with

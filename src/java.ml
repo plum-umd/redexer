@@ -57,6 +57,8 @@ let j = "long"
 let f = "float"
 let d = "double"
 
+let shorties = [v; z; b; s; c; i; j; f; d]
+
 let init = "<init>"
 let clinit = "<clinit>"
 
@@ -177,6 +179,16 @@ struct
   let thr = pk^"Throwable"
   let stk = pk^"StackTraceElement"
 
+  let c_void  = pk^"Void"
+  let c_bool  = pk^"Boolean"
+  let c_char  = pk^"Character"
+  let c_byte  = pk^"Byte"
+  let c_short = pk^"Short"
+  let c_int   = pk^"Integer"
+  let c_long  = pk^"Long"
+  let c_float = pk^"Float"
+  let c_doubl = pk^"Double"
+
   let get_cls  = "getClass"
   let get_name = "getName"
   let get_stk  = "getStackTrace"
@@ -191,6 +203,8 @@ struct
   let v_of    = "valueOf"
 
   let clazz () = L.map to_java_ty [obj; cls; pkg; sys; str; sbd; thr; stk]
+  let wrappers () = L.map to_java_ty
+    [c_void; c_bool; c_char; c_byte; c_short; c_int; c_long; c_float; c_doubl]
 end
 
 module IO =
