@@ -920,7 +920,14 @@ and chg_abs_rel abs hsh lmap : D.data_item IM.t =
   and place_ann_set acc = function
     | _, D.ANNO_SET     ll ->
     (
-      let rl  = L.map (pos hsh.h_annot) ll in
+      let get_an_ty (l: D.link) : D.link =
+        let _, item = H.find hsh.h_annot (D.get_off l) in
+        match item with
+        | D.ANNOTATION ann -> ann.D.annotation.D.an_type_idx
+        | _ -> raise (D.Wrong_match "place_ann_set")
+      in
+      let ac l1 l2 = lc (get_an_ty l1) (get_an_ty l2) in
+      let rl  = L.map (pos hsh.h_annot) (L.stable_sort ac ll) in
       let cur = !offset in
       offset := !offset + 4 + (L.length ll) * 4;
       IM.add (to_i32 cur) (D.ANNO_SET rl) acc
@@ -1071,11 +1078,13 @@ and chg_abs_rel abs hsh lmap : D.data_item IM.t =
         D.method_idx = l2l lmap.mtd_ids "method_idx" e.D.method_idx;
         D.code_off   = sop cod !sz_cod_itm (pos hsh.h_cod_itm e.D.code_off);
       } in
+      let fc f1 f2 = lc f1.D.field_idx f2.D.field_idx
+      and mc m1 m2 = lc m1.D.method_idx m2.D.method_idx in
       let ci' = {
-        D.static_fields   = L.map ef ci.D.static_fields;
-        D.instance_fields = L.map ef ci.D.instance_fields;
-        D.direct_methods  = L.map em ci.D.direct_methods;
-        D.virtual_methods = L.map em ci.D.virtual_methods;
+        D.static_fields   = L.stable_sort fc (L.map ef ci.D.static_fields);
+        D.instance_fields = L.stable_sort fc (L.map ef ci.D.instance_fields);
+        D.direct_methods  = L.stable_sort mc (L.map em ci.D.direct_methods);
+        D.virtual_methods = L.stable_sort mc (L.map em ci.D.virtual_methods);
       } in
       let cur = !offset in
       offset := !offset + CL.length (trans_class_data ci');
@@ -1239,10 +1248,12 @@ and chg_abs_rel_ann lmap ann : D.encoded_annotation =
   let chg_elt (e: D.annotation_element) = {
     D.name_idx = l2l lmap.str_ids "name_idx" e.D.name_idx;
     D.value    = chg_abs_rel_ev lmap e.D.value;
-  } in
+  }
+  and ec e1 e2 = lc e1.D.name_idx e2.D.name_idx
+  in
   {
     D.an_type_idx = l2l lmap.typ_ids "an_type_idx" ann.D.an_type_idx;
-    D.elements    = L.map chg_elt ann.D.elements;
+    D.elements    = L.stable_sort ec (L.map chg_elt ann.D.elements);
   }
 
 (* 2nd phase: calculate absolute offset, rel position -> abs one *)
@@ -1783,7 +1794,7 @@ and trans_encoded_ann (ann: D.encoded_annotation) : char CL.clist =
     and value = trans_encoded_value e.D.value
     in name @@ value @@ acc
   in
-  ty @@ sz @@ (L.fold_right e_folder ann.D.elements CL.empty)
+  ty @@ sz @@ L.fold_right e_folder ann.D.elements CL.empty
 
 and trans_static_val (sl: D.encoded_value list) : char CL.clist =
   let sz = write_uleb128 (L.length sl) in
@@ -1805,22 +1816,13 @@ and trans_class_data (ci: D.class_data_item) : char CL.clist =
          @@ (write_uleb128 (D.of_off e.D.code_off)) in
     prv := D.of_idx e.D.method_idx; w
   in
-  let fc f1 f2 =
-    let fid1 = D.of_idx f1.D.field_idx
-    and fid2 = D.of_idx f2.D.field_idx in
-    compare fid1 fid2
-  and mc m1 m2 =
-    let mid1 = D.of_idx m1.D.method_idx
-    and mid2 = D.of_idx m2.D.method_idx in
-    compare mid1 mid2
-  in
   prv := 0;
-  let s_fld = flatten (L.map ef (L.stable_sort fc ci.D.static_fields))   in
+  let s_fld = flatten (L.map ef ci.D.static_fields)   in
   prv := 0;
-  let i_fld = flatten (L.map ef (L.stable_sort fc ci.D.instance_fields)) in
+  let i_fld = flatten (L.map ef ci.D.instance_fields) in
   prv := 0;
-  let d_mtd = flatten (L.map em (L.stable_sort mc ci.D.direct_methods))  in
+  let d_mtd = flatten (L.map em ci.D.direct_methods)  in
   prv := 0;
-  let v_mtd = flatten (L.map em (L.stable_sort mc ci.D.virtual_methods)) in
+  let v_mtd = flatten (L.map em ci.D.virtual_methods) in
   ssz @@ isz @@ dsz @@ vsz @@ s_fld @@ i_fld @@ d_mtd @@ v_mtd
 

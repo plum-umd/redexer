@@ -69,12 +69,13 @@ class Dex
   end
 
   def self.dump(dex_name=DEX, *out_name)
-    self.runcmd("#{REDEXER} #{self.out_opt(out_name)} -dump #{dex_name} #{QUIET}")
+    opt = self.out_opt(out_name)
+    self.runcmd("#{REDEXER} #{opt} -dump #{dex_name}")
   end
 
   def self.combine(dex_name, lib, *out_name)
     opt = self.out_opt(out_name)
-    self.runcmd("#{REDEXER} #{opt} -lib #{lib} -combine #{dex_name} #{QUIET}")
+    self.runcmd("#{REDEXER} #{opt} -lib #{lib} -combine #{dex_name}")
   end
   
   def self.logging(dex_name=DEX, *out_name)
