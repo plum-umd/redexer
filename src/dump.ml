@@ -923,7 +923,8 @@ and chg_abs_rel abs hsh lmap : D.data_item IM.t =
       let get_an_ty (l: D.link) : D.link =
         let _, item = H.find hsh.h_annot (D.get_off l) in
         match item with
-        | D.ANNOTATION ann -> ann.D.annotation.D.an_type_idx
+        | D.ANNOTATION ann ->
+          l2l lmap.typ_ids "an_type_idx" ann.D.annotation.D.an_type_idx
         | _ -> raise (D.Wrong_match "place_ann_set")
       in
       let ac l1 l2 = lc (get_an_ty l1) (get_an_ty l2) in
