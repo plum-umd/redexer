@@ -265,14 +265,21 @@ object
       let op, opr = D.get_ins dx ins in
       match I.access_link op with
       | I.METHOD_IDS (* super call would be captured as 'override' *)
-        when op <> I.OP_INVOKE_SUPER && op <> I.OP_INVOKE_SUPER_RANGE ->
+        when not (L.mem op [I.OP_INVOKE_SUPER; I.OP_INVOKE_SUPER_RANGE]) ->
       (
         let mid = D.opr2idx (U.get_last opr) in
         let cid = D.get_cid_from_mid dx mid in
-        let cname = J.of_java_ty (D.get_ty_str dx cid) in
-        let mname = D.get_mtd_name dx mid in
-        if begins_w_adr cname && 0 <> S.compare mname J.init then
-          Log.i (Pf.sprintf "invoke: %s->%s" cname mname)
+        try ignore (D.get_citm dx cid mid)
+        (* means that method will be loaded at run-time, i.e., libraries *)
+        with D.Wrong_dex _ ->
+        (
+          let sid = D.get_superclass dx cid in
+          let lid = if sid = D.no_idx then cid else sid in
+          let lname = J.of_java_ty (D.get_ty_str dx lid) in
+          let mname = D.get_mtd_name dx mid in
+          if begins_w_adr lname && 0 <> S.compare mname J.init then
+            Log.i (Pf.sprintf "invoke: %s->%s" lname mname)
+        )
       )
       | _ -> ()
 end
