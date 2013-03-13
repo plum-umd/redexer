@@ -87,9 +87,6 @@ let all (n: int) : IS.t =
     s := IS.add i !s
   done; !s
 
-let get_last (lst: 'a list) : 'a =
-  L.hd (L.rev lst)
-
 let is_changed bef aft : bool =
   IS.compare bef aft <> 0
 
@@ -138,14 +135,14 @@ and calc_leaders (dx: D.dex) (tries: D.try_item list) inss : D.link list =
       else if L.mem hx [0x2b; 0x2c] then (* switch *)
       (
         let ins2 = L.hd tl (* default case *)
-        and off = D.opr2off (get_last opr) in
+        and off = D.opr2off (U.get_last opr) in
         let tgt = ins2 :: (get_sw_tagets dx off) in
         L.fold_left (fun a l -> OS.add l a) acc tgt
       )
       else if L.mem hx (U.range 0x32 0x3d []) then (* if-test *)
       (
         let ins2 = L.hd tl (* false branch *)
-        and off = D.opr2off (get_last opr) in
+        and off = D.opr2off (U.get_last opr) in
         iter (OS.add ins2 (OS.add off acc)) tl
       )
       else iter acc tl
@@ -205,7 +202,7 @@ and make_edges (dx: D.dex) (citm: D.code_item) (g: cfg) : unit =
     in
     if b.insns <> [] then (* NORM *)
     (
-      let lns = L.hd (L.rev b.insns)
+      let lns = U.get_last b.insns
       in (* see the last instruction of the basic block *)
       let catch_bbs = catch_to lns in
       L.iter (add_pred i) catch_bbs;
@@ -226,14 +223,14 @@ and make_edges (dx: D.dex) (citm: D.code_item) (g: cfg) : unit =
       (
         let des1 = i + 1 in (* default case *)
         add_edge i des1;
-        let off = D.opr2off (get_last opr) in
+        let off = D.opr2off (U.get_last opr) in
         let tgt = get_sw_tagets dx off in
         L.iter (fun l -> add_edge i (find_bb g l)) tgt
       )
       else if L.mem hx (U.range 0x32 0x3d []) then (* if-test *)
       (
         let des1 = i + 1 (* false branch *)
-        and des2 = find_bb g (D.opr2off (get_last opr)) in
+        and des2 = find_bb g (D.opr2off (U.get_last opr)) in
         add_edge i des1; add_edge i des2
       )
       else (* general case *)
@@ -293,7 +290,7 @@ let doms (g: cfg) : dom =
 (* idom : dom -> int -> int *)
 let idom dom i : int =
   let dom' = IS.elements (IS.diff dom.(i) (IS.singleton i)) in
-  if dom' <> [] then L.hd (L.rev dom') else 0
+  if dom' <> [] then U.get_last dom' else 0
 
 (* cdom : dom -> int list *)
 let cdom dom : int list =
@@ -342,7 +339,7 @@ let cpdom pdom : int list =
 let get_last_ins (g: cfg) pdom : D.link =
   let e = (A.length g) - 1 in
   let last_bb = L.find (fun bb -> ipdom pdom bb = e) g.(e).pred in
-  L.hd (L.rev g.(last_bb).insns)
+  U.get_last g.(last_bb).insns
 
 (***********************************************************************)
 (* Control-flow Module for Data-flow Analysis                          *)
@@ -378,7 +375,7 @@ let to_module (dx: D.dex) (g: cfg) : cfg_module =
     let pred ins =
       let b = find_bb g ins in
       if L.hd g.(b).insns = ins then
-        try L.map (fun b' -> L.hd (L.rev g.(b').insns)) g.(b).pred with _ -> []
+        try L.map (fun b' -> U.get_last g.(b').insns) g.(b).pred with _ -> []
       else
         let rec find_pred p = function
           | h::_ when h = ins -> p
@@ -389,7 +386,7 @@ let to_module (dx: D.dex) (g: cfg) : cfg_module =
 
     let succ ins =
       let b = find_bb g ins in
-      if L.hd (L.rev g.(b).insns) = ins then
+      if U.get_last g.(b).insns = ins then
         try L.map (fun b' -> L.hd g.(b').insns) g.(b).succ with _ -> []
       else
         let rec find_succ = function

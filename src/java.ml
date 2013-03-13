@@ -153,12 +153,12 @@ and of_java_ty typ : string =
 (* get_package_name : string -> string *)
 let get_package_name full : string =
   let ty = of_java_ty full in
-  let pkg = L.rev (L.tl (L.rev (U.split_string ty '.'))) in
+  let pkg = U.rm_last (U.split_string ty '.') in
   S.concat "." pkg
 
 (* get_class_name : string -> string *)
 let get_class_name full : string =
-  let cls = L.hd (L.rev (U.split_string full '/')) in
+  let cls = U.get_last (U.split_string full '/') in
   U.trim_last cls
 
 (***********************************************************************)

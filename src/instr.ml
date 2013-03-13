@@ -1178,7 +1178,7 @@ let get_argv (ins: instr) : operand list =
   match access_link op with
   | METHOD_IDS ->
   (
-    let argv = L.rev (L.tl (L.rev opr))
+    let argv = U.rm_last opr
     and hx = op_to_hx op in
     if 0x6e <= hx && hx <= 0x72 then argv (* normal *)
     else if 0x74 <= hx && hx <= 0x78 then (* range *)

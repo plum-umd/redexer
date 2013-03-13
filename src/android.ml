@@ -267,7 +267,7 @@ object
       | I.METHOD_IDS (* super call would be captured as 'override' *)
         when op <> I.OP_INVOKE_SUPER && op <> I.OP_INVOKE_SUPER_RANGE ->
       (
-        let mid = D.opr2idx (L.hd (L.rev opr)) in
+        let mid = D.opr2idx (U.get_last opr) in
         let cid = D.get_cid_from_mid dx mid in
         let cname = J.of_java_ty (D.get_ty_str dx cid) in
         let mname = D.get_mtd_name dx mid in

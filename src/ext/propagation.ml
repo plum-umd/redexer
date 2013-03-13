@@ -169,7 +169,7 @@ let rec transfer (dx: D.dex) (inn: value IM.t) (ins: D.link) : value IM.t =
   )
   else if L.mem hx (U.range 0x6e 0x72 (U.range 0x74 0x78 [])) then (* INVOKE *)
   (
-    let mid = D.opr2idx (L.hd (L.rev opr)) in
+    let mid = D.opr2idx (U.get_last opr) in
     try
       let reg_x = get_this opr in
       let this = IM.find reg_x inn in

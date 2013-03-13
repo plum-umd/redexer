@@ -54,17 +54,23 @@ val read_lines : in_channel -> string list
 (** tail-recursive version of python-like range *)
 val range : int -> int -> int list -> int list
 
-(** trim the 1st character *)
+(** get the last element in a [list] *)
+val get_last : 'a list -> 'a
+
+(** remove the last element in a [list] *)
+val rm_last : 'a list -> 'a list
+
+(** trim the 1st [char] *)
 val trim_1st : string -> string
 
-(** trim the last character *)
+(** trim the last [char] *)
 val trim_last : string -> string
 
-(** split a [string] into a list of [char]s *)
+(** split a [string] into a [list] of [char]s *)
 val explode : string -> char list
 
-(** split a [string] into a list of [string]s, with separator [split] *)
+(** split a [string] into a [list] of [string]s, with separator [split] *)
 val split_string : string -> char -> string list
 
-(** [true] if the given string begins with the given prefix *)
+(** [true] if the given [string] begins with the given prefix *)
 val begins_with : string -> string -> bool

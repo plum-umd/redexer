@@ -38,6 +38,8 @@
 
 module DA = DynArray
 
+module U = Util
+
 module I = Instr
 module D = Dex
 module V = Visitor
@@ -155,7 +157,7 @@ object
     match I.access_link op with
     | I.METHOD_IDS ->
       (* last opr at invoke-kind must be method id *)
-      let callee = D.opr2idx (L.hd (L.rev opr)) in
+      let callee = D.opr2idx (U.get_last opr) in
       (* explicit call relations *)
       add_call dx cg caller callee
     | _ -> ()

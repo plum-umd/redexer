@@ -58,11 +58,23 @@ let read_lines ch : string list =
     with End_of_file -> L.rev acc
   in aux []
 
-(* range: int -> int -> int list -> int list *)
+(***********************************************************************)
+(* a few list utilities                                                *)
+(***********************************************************************)
+
+(* range : int -> int -> int list -> int list *)
 let rec range (x: int) (y: int) res : int list =
   if y < x then res else
     let new_res = y :: res in
     if x = y then new_res else range x (y-1) new_res
+
+(* get_last : 'a list -> 'a *)
+let get_last (l: 'a list) : 'a =
+  L.hd (L.rev l)
+
+(* rm_last : 'a list -> 'a list *)
+let rm_last (l: 'a list) : 'a list =
+  L.rev (L.tl (L.rev l))
 
 (***********************************************************************)
 (* a few string utilities                                              *)

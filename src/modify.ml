@@ -123,9 +123,6 @@ let seed_addr (seed: int) : unit =
 let get_fresh_addr () : D.link =
   incr rlink; D.to_off !rlink
 
-let get_last (l: 'a list) : 'a =
-  L.hd (L.rev l)
-
 (* try matching regular expression *)
 let regexp_folder target acc re =
   acc || RE.string_match re target 0
@@ -972,7 +969,7 @@ object
       let op, opr = D.get_ins dx ins in
       match I.access_link op with
       | I.METHOD_IDS ->
-        let mid = D.opr2idx (get_last opr) in
+        let mid = D.opr2idx (U.get_last opr) in
         let mit = D.get_mit dx mid in
         let rety = get_ty_str dx (D.get_rety dx mit) in
         let cname = D.get_ty_str dx (D.get_cid_from_mid dx mid)
