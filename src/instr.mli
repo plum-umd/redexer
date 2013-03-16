@@ -384,9 +384,21 @@ val new_arr : int -> int -> int -> instr
  generate a new [OP_GOTO]-kind {!instr} *)
 val new_goto : int -> offset -> instr
 
+(** for the given test registers and {!offset},
+ generate a new [OP_IF]-kind {!instr} *)
+val new_if : int -> int -> int -> offset -> instr
+
 (** for a given value, array, index registers,
  generate a new [OP_A(GET|PUT)]-kind {!instr} *)
 val new_arr_op : int -> int list -> instr
+
+(** for the given binary op and registers,
+ generate a new binary operation {!instr} *)
+val new_bin_op : int -> int list -> instr
+
+(** for given registers and instance field id,
+ generate [OP_I(GET|PUT)]-kind {!instr} *)
+val new_ist_fld : int -> int -> int -> int -> instr
 
 (** for given register number and static field id,
  generate [OP_S(GET|PUT)]-kind {!instr} *)

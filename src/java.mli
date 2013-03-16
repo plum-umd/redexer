@@ -38,7 +38,7 @@
 
 (** This module provides utility functions for handling [Java] language *)
 
-(** {2 Basic Types} *)
+(** {2 Primitives} *)
 
 (** [void] *)
 val v : string
@@ -98,6 +98,12 @@ val of_type_descr : string -> string
 
 (** from [Ljava/lang/Object;] to [java.lang.Object] *)
 val of_java_ty : string -> string
+
+(** [true] if the given type name is one of primitive types *)
+val is_primitive : string -> bool
+
+(** [true] if the given type name is either [long] or [double] *)
+val is_wide : string -> bool
 
 (** from [Ljava/lang/Object;] to [java.lang] *)
 val get_package_name : string -> string

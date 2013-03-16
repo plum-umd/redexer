@@ -1945,20 +1945,25 @@ let instr_to_bytes (base: int) (ins: instr) : char list =
 (* New instruction                                                     *)
 (***********************************************************************)
 
+let to_con c = OPR_CONST c
+let to_reg r = OPR_REGISTER r
+let to_idx i = OPR_INDEX i
+let to_off f = OPR_OFFSET f
+
 (* new_const : int -> int -> instr *)
 let new_const (r: int) (const: int) : instr =
   let op =
-    if const < 0xf then OP_CONST_4 
+    if const < 0xf && r < 16 then OP_CONST_4 
     else if const < 0xffff then OP_CONST_16
     else OP_CONST
-  and opr = [OPR_REGISTER r; OPR_CONST (to_i64 const)] in op, opr
+  and opr = [to_reg r; to_con (to_i64 const)] in op, opr
 
 (* wrap REGISTER except for the last thing (type, method, or field id) *)
 let refer_last (hx: int) (args: int list) : instr =
   let rec ex_last = function
     | []   -> []
-    | [i]  -> [OPR_INDEX i]
-    | h::t -> (OPR_REGISTER h)::(ex_last t)
+    | [i]  -> [to_idx i]
+    | h::t -> (to_reg h)::(ex_last t)
   in
   let op = hx_to_op hx
   and opr = ex_last args in op, opr
@@ -1966,7 +1971,7 @@ let refer_last (hx: int) (args: int list) : instr =
 (* MOVE from a register to a register *)
 let mv_reg_to_reg (hx: int) (dst: int) (src: int) : instr =
   let op = hx_to_op hx
-  and opr = [OPR_REGISTER dst; OPR_REGISTER src] in op, opr
+  and opr = L.map to_reg [dst; src] in op, opr
 
 (* MOVE a thing referred by id to a register *)
 let mv_id_to_reg (hx: int) (r: int) (i: int) : instr =
@@ -1993,12 +1998,26 @@ let new_arr (dst: int) (sz: int) (typ: int) : instr =
 (* new_goto : int -> offset -> instr *)
 let new_goto (hx: int) (dst: offset) : instr =
   let op = hx_to_op hx
-  and opr = [OPR_OFFSET dst] in op, opr
+  and opr = [to_off dst] in op, opr
+
+(* new_if : int -> int -> int -> offset -> instr *)
+let new_if (hx: int) (a: int) (b: int) (dst: offset) : instr =
+  let op = hx_to_op hx
+  and opr = [to_reg a; to_reg b; to_off dst] in op, opr
 
 (* new_arr_op : int -> int list -> instr *)
 let new_arr_op (hx: int) (argv: int list) : instr =
   let op = hx_to_op hx
-  and opr = L.map (fun i -> OPR_REGISTER i) argv in op, opr
+  and opr = L.map to_reg argv in op, opr
+
+(* new_bin_op : int -> int list -> instr *)
+let new_bin_op (hx: int) (regs: int list) : instr =
+  let op = hx_to_op hx
+  and opr = L.map to_reg regs in op, opr
+
+(* new_ist_fld : int -> int -> int -> int -> instr *)
+let new_ist_fld (hx: int) (d: int) (o: int) (i: int) : instr =
+  refer_last hx [d; o; i]
 
 (* new_stt_fld : int -> int -> int -> instr *)
 let new_stt_fld (hx: int) (r: int) (i: int) : instr =
@@ -2011,12 +2030,12 @@ let new_invoke (hx: int) (args: int list) : instr =
 (* new_move_result : int -> int -> instr *)
 let new_move_result (hx: int) (r: int) : instr =
   let op = hx_to_op hx
-  and opr = [OPR_REGISTER r] in op, opr
+  and opr = [to_reg r] in op, opr
 
 (* new_return : int -> int option -> instr *)
 let new_return (hx: int) (r: int option) : instr =
   let op = hx_to_op hx
-  and opr = match r with Some i -> [OPR_REGISTER i] | _ -> [] in op, opr
+  and opr = match r with Some i -> [to_reg i] | _ -> [] in op, opr
 
 (* rv : instr *)
 let rv = new_return 0x0e None

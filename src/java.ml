@@ -150,6 +150,14 @@ and of_java_ty typ : string =
     "["^(of_java_ty (U.trim_1st typ))
   else typ
 
+(* is_primitive : string -> bool *)
+let is_primitive (typ: string) : bool =
+  L.mem typ (L.map to_type_descr shorties)
+
+(* is_wide : string -> bool *)
+let is_wide (typ: string) : bool =
+  L.mem typ (L.map to_type_descr [j; d])
+
 (* get_package_name : string -> string *)
 let get_package_name full : string =
   let ty = of_java_ty full in
@@ -242,6 +250,6 @@ struct
 end
 
 (* is_library : string -> bool *)
-let is_library (c_name: string) : bool =
-  L.mem c_name (Lang.clazz ()) || L.mem c_name (IO.clazz ())
+let is_library (cname: string) : bool =
+  L.mem cname (Lang.clazz ()) || L.mem cname (IO.clazz ())
 
