@@ -91,11 +91,17 @@ val prev : cursor -> cursor
 (** next instruction *)
 val next : cursor -> cursor
 
+(** get the {!cursor} of the given instruction *)
+val get_cursor : Dex.code_item -> Dex.link -> cursor
+
 (** get the first {!cursor} *)
 val get_fst_cursor : unit -> cursor
 
 (** get the last {!cursor} *)
 val get_last_cursor : Dex.dex -> Dex.code_item -> cursor
+
+(** get the {!Instr.instr} at {!cursor} point *)
+val get_ins : Dex.dex -> Dex.code_item -> cursor -> Instr.instr
 
 (** get the first {!Instr.instr} *)
 val get_fst_ins : Dex.dex -> Dex.code_item -> Instr.instr
@@ -127,8 +133,11 @@ val insrt_insns_after_end : Dex.dex -> Dex.code_item -> Instr.instr list -> curs
 (** insert {!Instr.rv} at the end of the method *)
 val insrt_return_void : Dex.dex -> Dex.link -> string -> unit
 
-(** shift register usage so as to secure free registers *)
+(** shift register usage so as to secure free registers around 0 *)
 val shift_reg_usage : Dex.dex -> Dex.code_item -> int -> unit
+
+(** shift parameters so as to secure free registers around "this" *)
+val shift_params : Dex.dex -> Dex.code_item -> int -> unit
 
 (** update register usage: [registers_size] and [outs_size] *)
 val update_reg_usage : Dex.dex -> Dex.code_item -> unit
@@ -152,6 +161,9 @@ val discard_cls_calls : Dex.dex -> string list -> unit
 
 (** trace call stack by modifying methods of specific classes in the dex *)
 val call_trace : Dex.dex -> string list -> unit
+
+(** expand {Instr.operand} usage caused by massive instrumentations *)
+val expand_opr : Dex.dex -> unit
 
 (** API test *)
 val hello : unit -> Dex.dex

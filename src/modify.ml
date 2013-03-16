@@ -38,6 +38,7 @@
 
 module St = Stats
 module DA = DynArray
+module CL = Clist
 
 module U = Util
 
@@ -79,6 +80,9 @@ type class_replacement_option =
   | Replace_Except_Methods of string * string * string list
 
 (* opcodes *)
+let move_f16 = I.op_to_hx I.OP_MOVE_FROM16
+let mv_wd_16 = I.op_to_hx I.OP_MOVE_WIDE_FROM16
+let mv_obj16 = I.op_to_hx I.OP_MOVE_OBJECT_FROM16
 let rtrn_obj = I.op_to_hx I.OP_RETURN_OBJECT
 let cons_str = I.op_to_hx I.OP_CONST_STRING
 let mv_r_obj = I.op_to_hx I.OP_MOVE_RESULT_OBJECT
@@ -92,6 +96,8 @@ let call_dir = I.op_to_hx I.OP_INVOKE_DIRECT
 (***********************************************************************)
 (* Utilities                                                           *)
 (***********************************************************************)
+
+let (@@) cl1 cl2 = CL.append cl1 cl2
 
 let print_fit (dx: D.dex) (fid, fit) : unit =
   let f_str = Log.of_i (D.of_idx fid)
@@ -411,6 +417,10 @@ let prev cur : cursor = cur - 1
 (* next instruction *)
 let next cur : cursor = cur + 1
 
+(* get the cursor of the given instruction *)
+let get_cursor (citm: D.code_item) (ins: D.link) : cursor =
+  DA.index_of (fun e -> e = ins) citm.D.insns
+
 (* get the cursor of the first instruction *)
 let get_fst_cursor () : cursor = 0
 
@@ -418,18 +428,21 @@ let get_fst_cursor () : cursor = 0
 let get_last_cursor (dx: D.dex) (citm: D.code_item) : cursor =
   let cfg  = St.time "cfg"  (Cf.make_cfg dx) citm in
   let pdom = St.time "pdom"  Cf.pdoms cfg in
-  let off  = St.time "pdom" (Cf.get_last_ins cfg) pdom in
-  DA.index_of (fun e -> e = off) citm.D.insns
+  let ins  = St.time "pdom" (Cf.get_last_ins cfg) pdom in
+  get_cursor citm ins
+
+(* get_ins : D.dex -> D.code_item -> cursor -> I.instr *)
+let get_ins (dx: D.dex) (citm: D.code_item) (c: cursor) : I.instr =
+  let off = DA.get citm.D.insns c in
+  D.get_ins dx off
 
 (* get_fst_ins : D.dex -> D.code_item -> I.instr *)
 let get_fst_ins (dx: D.dex) (citm: D.code_item) : I.instr =
-  let fst_off = DA.get citm.D.insns (get_fst_cursor ()) in
-  D.get_ins dx fst_off
+  get_ins dx citm (get_fst_cursor ())
 
 (* get_last_ins : D.dex -> D.code_item -> I.instr *)
 let get_last_ins (dx: D.dex) (citm: D.code_item) : I.instr =
-  let last_off = DA.get citm.D.insns (get_last_cursor dx citm) in
-  D.get_ins dx last_off
+  get_ins dx citm (get_last_cursor dx citm)
 
 let next_off off : D.link =
   D.to_off ((D.of_off off) + 1)
@@ -518,15 +531,14 @@ let insrt_return_void dx (cid: D.link) (mname: string) : unit =
   let _,citm = D.get_citm dx cid mid in
   ignore (insrt_insns_after_end dx citm [I.rv])
 
-(* shift_reg_usage : D.dex -> D.code_item -> int -> unit *)
-let shift_reg_usage dx (citm: D.code_item) (sft: int) : unit =
+let shift_reg_cond dx (citm: D.code_item) (sft: int) cond : unit =
   let ins_iter (off: D.link) =
     if D.is_ins dx off then
     (
       let op, opr = D.get_ins dx off in
       let opr_alter opr =
         match opr with
-        | I.OPR_REGISTER n -> I.OPR_REGISTER (n + sft)
+        | I.OPR_REGISTER n when cond n -> I.OPR_REGISTER (n + sft)
         | _ -> opr
       in
       D.insrt_ins dx off (op, L.map opr_alter opr)
@@ -534,6 +546,16 @@ let shift_reg_usage dx (citm: D.code_item) (sft: int) : unit =
   in
   DA.iter ins_iter citm.D.insns;
   citm.D.registers_size <- citm.D.registers_size + sft
+
+(* shift_reg_usage : D.dex -> D.code_item -> int -> unit *)
+let shift_reg_usage dx (citm: D.code_item) (sft: int) : unit =
+  shift_reg_cond dx citm sft (fun r -> true)
+
+(* shift_params : D.dex -> D.code_item -> int -> unit *)
+let shift_params dx (citm: D.code_item) (sft: int) : unit =
+  let this = D.calc_this citm in
+  let params = U.range this (citm.D.registers_size - 1) [] in
+  shift_reg_cond dx citm sft (fun r -> L.mem r params)
 
 (* update_reg_usage : D.dex -> D.code_item -> unit *)
 let update_reg_usage dx (citm: D.code_item) : unit =
@@ -547,7 +569,7 @@ let update_reg_usage dx (citm: D.code_item) : unit =
     in
     L.fold_left opr_folder_regs regs opr,
     if I.access_link op <> I.METHOD_IDS then outs else
-      max outs ((L.length opr) - 1) (* excluding the method id *)
+      let argv = I.get_argv (op, opr) in max outs (L.length argv)
   in
   let regs, outs = DA.fold_left ins_folder (IS.empty, 0) citm.D.insns in
   citm.D.registers_size <- max (IS.cardinal regs) citm.D.registers_size;
@@ -638,6 +660,7 @@ let make_mmap maps (dx: D.dex) xl yl cro : unit =
     let s_name = D.get_str dx s_mit.D.m_name_id
     and s_argv = L.map (l2l maps.cmap) (D.get_argv dx s_mit)
     and s_rety = l2l maps.cmap (D.get_rety dx s_mit) in
+    (* if it's in ads packages, do not check method name *)
     let cname = D.get_ty_str dx s_mit.D.m_class_id in
     let t =
       match cro with
@@ -1070,6 +1093,163 @@ let call_trace (dx: D.dex) (re: string list) : unit =
   let res = L.map RE.regexp re in
   V.iter (new insrt_tracer_call dx trc_mid res);
   Log.i ("# of call trace(s): "^(Log.of_i (!trc_cnt + L.length inss_trc)))
+
+(***********************************************************************)
+(* Expand operands                                                     *)
+(***********************************************************************)
+
+let exp_cnt = ref 0
+
+class opr_expander (dx: D.dex) =
+  let primitives = L.map J.to_type_descr J.shorties in
+object
+  inherit V.iterator dx
+
+  (* to update goto instructions whose offset would be truncated
+    due to aggressive instrumentations *)
+  val mutable cur_citm = D.empty_citm ()
+  method v_citm (citm: D.code_item) : unit =
+    cur_citm <- citm
+
+  method v_ins (ins: D.link) : unit =
+    let overwrite (inss: I.instr list) : unit =
+      let cursor = get_cursor cur_citm ins in
+      D.insrt_ins dx ins (L.hd inss);
+      insrt_insns dx cur_citm (next cursor) (L.tl inss);
+      exp_cnt := !exp_cnt + (L.length inss)
+    in
+    if D.is_ins dx ins then
+    (
+      let op, opr = D.get_ins dx ins in
+      let hx = I.op_to_hx op in
+      match op, opr with
+      (* register for const/4 can be truncated *)
+      | I.OP_CONST_4, I.OPR_REGISTER r :: I.OPR_CONST c :: []
+      when r >= 16 (* 2^4 *) -> incr exp_cnt;
+        D.insrt_ins dx ins (I.new_const r (Int64.to_int c))
+
+      (* source/destination registers for move can be truncated *)
+      | I.OP_MOVE,        I.OPR_REGISTER s :: I.OPR_REGISTER d :: []
+      | I.OP_MOVE_WIDE,   I.OPR_REGISTER s :: I.OPR_REGISTER d :: []
+      | I.OP_MOVE_OBJECT, I.OPR_REGISTER s :: I.OPR_REGISTER d :: []
+      when d >=  16 (* 2^4 *) -> incr exp_cnt;
+        if s >= 256 (* 2^8 *) then
+          D.insrt_ins dx ins (I.new_move (hx + 2) s d)
+        else
+          D.insrt_ins dx ins (I.new_move (hx + 1) s d)
+      | I.OP_MOVE_FROM16,        I.OPR_REGISTER s :: I.OPR_REGISTER d :: []
+      | I.OP_MOVE_WIDE_FROM16,   I.OPR_REGISTER s :: I.OPR_REGISTER d :: []
+      | I.OP_MOVE_OBJECT_FROM16, I.OPR_REGISTER s :: I.OPR_REGISTER d :: []
+      when s >= 256 (* 2^8 *) -> incr exp_cnt;
+        D.insrt_ins dx ins (I.new_move (hx + 1) s d)
+
+      (* offset for goto can be truncated *)
+      | I.OP_GOTO,    I.OPR_OFFSET off :: []
+      when cur_citm.D.insns_size >    256 (* 2^8 *) -> incr exp_cnt;
+        D.insrt_ins dx ins (I.new_goto (hx + 1) off)
+      | I.OP_GOTO_16, I.OPR_OFFSET off :: []
+      when cur_citm.D.insns_size > 65536 (* 2^16 *) -> incr exp_cnt;
+        D.insrt_ins dx ins (I.new_goto (hx + 1) off)
+
+      (* registers for if-test can be truncated *)
+      | _, I.OPR_REGISTER a :: I.OPR_REGISTER b :: I.OPR_OFFSET off :: []
+      when 0x32 <= hx && hx <= 0x37 && (a >= 16 || b >= 16) (* 2^4 *) ->
+      (
+        let new_a = if a >= 16 then 0 else a
+        and new_b = if b >= 16 then 1 else b in
+        let mv_a = if a < 16 then [] else [I.new_move move_f16 new_a a]
+        and mv_b = if b < 16 then [] else [I.new_move move_f16 new_b b]
+        and test = [I.new_if hx new_a new_b off] in
+        let inss = mv_a @ mv_b @ test in
+        overwrite inss
+      )
+
+      (* registers for i(get|put)-* can be truncated *)
+      | _, I.OPR_REGISTER d :: I.OPR_REGISTER o :: I.OPR_INDEX fid :: []
+      when 0x52 <= hx && hx <= 0x5f && (d >= 16 || o >= 16) (* 2^4 *) ->
+      (
+        let new_d = if d >= 16 then 0 else d
+        and new_o = if o >= 16 then 2 else o in
+        let i_et = [I.new_ist_fld hx new_d new_o fid]
+        and mv_o = if o < 16 then [] else [I.new_move mv_obj16 new_o o]
+        and mv_d = if d < 16 then [] else
+          let mv_op = match op with
+            | I.OP_IGET_WIDE | I.OP_IPUT_WIDE -> mv_wd_16
+            | I.OP_IGET_OBJECT | I.OP_IPUT_OBJECT -> mv_obj16
+            | _ -> move_f16
+          in [I.new_move mv_op d new_d]
+        in
+        let inss = if 52 <= hx && hx <= 58
+          then mv_o @ i_et @ mv_d
+          else mv_o @ mv_d @ i_et
+        in
+        overwrite inss
+      )
+
+      (* parameters for method invocations can be truncated *)
+      | I.OP_INVOKE_VIRTUAL,   _
+      | I.OP_INVOKE_SUPER,     _
+      | I.OP_INVOKE_DIRECT,    _
+      | I.OP_INVOKE_STATIC,    _
+      | I.OP_INVOKE_INTERFACE, _ ->
+      (
+        let mid = D.opr2idx (U.get_last opr)
+        and argv = U.rm_last opr in
+        let calc_max_r acc = function I.OPR_REGISTER r -> max acc r in
+        let max_r = L.fold_left calc_max_r 0 argv in
+        if max_r >= 16 (* 2^4 *) then
+        (
+          let argv_ty = D.get_argv dx (D.get_mit dx mid)
+          and cid = D.get_cid_from_mid dx mid in
+          let argv_ty =
+            if op = I.OP_INVOKE_STATIC then argv_ty else cid :: argv_ty
+          in
+          let copy_argv (acc, (dsts, srcs)) ty =
+            let dst :: d_tl = dsts
+            and src :: s_tl = srcs
+            and tname = D.get_ty_str dx ty in
+            if not (J.is_primitive tname) then
+            (
+              let ins = I.new_move mv_obj16 dst src in
+              acc @@ CL.single ins, (d_tl, s_tl)
+            )
+            else if J.is_wide tname then
+            (
+              let ins = I.new_move mv_wd_16 dst src in
+              acc @@ CL.single ins, (L.tl d_tl, L.tl s_tl)
+            )
+            else
+            (
+              let ins = I.new_move move_f16 dst src in
+              acc @@ CL.single ins, (d_tl, s_tl)
+            )
+          in
+          let argn = L.length argv in
+          let dsts = U.range 0 (argn - 1) []
+          and srcs = L.map (function I.OPR_REGISTER r -> r) argv in
+          let inss = CL.toList (
+            fst (L.fold_left copy_argv (CL.empty, (dsts, srcs)) argv_ty)
+            @@ CL.single (I.new_invoke (hx + 6) [0; argn-1; D.of_idx mid])
+          ) in
+          overwrite inss
+        )
+      )
+
+      (* registers for binop/2addr can be truncated *)
+      | _, I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
+      when 0xb0 <= hx && hx <= 0xcf && (d >= 16 || s >= 16) -> incr exp_cnt;
+        D.insrt_ins dx ins (I.new_bin_op (hx - 32) [d; d; s])
+      | _ -> ()
+    )
+
+  method finish () : unit =
+    Log.i ("# of operand expand(s): "^(Log.of_i !exp_cnt))
+
+end
+
+(* expand_opr : D.dex -> unit *)
+let expand_opr (dx: D.dex) : unit =
+  V.iter (new opr_expander dx)
 
 (***********************************************************************)
 (* API test                                                            *)
