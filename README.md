@@ -116,7 +116,7 @@ of the given dex file in a YAML format.
 
 This option dumps instructions for a specified method
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd dump_method --mtd cls_.mtd
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd dump_method --mtd cls.mtd
 
 * identity
 
@@ -172,32 +172,32 @@ If you don't specify the pdf name, cg.pdf will be used.
 This option generates a pdf file that shows a control-flow graph of the given
 method.  Append a method name to a class name with dot: class_name.method_name
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd cfg --mtd cls_.mtd [--to blah.pdf]
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd cfg --mtd cls.mtd [--to blah.pdf]
 
 * (post) dominator tree
 
 This option is similar to the above feature, except for that it depicts
 (post) dominator tree.
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd (p)dom --mtd cls_.mtd [--to blah.pdf]
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd (p)dom --mtd cls.mtd [--to blah.pdf]
 
 * liveness analysis
 
 This option performs a classic backward data-flow analysis.
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd live --mtd cls_.mtd
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd live --mtd cls.mtd
 
 * constant-propagation analysis
 
 This option conducts a classic forward data-flow analysis.
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd const --mtd cls_.mtd
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd const --mtd cls.mtd
 
 * dependants
 
 This option finds class dependancy.
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd dependants --mtd cls_.mtd
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd dependants --mtd cls.mtd
 
 * launcher activity
 

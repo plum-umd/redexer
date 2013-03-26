@@ -34,15 +34,21 @@ Publications
 Requirements
 ------------
 
-- [OCaml][ml] 3.12 or higher
+* OCaml and Ruby
 
-- The OCaml SHA library (ocamlfind/findlib or FlexDLL).
+This tool is tested under [OCaml][ml] 3.12 and [Ruby][rb] 1.8.6(7),
+so you need to install them (or higher version of them).
+
+* OCaml SHA library (ocamlfind/findlib or FlexDLL)
+
 If you're using a linux machine, you can easily find a distribution.
-If not, e.g., using a Mac, you need to compile and install it yourself.
+
+If not, e.g., using a Mac, you need to install it by yourself.
 You can find the original source codes at [here][sha].
 Build it by running make, and link the resulting directory into ocamlfind's
 root site-lib directory; or sudo make install.
-If you're using a PC, you need to install [ocamlfind/findlib][flib]
+
+If you're PC, you need to install [ocamlfind/findlib][flib]
 and [FlexDLL][fdll] first.  Please make sure that your environment
 variables are set correctly as follows:
 
@@ -50,20 +56,21 @@ variables are set correctly as follows:
     CAML_LD_LIBRARY_PATH=%OCAMLLIB%\stublibs
     FLEXLINKFLAGS=-L%MinGW%\lib -L%MinGW%\lib\gcc\mingw32\N.N.N
 
-- [Ruby][rb] 1.8.6 or higher
+* Android SDK (or sources)
 
-- RubyGems and Nokogiri
+To unpack and repack apk files, we use [apktool][apk], an open source APK
+reengineering tool.  Since it uses aapt, Android Asset Packaging Tool,
+you need to install [Android SDK][sdk] or sources.  Besides, we use
+zipalign, which also comes from Android SDK, to optimize rewritten apps.
+
+* RubyGems and Nokogiri
+
 The main scripts are written in Ruby and require [RubyGems][gem], a Ruby
 package manager, and [Nokogiri][xml], an XML library to manipulate
 manifest files.
 
-- The Android SDK (or sources)
-To unpack and repack apk files, we use [apktool][apk], an open source APK
-reengineering tool.  Since it uses aapt, Android Asset Packaging Tool,
-you need to install the [Android SDK][sdk] or sources.  Also, we use
-zipalign, which also comes from Android SDK, to optimize rewritten apps.
+* (optional) graphviz dot
 
-- (optional) graphviz dot
 If you want to see graphs (e.g. call graph, control-flow graph,
 dominator tree, etc.), you need to install [graphviz dot][dot].
 
@@ -78,20 +85,23 @@ dominator tree, etc.), you need to install [graphviz dot][dot].
 [xml]: http://nokogiri.org/
 [dot]: http://www.graphviz.org/
 
-Building
---------
+Build
+-----
 
-Note that on some machines, you need to set some architecture-specific
-flags before building.  An export CFLAGS="-arch i386" or similar should
-work to solve strange linking problems from architecture-specific stat code.
-Building follows the usual configure-make convention:
+Note that on some machines, macs, for example, before building you
+need to set some arch specific flags.  An export CFLAGS="-arch i386"
+or similar should work to solve strange linking problems from arch
+specific stat code.
 
     $ ./configure
+
+It will generate ocamlutil/stat_stubs.c, which reflects your env.
+Then, make!  You can see redexer binary at the top level.
+
     $ make (clean)
 
-The build process leaves the redexer binary at the top level.
-Before using redexer, you must install the most recent platform file
-for apktool:
+Before using the tool, installing the most recent platform file
+for apktool is up to users.  For instance, you need to do like
 
     $ java -jar tools/apktool.jar if [proper platform file]
 
@@ -102,40 +112,60 @@ You can generate API documents in html format as well.
 Usage
 -----
 
-- help
-Show all options provided by redexer.
+* help
+
+You can see all the options the tool provides:
 
     $ ruby scripts/cmd.rb -h
     $ ruby scripts/cmd.rb --help
 
-- unparse
-Produce a YAML file containing the contents of a bytecode file.
+* unparse
+
+Like dexdump at Android SDK, redexer allows you to view the internals
+of the given dex file in a YAML format.
 
     $ ruby scripts/cmd.rb target.(apk|dex) --cmd unparse [--to blah.yml]
 
-- dump method
-Dump the instructions for the specified method.
+* dump method
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd dump_method --mtd cls_.mtd
+This option dumps instructions for a specified method
 
-- identity
-Parse a dex file and generate an identical output file. This feature
-is really just for shaking out bugs in redexer.
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd dump_method --mtd cls.mtd
+
+* identity
+
+This feature is to test parsing and dumping modules of redexer.
+It probably generates an identical dex file.
 
     $ ruby scripts/cmd.rb target.(apk|dex) --cmd id [--to blah.dex]
 
-- info
-Show basic statistics about the dex file.
+* info
+
+You can also see basic statistics about the dex file, e.g., # instr.
 
     $ ruby scripts/cmd.rb target.(apk|dex) --cmd info
 
-- classes
-Print the names of all classes defined in the dex file.
+* classes
+
+This option prints out all class names defined in the dex file.
 
     $ ruby scripts/cmd.rb target.(apk|dex) --cmd classes
 
-- opstat
-Report how option opcodes are used in a file
+It may be useful to search specific third-party libraries, e.g.,
+
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd classes | egrep 'apache'
+
+* api
+
+This option prints out API usage in the dex file.
+
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd api
+
+* opcode statistics
+
+Aren't you curious how rarely some opcodes are used in Dalvik bytecodes?
+It will show you the histogram of entire opcodes, or you can look up
+how often the exact opcode is used in the given app.
 
     $ ruby scripts/cmd.rb target.(apk|dex) --cmd opstat [--op opcode1,opcode2,...]
 
@@ -144,71 +174,75 @@ For instance,
     $ ruby scripts/cmd.rb ~/apps/top24/com.whatsapp.apk --cmd opstat
     $ ruby scripts/cmd.rb ~/apps/top24/com.whatsapp.apk --cmd opstat --op div-int/lit16,nop
 
-- cg
-Generate a pdf file containing the call graph of the given file.
-If you don't specify the output pdf name, cg.pdf will be used.
+* call graph
+
+This option generates a pdf file that depicts a call graph of the given file.
+If you don't specify the pdf name, cg.pdf will be used.
 
     $ ruby scripts/cmd.rb target.(apk|dex) --cmd cg [--to blah.pdf]
 
-- cfg
-Generate a pdf containing the control-flow graph of a given
+* control-flow graph
+
+This option generates a pdf file that shows a control-flow graph of the given
 method.  Append a method name to a class name with dot: class_name.method_name
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd cfg --mtd cls_.mtd [--to blah.pdf]
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd cfg --mtd cls.mtd [--to blah.pdf]
 
-- dom/pdom
-Generate a pdf containing either the domainator or postdomaintor tree
-for a method.
+* (post) dominator tree
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd (p)dom --mtd cls_.mtd [--to blah.pdf]
+This option is similar to the above feature, except for that it depicts
+(post) dominator tree.
 
-- live
-Perform classic live variable analysis on a method.
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd (p)dom --mtd cls.mtd [--to blah.pdf]
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd live --mtd cls_.mtd
+* liveness analysis
 
-- const
-Perform constant propagation on a method.
+This option performs a classic backward data-flow analysis.
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd const --mtd cls_.mtd
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd live --mtd cls.mtd
 
-- analyze_perms
-Find what permission-protected API calls are used by an app.  Using
-constant propagation analysis, this option also prints out constant
-arguments for such calls.  Permission names are same as Mr. Hide ones,
-e.g. url, con, sta, set, etc.
+* constant-propagation analysis
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd analyze_perms
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd analyze_perms --perms url,set
+This option conducts a classic forward data-flow analysis.
 
-- dependants
-Find class dependency.
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd const --mtd cls.mtd
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd dependants --mtd cls_.mtd
+* dependants
 
-- launcher
-Print out the name of the launcher activity for an apk.
+This option finds class dependancy.
+
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd dependants --mtd cls.mtd
+
+* launcher activity
+
+This option prints out the launching activity name of the given apk
 
     $ ruby scripts/cmd.rb target.apk --cmd launcher
 
-- sdk
-Prints out what SDK version the apk requires.
+* target SDK version
+
+This option prints out what SDK version the apk requires
 
     $ ruby scripts/cmd.rb target.apk --cmd sdk
 
 If you don't want to unpack the apk file,
-you can do the same thing with a combination of commands:
+actually, you can do the same thing with a combination of commands:
 
     $ aapt dump badging target.apk | grep 'targetSdkVersion' | tr -dc 0-9.\\n
 
-- hello
-Generate a dex file that, when executed, prints out a simple message.
-That dex file is made only using redexer APIs.
+* Hello, DEX
+
+This option would generate a dex file that prints out a simple message.
+That dex file is made only using redexer's APIs.
 
     $ ruby scripts/cmd.rb --cmd hello
 
+Check its internal.
+
+    $ dexdump -d results/classes.dex
+
 If you're interested, you can test that dex file as follows.
-We assume the path to ANDROID_SDK is set correctly.
+Assume path to ANDROID_SDK is set.
 
     // create a temporary jar suitable for dalvik VM
     $ aapt add temp.jar results/classes.dex
