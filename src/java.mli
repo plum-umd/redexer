@@ -146,14 +146,14 @@ sig
   (** [java.lang.Boolean] *)
   val c_bool : string
 
-  (** [java.lang.Character] *)
-  val c_char : string
-
   (** [java.lang.Byte] *)
   val c_byte : string
 
   (** [java.lang.Short] *)
   val c_short : string
+
+  (** [java.lang.Character] *)
+  val c_char : string
 
   (** [java.lang.Integer] *)
   val c_int : string
