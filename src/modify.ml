@@ -1101,7 +1101,6 @@ let call_trace (dx: D.dex) (re: string list) : unit =
 let exp_cnt = ref 0
 
 class opr_expander (dx: D.dex) =
-  let primitives = L.map J.to_type_descr J.shorties in
 object
   inherit V.iterator dx
 
@@ -1123,27 +1122,41 @@ object
       let op, opr = D.get_ins dx ins in
       let hx = I.op_to_hx op in
       match op, opr with
-      (* register for const/4 can be truncated *)
+      (* register for const/4 *)
       | I.OP_CONST_4, I.OPR_REGISTER r :: I.OPR_CONST c :: []
       when r >= 16 (* 2^4 *) -> incr exp_cnt;
         D.insrt_ins dx ins (I.new_const r (Int64.to_int c))
 
-      (* source/destination registers for move can be truncated *)
-      | I.OP_MOVE,        I.OPR_REGISTER s :: I.OPR_REGISTER d :: []
-      | I.OP_MOVE_WIDE,   I.OPR_REGISTER s :: I.OPR_REGISTER d :: []
-      | I.OP_MOVE_OBJECT, I.OPR_REGISTER s :: I.OPR_REGISTER d :: []
-      when d >=  16 (* 2^4 *) -> incr exp_cnt;
-        if s >= 256 (* 2^8 *) then
-          D.insrt_ins dx ins (I.new_move (hx + 2) s d)
+      (* source/destination registers for move *)
+      | I.OP_MOVE,        I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
+      | I.OP_MOVE_WIDE,   I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
+      | I.OP_MOVE_OBJECT, I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
+      when d >= 16 || s >= 16 (* 2^4 *) -> incr exp_cnt;
+        if d >= 256 (* 2^8 *) then
+          D.insrt_ins dx ins (I.new_move (hx + 2) d s)
         else
-          D.insrt_ins dx ins (I.new_move (hx + 1) s d)
-      | I.OP_MOVE_FROM16,        I.OPR_REGISTER s :: I.OPR_REGISTER d :: []
-      | I.OP_MOVE_WIDE_FROM16,   I.OPR_REGISTER s :: I.OPR_REGISTER d :: []
-      | I.OP_MOVE_OBJECT_FROM16, I.OPR_REGISTER s :: I.OPR_REGISTER d :: []
-      when s >= 256 (* 2^8 *) -> incr exp_cnt;
-        D.insrt_ins dx ins (I.new_move (hx + 1) s d)
+          D.insrt_ins dx ins (I.new_move (hx + 1) d s)
 
-      (* offset for goto can be truncated *)
+      | I.OP_MOVE_FROM16,        I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
+      | I.OP_MOVE_WIDE_FROM16,   I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
+      | I.OP_MOVE_OBJECT_FROM16, I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
+      when d >= 256 (* 2^8 *) -> incr exp_cnt;
+        D.insrt_ins dx ins (I.new_move (hx + 1) d s)
+
+      (* registers for array-length *)
+      | I.OP_ARRAY_LENGTH, I.OPR_REGISTER d :: I.OPR_REGISTER a :: []
+      when d >= 16 || a >= 16 (* 2^4 *) ->
+      (
+        let new_a = if a >= 16 then 0 else a
+        and new_d = if d >= 16 then 1 else d in
+        let mv_a = if a < 16 then [] else [I.new_move mv_obj16 new_a a]
+        and mv_d = if d < 16 then [] else [I.new_move move_f16 d new_d]
+        and alen = [I.new_move hx new_d new_a] in
+        let inss = mv_a @ alen @ mv_d in
+        overwrite inss
+      )
+
+      (* offset for goto *)
       | I.OP_GOTO,    I.OPR_OFFSET off :: []
       when cur_citm.D.insns_size >    256 (* 2^8 *) -> incr exp_cnt;
         D.insrt_ins dx ins (I.new_goto (hx + 1) off)
@@ -1151,7 +1164,7 @@ object
       when cur_citm.D.insns_size > 65536 (* 2^16 *) -> incr exp_cnt;
         D.insrt_ins dx ins (I.new_goto (hx + 1) off)
 
-      (* registers for if-test can be truncated *)
+      (* registers for if-test *)
       | _, I.OPR_REGISTER a :: I.OPR_REGISTER b :: I.OPR_OFFSET off :: []
       when 0x32 <= hx && hx <= 0x37 && (a >= 16 || b >= 16) (* 2^4 *) ->
       (
@@ -1164,7 +1177,7 @@ object
         overwrite inss
       )
 
-      (* registers for i(get|put)-* can be truncated *)
+      (* registers for i(get|put)-* *)
       | _, I.OPR_REGISTER d :: I.OPR_REGISTER o :: I.OPR_INDEX fid :: []
       when 0x52 <= hx && hx <= 0x5f && (d >= 16 || o >= 16) (* 2^4 *) ->
       (
@@ -1177,7 +1190,9 @@ object
             | I.OP_IGET_WIDE | I.OP_IPUT_WIDE -> mv_wd_16
             | I.OP_IGET_OBJECT | I.OP_IPUT_OBJECT -> mv_obj16
             | _ -> move_f16
-          in [I.new_move mv_op d new_d]
+          in
+          let d, s = if 52 <= hx && hx <= 58 then d, new_d else new_d, d in
+          [I.new_move mv_op d s]
         in
         let inss = if 52 <= hx && hx <= 58
           then mv_o @ i_et @ mv_d
@@ -1186,7 +1201,7 @@ object
         overwrite inss
       )
 
-      (* parameters for method invocations can be truncated *)
+      (* parameters for method invocations *)
       | I.OP_INVOKE_VIRTUAL,   _
       | I.OP_INVOKE_SUPER,     _
       | I.OP_INVOKE_DIRECT,    _
@@ -1235,7 +1250,7 @@ object
         )
       )
 
-      (* registers for binop/2addr can be truncated *)
+      (* registers for binop/2addr *)
       | _, I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
       when 0xb0 <= hx && hx <= 0xcf && (d >= 16 || s >= 16) -> incr exp_cnt;
         D.insrt_ins dx ins (I.new_bin_op (hx - 32) [d; d; s])
