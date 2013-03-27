@@ -75,8 +75,8 @@ val ipdom : pdom -> int -> int
 (** longest common post dominators *)
 val cpdom : pdom -> int list
 
-(** get the last instruction *)
-val get_last_ins : cfg -> pdom -> Dex.link
+(** get the last instructions *)
+val get_last_inss : cfg -> pdom -> Dex.link list
 
 (** {2 Control-flow Module for Data-flow Analysis} *)
 
@@ -89,8 +89,8 @@ sig
   (** starting statement *)
   val start : st
 
-  (** last statement *)
-  val last : st
+  (** last statements *)
+  val last : st list
 
   (** all statements *)
   val all : st list

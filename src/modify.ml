@@ -428,7 +428,15 @@ let get_fst_cursor () : cursor = 0
 let get_last_cursor (dx: D.dex) (citm: D.code_item) : cursor =
   let cfg  = St.time "cfg"  (Cf.make_cfg dx) citm in
   let pdom = St.time "pdom"  Cf.pdoms cfg in
-  let ins  = St.time "pdom" (Cf.get_last_ins cfg) pdom in
+  let inss = St.time "pdom" (Cf.get_last_inss cfg) pdom in
+  (* TODO: actually, this func should return cursor list *)
+  let find_return ins =
+    let op, _ = D.get_ins dx ins in
+    let hx = I.op_to_hx op in 0x0e <= hx && hx <= 0x11
+  in
+  let ins =
+    if 1 = (L.length inss) then L.hd inss else L.find find_return inss
+  in
   get_cursor citm ins
 
 (* get_ins : D.dex -> D.code_item -> cursor -> I.instr *)

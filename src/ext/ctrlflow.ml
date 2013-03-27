@@ -335,11 +335,11 @@ let cpdom pdom : int list =
   let l = L.tl (L.rev (A.to_list pdom)) in (* exclude the exit node *)
   IS.elements (L.fold_left (fun a p -> IS.inter a p) (L.hd l) (L.tl l))
 
-(* get_last_ins : cfg -> pdom -> D.link *)
-let get_last_ins (g: cfg) pdom : D.link =
+(* get_last_inss : cfg -> pdom -> D.link list *)
+let get_last_inss (g: cfg) pdom : D.link list =
   let e = (A.length g) - 1 in
-  let last_bb = L.find (fun bb -> ipdom pdom bb = e) g.(e).pred in
-  U.get_last g.(last_bb).insns
+  let last_bbs = L.filter (fun bb -> ipdom pdom bb = e) g.(e).pred in
+  L.map (fun bb -> U.get_last g.(bb).insns) last_bbs
 
 (***********************************************************************)
 (* Control-flow Module for Data-flow Analysis                          *)
@@ -349,7 +349,7 @@ module type CTRLFLOW =
 sig
   type st
   val start : st
-  val last : st
+  val last : st list
   val all : st list
   val pred : st -> st list
   val succ : st -> st list
@@ -367,7 +367,7 @@ let to_module (dx: D.dex) (g: cfg) : cfg_module =
   struct
     type st = D.link
     let start = if empty then D.no_off else L.hd g.(1).insns
-    let last = if empty then D.no_off else get_last_ins g pdom
+    let last = if empty then [] else get_last_inss g pdom
     let all =
       let all_bb = IS.elements (all len) in
       L.fold_left (fun acc bb -> acc @@ g.(bb).insns) [] all_bb
