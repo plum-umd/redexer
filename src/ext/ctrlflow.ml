@@ -82,10 +82,7 @@ let pp = Printf.printf
 let (@@) l1 l2 = L.rev_append (L.rev l1) l2
 
 let all (n: int) : IS.t =
-  let s = ref IS.empty in
-  for i = 0 to n - 1 do
-    s := IS.add i !s
-  done; !s
+  L.fold_left (fun acc i -> IS.add i acc) IS.empty (U.range 0 (n-1) [])
 
 let is_changed bef aft : bool =
   IS.compare bef aft <> 0
@@ -97,7 +94,6 @@ let is_changed bef aft : bool =
 (* make_cfg : D.dex -> D.code_item -> cfg *)
 let rec make_cfg (dx: D.dex) (citm: D.code_item) : cfg =
   let inss = L.filter (D.is_ins dx) (DA.to_list citm.D.insns) in
-try
   let leaders = calc_leaders dx citm.D.tries inss in
   let spl = split leaders inss
   and toBB b = { kind = NORM; insns = b; pred = []; succ = []; } in
@@ -107,11 +103,10 @@ try
   let g = A.of_list (bb0 :: (bbs @@ [bbl])) in
   make_edges dx citm g;
   g
-with e -> (Unparse.print_method dx citm; raise e)
 
 and calc_leaders (dx: D.dex) (tries: D.try_item list) inss : D.link list =
   let rec iter (acc: OS.t) = function
-    | ins1 :: tl when D.is_ins dx ins1 ->
+    | ins1 :: tl ->
     (
       let op, opr = D.get_ins dx ins1 in
       let hx = I.op_to_hx op in
@@ -137,7 +132,7 @@ and calc_leaders (dx: D.dex) (tries: D.try_item list) inss : D.link list =
         let ins2 = L.hd tl (* default case *)
         and off = D.opr2off (U.get_last opr) in
         let tgt = ins2 :: (get_sw_tagets dx off) in
-        L.fold_left (fun a l -> OS.add l a) acc tgt
+        iter (L.fold_left (fun a l -> OS.add l a) acc tgt) tl
       )
       else if L.mem hx (U.range 0x32 0x3d []) then (* if-test *)
       (
@@ -161,7 +156,7 @@ and calc_leaders (dx: D.dex) (tries: D.try_item list) inss : D.link list =
   in
 try
   (* the 1st instr is also a leader *)
-  let ld = (iter (OS.singleton (L.hd inss)) inss) in
+  let ld = iter (OS.singleton (L.hd inss)) inss in
   OS.elements (L.fold_left fold_try ld tries)
 with Failure "hd" -> [] (* empty body? *)
 
@@ -187,7 +182,7 @@ and make_edges (dx: D.dex) (citm: D.code_item) (g: cfg) : unit =
       let ti = L.find finder citm.D.tries in
       let hdl = L.nth citm.D.c_handlers (D.of_idx ti.D.handler_off) in
       let any =
-        if (D.of_off hdl.D.catch_all_addr) = 0 then []
+        if 0 = D.of_off hdl.D.catch_all_addr then []
         else [find_bb g hdl.D.catch_all_addr]
       in
       any @@ (L.map (fun ta -> find_bb g ta.D.addr) hdl.D.e_handlers)
@@ -209,6 +204,11 @@ and make_edges (dx: D.dex) (citm: D.code_item) (g: cfg) : unit =
       b.succ <- catch_bbs @@ b.succ;
       let op, opr = D.get_ins dx lns in
       let hx = I.op_to_hx op in
+      let hx, opr = (* last instruction could be nop for padding *)
+        if hx <> 0x00 || L.length b.insns <= 1 then hx, opr else
+        let lns' = U.get_last (U.rm_last b.insns) in
+        let op, opr = D.get_ins dx lns' in I.op_to_hx op, opr
+      in
       if L.mem hx (U.range 0x0e 0x11 [0x27]) then (* return or throw *)
       (
         let des = (A.length g) - 1 in
