@@ -350,6 +350,22 @@ let mtd_sig_exists (dx: D.dex) (cid: D.link) (mname: string) : D.link =
     if D.own_the_mtd dx cid mid then mid else D.no_idx
   with D.Wrong_dex _ -> D.no_idx
 
+(* new_sig : D.dex -> D.link -> string -> string -> string list -> D.link *)
+let new_sig (dx: D.dex) (cid: D.link) (mname: string)
+    (rety: string) (argv: string list) : D.link =
+  let old = mtd_sig_exists dx cid mname in
+  if old <> D.no_idx then old else
+  (
+    let nid = D.to_idx (DA.length dx.D.d_method_ids)
+    and mit = {
+      D.m_class_id = cid;
+      D.m_proto_id = find_or_new_proto dx rety argv;
+      D.m_name_id  = find_or_new_str dx mname;
+    } in
+    DA.add dx.D.d_method_ids mit;
+    nid
+  )
+
 (* method implementation exists? *)
 let mtd_body_exists (dx: D.dex) (cid: D.link) (mname: string) : D.link =
   let mid = mtd_sig_exists dx cid mname in
@@ -360,25 +376,12 @@ let mtd_body_exists (dx: D.dex) (cid: D.link) (mname: string) : D.link =
 (* new_method : D.dex -> D.link -> string
   -> J.access_flag list -> string -> string list -> D.link *)
 let new_method (dx: D.dex) (cid: D.link) (mname: string)
-  (flags: D.access_flag list) (rety: string) (argv: string list) : D.link =
+    (flags: D.access_flag list) (rety: string) (argv: string list) : D.link =
   let flags = if mname = J.init then D.ACC_CONSTRUCTOR::flags else flags in
   let old = mtd_body_exists dx cid mname in
   if old <> D.no_idx then old else
   (
-    let old = mtd_sig_exists dx cid mname in
-    let mid =
-      if old <> D.no_idx then old else
-      (
-        let nid = D.to_idx (DA.length dx.D.d_method_ids)
-        and mit = {
-          D.m_class_id = cid;
-          D.m_proto_id = find_or_new_proto dx rety argv;
-          D.m_name_id  = find_or_new_str dx mname;
-        } in
-        DA.add dx.D.d_method_ids mit;
-        nid
-      )
-    in
+    let mid = new_sig dx cid mname rety argv in
     if not (is_lib (D.get_ty_str dx cid)) then
     (
       let cdat = find_or_new_cdata dx cid

@@ -74,7 +74,12 @@ val add_interface : Dex.dex -> Dex.link -> string -> unit
 val new_field : Dex.dex -> Dex.link -> string
  -> Dex.access_flag list -> string -> Dex.link
 
-(** add a new method definition;
+(** add a new method signature;
+ pass class id, its name, return type, and arguments *)
+val new_sig : Dex.dex -> Dex.link -> string
+ -> string -> string list -> Dex.link
+
+(** add a new method definition, along with empty body;
  pass class id, its name, {!Dex.access_flag}s, return type, and arguments *)
 val new_method : Dex.dex -> Dex.link -> string
  -> Dex.access_flag list -> string -> string list -> Dex.link
