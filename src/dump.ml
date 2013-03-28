@@ -42,6 +42,8 @@ module St = Stats
 module CL = Clist
 module DA = DynArray
 
+module U = Util
+
 module I  = Instr
 module D  = Dex
 
@@ -244,9 +246,9 @@ let sc (o1, s1) (o2, s2) =
     if c1 <> 0 then c1 else I32.compare o1 o2
   | _, _ -> raise (D.Wrong_match "sort_str")
 
-(* fill 'a elements n times *)
-let rec fill (x: 'a) (n: int) : 'a CL.clist =
-  if n <= 0 then CL.empty else (CL.single x) @@ (fill x (n-1))
+(* fill 'a element n times *)
+let fill (x: 'a) (n: int) : 'a CL.clist =
+  CL.fromList (U.repeat x n [])
 
 (* writing 8 bit *)
 let write8 (i: int) : char = char_of_int i

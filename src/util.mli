@@ -51,8 +51,11 @@ module IM : Map.S with type key = IntKey.t
 (** read each line from {!in_channel} *)
 val read_lines : in_channel -> string list
 
-(** tail-recursive version of python-like range *)
+(** tail-recursive version of python range *)
 val range : int -> int -> int list -> int list
+
+(** tail-recursive version of python itertools.repeat *)
+val repeat : 'a -> int -> 'a list -> 'a list
 
 (** get the last element in a [list] *)
 val get_last : 'a list -> 'a

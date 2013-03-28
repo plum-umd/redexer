@@ -68,6 +68,10 @@ let rec range (x: int) (y: int) res : int list =
     let new_res = y :: res in
     if x = y then new_res else range x (y-1) new_res
 
+(* repeat : 'a -> int -> 'a list -> 'a list *)
+let rec repeat (x: 'a) (n: int) res : 'a list =
+  if n <= 0 then res else repeat x (n - 1) (x :: res)
+
 (* get_last : 'a list -> 'a *)
 let get_last (l: 'a list) : 'a =
   L.hd (L.rev l)
