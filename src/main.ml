@@ -81,7 +81,7 @@ let outputdir = ref "output"
 let dump_html (tx : D.dex) : unit =
   St.time "dump_html" (Hup.generate_documentation tx !outputdir) !infile
 
-let lib = ref "tutorial/logging/bin/classes.dex"
+let lib = ref "logging/bin/classes.dex"
 
 let combine (tx: D.dex) : unit =
  try (
@@ -164,7 +164,7 @@ try (
   (* seed new addresses for modification *)
   Md.seed_addr cx.D.header.D.file_size;
   (* modify target dex accordingly *)
-  Lgg.modify cx;
+  St.time "logging" Lgg.modify cx;
   (* rename specific classes *)
   let rnm' = rnm ^ "." ^ "cls" in
   let ch = open_in rnm' in
