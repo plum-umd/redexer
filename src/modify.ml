@@ -548,7 +548,14 @@ let shift_reg_cond dx (citm: D.code_item) (sft: int) cond : unit =
     )
   in
   DA.iter ins_iter citm.D.insns;
-  citm.D.registers_size <- citm.D.registers_size + sft
+  citm.D.registers_size <- citm.D.registers_size + sft;
+  (* TODO: should also update register occurrences in debug_info *)
+  (* stopgap: just delete debug_info if modified *)
+  if citm.D.debug_info_off <> D.no_off then
+  (
+    D.rm_data dx citm.D.debug_info_off;
+    citm.D.debug_info_off <- D.no_off
+  )
 
 (* shift_reg_usage : D.dex -> D.code_item -> int -> unit *)
 let shift_reg_usage dx (citm: D.code_item) (sft: int) : unit =
