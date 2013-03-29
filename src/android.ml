@@ -64,11 +64,21 @@ struct
   let service = pkg^"Service"
   let application = pkg^"Application"
 
+  let lst_act = pkg^"ListActivity"
+  let tab_act = pkg^"TabActivity"
+
   let onCreate  = "onCreate"
-  let onDestroy = "onDestroy"
+  let onStart   = "onStart"
   let onResume  = "onResume"
   let onPause   = "onPause"
+  let onStop    = "onStop"
+  let onDestroy = "onDestroy"
 
+  let onBind   = "onBind"
+  let onRebind = "onRebind"
+  let onUnbind = "onUnbind"
+
+  let onCreateOptionsMenu   = "onCreateOptionsMenu"
   let onOptionsItemSelected = "onOptionsItemSelected"
 
   let query = "managedQuery"
@@ -80,6 +90,7 @@ module Content =
 struct
   let pkg = adr^"content."
   let context = pkg^"Context"
+  let intent = pkg^"Intent"
   let provider = pkg^"ContentProvider"
   let uris = pkg^"ContentUris"
 

@@ -38,17 +38,17 @@
 
 module St = Stats
 
+module U = Util
+
 module I  = Instr
 module D  = Dex
 module J  = Java
 
-module A  = Android
-module Ap = Android.App
-module Ao = Android.OS
-module As = Android.Preference
-module Ak = Android.View.KeyEvent
-module Am = Android.View.MenuItem
-module Av = Android.View
+module App = Android.App
+module Acn = Android.Content
+module Aos = Android.OS
+module Apr = Android.Preference
+
 
 module V  = Visitor
 module M  = Modify
@@ -64,15 +64,24 @@ let call_stt = I.op_to_hx I.OP_INVOKE_STATIC
 
 let logging = "Lorg/umd/logging/"
 
-let pwr_mgr     = logging^"os/PowerManager;"
-let get_pwr_mgr = "getPowerManager"
-
 let logger  = logging^"util/Logger;"
 let action  = logging^"util/Logger$AppAction;"
 let logActn = "logChildAction"
 
-let tgt_comps = [Ap.activity; As.activity]
-let act_trans = [Ap.onCreate; Ap.onDestroy; Ap.onResume; Ap.onPause]
+module SM = Map.Make(String)
+
+let act_comps = [App.activity; App.lst_act; App.tab_act; Apr.activity]
+
+let act_trans = [App.onCreate; App.onResume; App.onPause; App.onDestroy]
+
+let srv_trans = [App.onCreate; App.onDestroy]
+
+(* from component to transition: { Activity => [onCreate; ...], ... } *)
+let comp_to_tran =
+  let srv_map = SM.add App.service srv_trans SM.empty in
+  L.fold_left2 (fun acc comp trans -> SM.add comp trans acc) srv_map
+    act_comps (U.repeat act_trans (L.length act_comps) [])
+
 
 (***********************************************************************)
 (* Log transitions of interest                                         *)
@@ -122,11 +131,12 @@ let act_trans = [Ap.onCreate; Ap.onDestroy; Ap.onResume; Ap.onPause]
 
 *)
 
-let rec target_on_hierarchy (dx: D.dex) (cid: D.link) : bool =
-  if cid = D.no_idx then false else
-    let cname = J.of_java_ty (D.get_ty_str dx cid) in
-    if L.mem cname tgt_comps then true else
-      target_on_hierarchy dx (D.get_superclass dx cid)
+let rec trans_in_hierarchy (dx: D.dex) (cid: D.link) : string list =
+  let cname = J.of_java_ty (D.get_ty_str dx cid) in
+  try SM.find cname comp_to_tran
+  with Not_found ->
+    let sid = D.get_superclass dx cid in
+    if sid = D.no_idx then [] else trans_in_hierarchy dx sid
 
 let override_cnt = ref 0
 let trans_cnt = ref 0
@@ -141,24 +151,24 @@ object
   (* to check this inherits a target component or not *)
   val mutable do_this_cls = false
   method v_cdef (cdef: D.class_def_item) : unit =
+
     let cid = cdef.D.c_class_id
     and sid = cdef.D.superclass in
-    let cname = J.of_java_ty (D.get_ty_str dx cid)
-    and sname = J.of_java_ty (D.get_ty_str dx sid) in
     (* override all the overridable methods for target components *)
     let per_on mname =
-      if not (M.override dx cid mname) then
+      if mname <> App.onUnbind && not (M.override dx cid mname) then
       ( M.insrt_return_void dx cid mname; incr override_cnt )
     in
-    (* note that this would find even app's own hierarchy *)
-    if target_on_hierarchy dx sid then L.iter per_on act_trans;
+    (* NOTE: this would explore all superclasses in hierarchy *)
+    L.iter per_on (trans_in_hierarchy dx sid);
     (*
        unlike overriding, we don't need to instrument aggresively
        because children would be logged as well
        if 1) superclass' methods are instrumented, which will be done below
        and 2) children override such methods, which has been done just above
     *)
-    do_this_cls <- L.mem sname tgt_comps
+    let sname = J.of_java_ty (D.get_ty_str dx sid) in
+    do_this_cls <- SM.mem sname comp_to_tran
 
   (* to check this is a transition method or not *)
   val mutable mname = ""
@@ -179,22 +189,41 @@ object
       trans_cnt := !trans_cnt + (L.length inss)
     )
 
+  method finish () : unit =
+    (* 2x : super(); return-*; *)
+    Log.i ("# of method overriding(s): "^(Log.of_i (!override_cnt * 2)));
+    Log.i ("# of transition logging(s): "^(Log.of_i !trans_cnt))
+
 end
 
 let log_transition (dx: D.dex) : unit =
-  (* insert method signatures first *)
-  let per_comp (comp: string) : unit =
-    let cid = M.new_class dx comp D.pub in
-    let _ = M.new_method dx cid Ap.onCreate D.pub J.v [Ao.bundle] in
-    let insrt_void_no_arg mname =
-      ignore (M.new_method dx cid mname D.pub J.v [])
-    in
-    L.iter insrt_void_no_arg (L.tl act_trans)
+  (* insert method sig first so that M.override can find method_id_item *)
+  let insrt_void_no_arg cid mname =
+    ignore (M.new_sig dx cid mname J.v [])
   in
-  L.iter per_comp tgt_comps;
-  V.iter (new trans_logger dx);
-  Log.i ("# of method overriding(s): "^(Log.of_i !override_cnt));
-  Log.i ("# of transition logging(s): "^(Log.of_i !trans_cnt))
+  (* Activity family *)
+  let per_act (comp: string) : unit =
+    let cid = M.new_class dx comp D.pub in
+    (* Activity.onCreate *)
+    let _ = M.new_sig dx cid App.onCreate J.v [Aos.bundle] in
+    (* anything else, e.g., onStart, onResume, etc. *)
+    L.iter (insrt_void_no_arg cid) (L.tl act_trans)
+  in
+  L.iter per_act act_comps;
+  (* Service family *)
+  let per_srv (comp: string) : unit =
+    let cid = M.new_class dx comp D.pub in
+    (* Service.(onCreate | onDestroy) *)
+    L.iter (insrt_void_no_arg cid) [App.onCreate; App.onDestroy];
+    (* Service.(onBind | onRebind) *)
+    let insrt_void_intent mname =
+      ignore (M.new_sig dx cid mname J.v [Acn.intent])
+    in
+    L.iter insrt_void_intent [App.onBind; App.onRebind]
+  in
+  L.iter per_srv [App.service];
+  (* then add super() into those overriable methods *)
+  V.iter (new trans_logger dx)
 
 (***********************************************************************)
 (* Rewrite to log apps behavior                                        *)

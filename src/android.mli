@@ -56,17 +56,41 @@ sig
   (** [android.app.Application] *)
   val application : string
 
+  (** [android.app.ListActivity] *)
+  val lst_act : string
+
+  (** [android.app.TabActivity] *)
+  val tab_act : string
+
   (** [onCreate] *)
   val onCreate : string
 
-  (** [onDestroy] *)
-  val onDestroy : string
+  (** [onStart] *)
+  val onStart : string
 
   (** [onResume] *)
   val onResume : string
 
   (** [onPause] *)
   val onPause : string
+
+  (** [onStop] *)
+  val onStop : string
+
+  (** [onDestroy] *)
+  val onDestroy : string
+
+  (** [onBind] *)
+  val onBind : string
+
+  (** [onRebind] *)
+  val onRebind : string
+
+  (** [onUnbind] *)
+  val onUnbind : string
+
+  (** [onCreateOptionsMenu] *)
+  val onCreateOptionsMenu : string
 
   (** [onOptionsItemSelected] *)
   val onOptionsItemSelected : string
@@ -82,6 +106,9 @@ sig
   (** [android.content.Context] *)
   val context : string
     
+  (** [android.content.Intent] *)
+  val intent : string
+
   (** [android.content.ContentProvider] *)
   val provider : string
 
