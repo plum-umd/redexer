@@ -1,3 +1,0 @@
-# view AndroidManifest.xml #generated:7
--keep class org.umd.util.MainActivity { <init>(...); }
-
