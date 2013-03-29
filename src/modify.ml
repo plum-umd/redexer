@@ -1166,6 +1166,19 @@ object
         overwrite inss
       )
 
+      (* registers for new-array *)
+      | I.OP_NEW_ARRAY, I.OPR_REGISTER a :: I.OPR_REGISTER s :: I.OPR_INDEX cid :: []
+      when a >= 16 || s >= 16 (* 2^4 *) ->
+      (
+        let new_s = if s >= 16 then 0 else s
+        and new_a = if a >= 16 then 1 else a in
+        let mv_s = if s < 16 then [] else [I.new_move move_f16 new_s s]
+        and mv_a = if a < 16 then [] else [I.new_move mv_obj16 a new_a]
+        and n_ar = [I.new_arr new_a new_s cid] in
+        let inss = mv_s @ n_ar @ mv_a in
+        overwrite inss
+      )
+
       (* offset for goto *)
       | I.OP_GOTO,    I.OPR_OFFSET off :: []
       when cur_citm.D.insns_size >    256 (* 2^8 *) -> incr exp_cnt;
@@ -1191,22 +1204,21 @@ object
       | _, I.OPR_REGISTER d :: I.OPR_REGISTER o :: I.OPR_INDEX fid :: []
       when 0x52 <= hx && hx <= 0x5f && (d >= 16 || o >= 16) (* 2^4 *) ->
       (
-        let new_d = if d >= 16 then 0 else d
-        and new_o = if o >= 16 then 2 else o in
-        let i_et = [I.new_ist_fld hx new_d new_o fid]
-        and mv_o = if o < 16 then [] else [I.new_move mv_obj16 new_o o]
+        let is_iget = 0x52 <= hx && hx <= 0x58 in
+        let new_o = if o >= 16 then 0 else o
+        and new_d = if d >= 16 then 2 else d in
+        let mv_o = if o < 16 then [] else [I.new_move mv_obj16 new_o o]
         and mv_d = if d < 16 then [] else
           let mv_op = match op with
-            | I.OP_IGET_WIDE | I.OP_IPUT_WIDE -> mv_wd_16
+            | I.OP_IGET_WIDE   | I.OP_IPUT_WIDE   -> mv_wd_16
             | I.OP_IGET_OBJECT | I.OP_IPUT_OBJECT -> mv_obj16
             | _ -> move_f16
           in
-          let d, s = if 52 <= hx && hx <= 58 then d, new_d else new_d, d in
+          let d, s = if is_iget then d, new_d else new_d, d in
           [I.new_move mv_op d s]
-        in
-        let inss = if 52 <= hx && hx <= 58
-          then mv_o @ i_et @ mv_d
-          else mv_o @ mv_d @ i_et
+        and i__t = [I.new_ist_fld hx new_d new_o fid] in
+        let inss =
+          if is_iget then mv_o @ i__t @ mv_d else mv_o @ mv_d @ i__t
         in
         overwrite inss
       )
@@ -1258,6 +1270,26 @@ object
           ) in
           overwrite inss
         )
+      )
+
+      (* registers for unary *)
+      | _, I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
+      when 0x7b <= hx && hx <= 0x8f && (d >= 16 || s >= 16) (* 2^4 *) ->
+      (
+        let new_s = if s >= 16 then 0 else s
+        and new_d = if d >= 16 then 2 else d in
+        let op_s =
+          if L.mem hx [0x7d; 0x7e; 0x80; 0x84; 0x85; 0x86; 0x8a; 0x8b; 0x8c]
+          then mv_wd_16 else move_f16
+        and op_d =
+          if L.mem hx [0x7d; 0x7e; 0x80; 0x81; 0x83; 0x86; 0x88; 0x89; 0x8b]
+          then mv_wd_16 else move_f16
+        in
+        let mv_s = if s < 16 then [] else [I.new_move op_s new_s s]
+        and mv_d = if d < 16 then [] else [I.new_move op_d d new_d]
+        and uop = [I.new_un_op hx [new_d; new_s]] in
+        let inss = mv_s @ uop @ mv_d in
+        overwrite inss
       )
 
       (* registers for binop/2addr *)

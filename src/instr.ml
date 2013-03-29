@@ -1968,6 +1968,11 @@ let refer_last (hx: int) (args: int list) : instr =
   let op = hx_to_op hx
   and opr = ex_last args in op, opr
 
+(* wrap everything in REGISTER *)
+let wrap_reg (hx: int) (opr: int list) : instr =
+  let op = hx_to_op hx
+  and opr = L.map to_reg opr in op, opr
+
 (* MOVE from a register to a register *)
 let mv_reg_to_reg (hx: int) (dst: int) (src: int) : instr =
   let op = hx_to_op hx
@@ -2007,13 +2012,15 @@ let new_if (hx: int) (a: int) (b: int) (dst: offset) : instr =
 
 (* new_arr_op : int -> int list -> instr *)
 let new_arr_op (hx: int) (argv: int list) : instr =
-  let op = hx_to_op hx
-  and opr = L.map to_reg argv in op, opr
+  wrap_reg hx argv
 
 (* new_bin_op : int -> int list -> instr *)
 let new_bin_op (hx: int) (regs: int list) : instr =
-  let op = hx_to_op hx
-  and opr = L.map to_reg regs in op, opr
+  wrap_reg hx regs
+
+(* new_un_op : int -> int list -> instr *)
+let new_un_op (hx: int) (regs: int list) : instr =
+  wrap_reg hx regs
 
 (* new_ist_fld : int -> int -> int -> int -> instr *)
 let new_ist_fld (hx: int) (d: int) (o: int) (i: int) : instr =
