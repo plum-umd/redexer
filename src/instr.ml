@@ -1951,12 +1951,14 @@ let to_idx i = OPR_INDEX i
 let to_off f = OPR_OFFSET f
 
 (* new_const : int -> int -> instr *)
-let new_const (r: int) (const: int) : instr =
+let new_const (r: int) (c: int) : instr =
   let op =
-    if const < 0xf && r < 16 then OP_CONST_4 
-    else if const < 0xffff then OP_CONST_16
+    (* const/4: 4 bits signed int and 4 bits destination register *)
+    if -1 * 0x8 <= c && c < 0x8 && r < 16 then OP_CONST_4 
+    (* const/16: 16 bits signed int and 8 bits destination register *)
+    else if -1 * 0x8fff <= c && c < 0x8fff && r < 256 then OP_CONST_16
     else OP_CONST
-  and opr = [to_reg r; to_con (to_i64 const)] in op, opr
+  and opr = [to_reg r; to_con (to_i64 c)] in op, opr
 
 (* wrap REGISTER except for the last thing (type, method, or field id) *)
 let refer_last (hx: int) (args: int list) : instr =
