@@ -96,7 +96,7 @@ let compare_val v1 v2 = match v1, v2 with
     let c = S.compare o1 o2 in if c <> 0 then c else S.compare f1 f2
   | _, _ -> 1 (* not total order; just return either 1 or -1 *)
 
-let val_to_string = function
+let val_to_str = function
   |  Const c -> I64.to_string c
   | String s -> "\""^s^"\""
   | Object o -> o
@@ -280,7 +280,8 @@ and read_const (dx: D.dex) (op: I.opcode) (opr: I.operand) : value =
   | _, _ -> BOT
 
 (* NOTE: cannot use Df instead of Dataflow here *)
-type propagation = (module Dataflow.ANALYSIS with type st = D.link)
+type propagation = (module Dataflow.ANALYSIS
+  with type st = D.link and type l = (value IM.t))
 
 (* make_dfa : D.dex -> D.code_item -> propagation *)
 let make_dfa (dx: D.dex) (citm: D.code_item) : propagation =
@@ -309,7 +310,7 @@ let make_dfa (dx: D.dex) (citm: D.code_item) : propagation =
       let buf = B.create (IM.cardinal l) in
       let per_kv k v =
         B.add_string buf ("v"^(string_of_int k)^": ");
-        B.add_string buf ((val_to_string v)^"\n")
+        B.add_string buf ((val_to_str v)^"\n")
       in
       IM.iter per_kv l;
       B.contents buf
@@ -333,17 +334,6 @@ let make_dfa (dx: D.dex) (citm: D.code_item) : propagation =
   end
   in
   let module DFA = Df.FwDFA (Df.Worklist) (RegVal) (CF) (PFlow) in
-  (module DFA : Dataflow.ANALYSIS with type st = D.link)
+  (module DFA : Dataflow.ANALYSIS
+    with type st = D.link and type l = (value IM.t))
 
-(* to_map : string -> string IM.t *)
-let to_map (str: string) : string IM.t =
-  let re = RE.regexp "v\\([0-9]+\\): \\(\".+\"\|[^' ']+\\)\n" in
-  let rec generator pos map =
-    try
-      let next_pos = RE.search_forward re str pos in
-      let reg_num = int_of_string (RE.matched_group 1 str)
-      and value = RE.matched_group 2 str in
-      generator (next_pos + 1) (IM.add reg_num value map)
-    with Not_found -> map
-  in
-  generator 0 IM.empty

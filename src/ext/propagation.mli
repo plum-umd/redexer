@@ -38,11 +38,20 @@
 
 (** This module offers constant propagation analysis using {!Dataflow} *)
 
-type propagation = (module Dataflow.ANALYSIS with type st = Dex.link)
+type value =
+  |  Const of int64           (** numerical constant *)
+  | String of string          (** const-string *)
+  | Object of string          (** const-class *)
+  |  Field of string * string (** static fields *)
+  | BOT                       (** non-const *)
+  | TOP                       (** undefined *)
+
+(** make {!value} printable *)
+val val_to_str : value -> string
+
+type propagation = (module Dataflow.ANALYSIS
+  with type st = Dex.link and type l = (value Util.IM.t))
 
 (** make constant propagation analysis *)
 val make_dfa : Dex.dex -> Dex.code_item -> propagation
-
-(** retrieve a register-value mapping *)
-val to_map : string -> string Util.IM.t
 

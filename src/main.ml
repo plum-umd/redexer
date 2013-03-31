@@ -136,14 +136,25 @@ let dependants (tx: D.dex) : unit =
   let cids = St.time "dependants" (Cg.dependants tx g) cid in
     L.iter (fun id -> Log.i (D.get_ty_str tx id)) cids
 
-let do_dfa (tag: string) (tx: D.dex) : unit =
+let rec do_dfa (tag: string) (tx: D.dex) : unit =
   Log.set_level "verbose";
   let citm = get_citm tx in
-  let dfa = match tag with
-    | "live"  -> St.time tag (Lv.make_dfa tx) citm
-    | "const" -> St.time tag (Cp.make_dfa tx) citm
+  match tag with
+  | "live"  -> do_live  tag tx citm
+  | "const" -> do_const tag tx citm
+
+and do_live  (tag: string) (tx: D.dex) (citm: D.code_item) : unit =
+  let dfa = St.time tag (Lv.make_dfa tx) citm in
+  let module DFA = (val dfa: Dataflow.ANALYSIS
+    with type st = D.link and type l = U.IS.t)
   in
-  let module DFA = (val dfa: Dataflow.ANALYSIS with type st = D.link) in
+  St.time tag DFA.fixed_pt ()
+
+and do_const (tag: string) (tx: D.dex) (citm: D.code_item) : unit =
+  let dfa = St.time tag (Cp.make_dfa tx) citm in
+  let module DFA = (val dfa: Dataflow.ANALYSIS
+    with type st = D.link and type l = (Cp.value U.IM.t))
+  in
   St.time tag DFA.fixed_pt ()
 
 let dat = ref "data"

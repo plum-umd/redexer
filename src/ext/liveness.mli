@@ -38,7 +38,8 @@
 
 (** This module defines liveness analysis using {!Dataflow} module. *)
 
-type liveness = (module Dataflow.ANALYSIS with type st = Dex.link)
+type liveness = (module Dataflow.ANALYSIS
+  with type st = Dex.link and type l = Util.IS.t)
 
 (** make liveness analysis *)
 val make_dfa : Dex.dex -> Dex.code_item -> liveness

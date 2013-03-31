@@ -112,7 +112,8 @@ let used op opr =
   L.fold_left (fun acc r -> IS.add r acc) IS.empty (L.flatten regs)
 
 (* NOTE: cannot use Df instead of Dataflow here *)
-type liveness = (module Dataflow.ANALYSIS with type st = D.link)
+type liveness = (module Dataflow.ANALYSIS
+  with type st = D.link and type l = IS.t)
 
 (* make_dfa : D.dex -> D.code_item -> liveness *)
 let make_dfa (dx: D.dex) (citm: D.code_item) : liveness =
@@ -151,5 +152,6 @@ let make_dfa (dx: D.dex) (citm: D.code_item) : liveness =
   end
   in
   let module DFA = Df.BwDFA (Df.Worklist) (Regs) (CF) (LiveFlow) in
-  (module DFA : Dataflow.ANALYSIS with type st = D.link)
+  (module DFA : Dataflow.ANALYSIS
+    with type st = D.link and type l = IS.t)
 
