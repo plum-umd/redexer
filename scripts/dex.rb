@@ -178,6 +178,10 @@ class Dex
     self.runcmd("#{REDEXER} -cls #{cls} -mtd #{mtd} -const #{dex_name}")
   end
 
+  def self.reach(dex_name, cls, mtd)
+    self.runcmd("#{REDEXER} -cls #{cls} -mtd #{mtd} -reach #{dex_name}")
+  end
+
   def self.hello
     self.runcmd("#{REDEXER} -hello")
   end

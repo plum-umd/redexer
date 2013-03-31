@@ -49,7 +49,7 @@ cmds = [
   "unparse", "htmlunparse", "id", "combine",
   "info", "classes", "api", "opstat",
   "cg", "cfg", "dom", "pdom",
-  "dump_method", "dependants", "live", "const",
+  "dump_method", "dependants", "live", "const", "reach",
   "sdk", "launcher", "hello", "logging"
 ]
 
@@ -192,7 +192,7 @@ when "cfg", "dom", "pdom"
   end
   Dex.send(cmd.to_sym, dex, cls, mtd, pdf)
   system("mv -f #{HOME}/#{pdf} #{RES}") unless to
-when "dump_method", "dependants", "live", "const"
+when "dump_method", "dependants", "live", "const", "reach"
   if not mtd
     close(apk)
     raise "No target method is specified"

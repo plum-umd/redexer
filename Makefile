@@ -5,8 +5,8 @@ SOURCES := \
 	src/util.ml src/log.ml src/java.ml src/instr.ml src/dex.ml \
 	src/parse.ml src/visitor.ml src/android.ml \
 	src/ext/unparse.ml src/ext/htmlunparse.ml \
-	src/ext/callgraph.ml src/ext/ctrlflow.ml \
-	src/ext/dataflow.ml src/ext/liveness.ml src/ext/propagation.ml \
+	src/ext/callgraph.ml src/ext/ctrlflow.ml src/ext/dataflow.ml \
+	src/ext/liveness.ml src/ext/propagation.ml src/ext/reaching.ml \
 	src/modify.ml src/combine.ml src/dump.ml \
 	src/ext/logging.ml src/main.ml
 
@@ -14,8 +14,8 @@ DOC_FILES := \
 	src/util.mli src/log.mli src/java.mli src/instr.mli src/dex.mli \
 	src/parse.mli src/visitor.mli src/android.mli \
 	src/ext/unparse.mli src/ext/htmlunparse.mli \
-	src/ext/callgraph.mli src/ext/ctrlflow.mli \
-	src/ext/dataflow.mli src/ext/liveness.mli src/ext/propagation.mli \
+	src/ext/callgraph.mli src/ext/ctrlflow.mli src/ext/dataflow.mli \
+	src/ext/liveness.mli src/ext/propagation.mli src/ext/reaching.mli \
 	src/modify.mli src/combine.mli src/dump.mli \
 	src/ext/logging.mli src/main.mli
 

@@ -193,6 +193,12 @@ This option conducts a classic forward data-flow analysis.
 
     $ ruby scripts/cmd.rb target.(apk|dex) --cmd const --mtd cls.mtd
 
+* reaching definition analysis
+
+This option conducts a classic forward data-flow analysis.
+
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd reach --mtd cls.mtd
+
 * dependants
 
 This option finds class dependancy.

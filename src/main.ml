@@ -50,8 +50,10 @@ module Hup = Htmlunparse
 
 module Cg = Callgraph
 module Ct = Ctrlflow
+
 module Lv = Liveness
 module Cp = Propagation
+module Rc = Reaching
 
 module Md  = Modify
 module Lgg = Logging
@@ -142,6 +144,7 @@ let rec do_dfa (tag: string) (tx: D.dex) : unit =
   match tag with
   | "live"  -> do_live  tag tx citm
   | "const" -> do_const tag tx citm
+  | "reach" -> do_reach tag tx citm
 
 and do_live  (tag: string) (tx: D.dex) (citm: D.code_item) : unit =
   let dfa = St.time tag (Lv.make_dfa tx) citm in
@@ -154,6 +157,13 @@ and do_const (tag: string) (tx: D.dex) (citm: D.code_item) : unit =
   let dfa = St.time tag (Cp.make_dfa tx) citm in
   let module DFA = (val dfa: Dataflow.ANALYSIS
     with type st = D.link and type l = (Cp.value U.IM.t))
+  in
+  St.time tag DFA.fixed_pt ()
+
+and do_reach (tag: string) (tx: D.dex) (citm: D.code_item) : unit =
+  let dfa = St.time tag (Rc.make_dfa tx) citm in
+  let module DFA = (val dfa: Dataflow.ANALYSIS
+    with type st = D.link and type l = (D.link U.IM.t))
   in
   St.time tag DFA.fixed_pt ()
 
@@ -214,6 +224,7 @@ let do_pdom          () = task := Some pdom
 let do_dependants    () = task := Some dependants
 let do_live          () = task := Some (do_dfa "live")
 let do_const         () = task := Some (do_dfa "const")
+let do_reach         () = task := Some (do_dfa "reach")
 
 let do_logging       () = task := Some instrument_logging
 
@@ -250,6 +261,7 @@ let arg_specs = A.align
     ("-dependants", A.Unit do_dependants, " find dependent classes");
     ("-live",       A.Unit do_live,       " liveness analysis");
     ("-const",      A.Unit do_const,      " constant propagation");
+    ("-reach",      A.Unit do_reach,      " reaching definition");
 
     ("-logging", A.Unit do_logging,
      " instrument logging feature into the given dex");
