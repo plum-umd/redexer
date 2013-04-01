@@ -1141,18 +1141,19 @@ object
     if D.is_ins dx ins then
     (
       let op, opr = D.get_ins dx ins in
-      let hx = I.op_to_hx op in
+      let hx = I.op_to_hx op
+      and low = I.low_reg op in
       match op, opr with
       (* register for const/4 *)
       | I.OP_CONST_4, I.OPR_REGISTER r :: I.OPR_CONST c :: []
-      when r >= 16 (* 2^4 *) -> incr exp_cnt;
+      when r >= low -> incr exp_cnt;
         D.insrt_ins dx ins (I.new_const r (Int64.to_int c))
 
       (* source/destination registers for move *)
       | I.OP_MOVE,        I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
       | I.OP_MOVE_WIDE,   I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
       | I.OP_MOVE_OBJECT, I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
-      when d >= 16 || s >= 16 (* 2^4 *) -> incr exp_cnt;
+      when d >= low || s >= low -> incr exp_cnt;
         if d >= 256 (* 2^8 *) then
           D.insrt_ins dx ins (I.new_move (hx + 2) d s)
         else
@@ -1161,17 +1162,17 @@ object
       | I.OP_MOVE_FROM16,        I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
       | I.OP_MOVE_WIDE_FROM16,   I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
       | I.OP_MOVE_OBJECT_FROM16, I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
-      when d >= 256 (* 2^8 *) -> incr exp_cnt;
+      when d >= low -> incr exp_cnt;
         D.insrt_ins dx ins (I.new_move (hx + 1) d s)
 
       (* registers for array-length *)
       | I.OP_ARRAY_LENGTH, I.OPR_REGISTER d :: I.OPR_REGISTER a :: []
-      when d >= 16 || a >= 16 (* 2^4 *) ->
+      when d >= low || a >= low ->
       (
-        let new_a = if a >= 16 then 0 else a
-        and new_d = if d >= 16 then 1 else d in
-        let mv_a = if a < 16 then [] else [I.new_move mv_obj16 new_a a]
-        and mv_d = if d < 16 then [] else [I.new_move move_f16 d new_d]
+        let new_a = if a >= low then 0 else a
+        and new_d = if d >= low then 1 else d in
+        let mv_a = if a < low then [] else [I.new_move mv_obj16 new_a a]
+        and mv_d = if d < low then [] else [I.new_move move_f16 d new_d]
         and alen = [I.new_move hx new_d new_a] in
         let inss = mv_a @ alen @ mv_d in
         overwrite inss
@@ -1179,12 +1180,12 @@ object
 
       (* registers for new-array *)
       | I.OP_NEW_ARRAY, I.OPR_REGISTER a :: I.OPR_REGISTER s :: I.OPR_INDEX cid :: []
-      when a >= 16 || s >= 16 (* 2^4 *) ->
+      when a >= low || s >= low ->
       (
-        let new_s = if s >= 16 then 0 else s
-        and new_a = if a >= 16 then 1 else a in
-        let mv_s = if s < 16 then [] else [I.new_move move_f16 new_s s]
-        and mv_a = if a < 16 then [] else [I.new_move mv_obj16 a new_a]
+        let new_s = if s >= low then 0 else s
+        and new_a = if a >= low then 1 else a in
+        let mv_s = if s < low then [] else [I.new_move move_f16 new_s s]
+        and mv_a = if a < low then [] else [I.new_move mv_obj16 a new_a]
         and n_ar = [I.new_arr new_a new_s cid] in
         let inss = mv_s @ n_ar @ mv_a in
         overwrite inss
@@ -1192,7 +1193,7 @@ object
 
       (* offset for goto *)
       | I.OP_GOTO,    I.OPR_OFFSET off :: []
-      when cur_citm.D.insns_size >    256 (* 2^8 *) -> incr exp_cnt;
+      when cur_citm.D.insns_size >   256 (* 2^8  *) -> incr exp_cnt;
         D.insrt_ins dx ins (I.new_goto (hx + 1) off)
       | I.OP_GOTO_16, I.OPR_OFFSET off :: []
       when cur_citm.D.insns_size > 65536 (* 2^16 *) -> incr exp_cnt;
@@ -1208,7 +1209,7 @@ object
 
       (* registers for if-test *)
       | _, I.OPR_REGISTER a :: I.OPR_REGISTER b :: I.OPR_OFFSET off :: []
-      when 0x32 <= hx && hx <= 0x37 && (a >= 16 || b >= 16) (* 2^4 *) ->
+      when 0x32 <= hx && hx <= 0x37 && (a >= low || b >= low) ->
       (
         let dfa = St.time "reach" (Rc.make_dfa dx) cur_citm in
         let module DFA = (val dfa: Dataflow.ANALYSIS
@@ -1223,10 +1224,10 @@ object
         and sort_b = get_def_sort (IM.find b inn) b in
         let op_a = mv_op sort_a
         and op_b = mv_op sort_b in
-        let new_a = if a >= 16 then 0 else a
-        and new_b = if b >= 16 then 1 else b in
-        let mv_a = if a < 16 then [] else [I.new_move op_a new_a a]
-        and mv_b = if b < 16 then [] else [I.new_move op_b new_b b]
+        let new_a = if a >= low then 0 else a
+        and new_b = if b >= low then 1 else b in
+        let mv_a = if a < low then [] else [I.new_move op_a new_a a]
+        and mv_b = if b < low then [] else [I.new_move op_b new_b b]
         and test = [I.new_if hx new_a new_b off] in
         let inss = mv_a @ mv_b @ test in
         overwrite inss
@@ -1234,13 +1235,13 @@ object
 
       (* registers for i(get|put)-* *)
       | _, I.OPR_REGISTER d :: I.OPR_REGISTER o :: I.OPR_INDEX fid :: []
-      when 0x52 <= hx && hx <= 0x5f && (d >= 16 || o >= 16) (* 2^4 *) ->
+      when 0x52 <= hx && hx <= 0x5f && (d >= low || o >= low) ->
       (
         let is_iget = 0x52 <= hx && hx <= 0x58 in
-        let new_o = if o >= 16 then 0 else o
-        and new_d = if d >= 16 then 2 else d in
-        let mv_o = if o < 16 then [] else [I.new_move mv_obj16 new_o o]
-        and mv_d = if d < 16 then [] else
+        let new_o = if o >= low then 0 else o
+        and new_d = if d >= low then 2 else d in
+        let mv_o = if o < low then [] else [I.new_move mv_obj16 new_o o]
+        and mv_d = if d < low then [] else
           let mv_op = mv_op (get_sort (op, opr) d) in
           let d, s = if is_iget then d, new_d else new_d, d in
           [I.new_move mv_op d s]
@@ -1262,7 +1263,7 @@ object
         and argv = U.rm_last opr in
         let calc_max_r acc = function I.OPR_REGISTER r -> max acc r in
         let max_r = L.fold_left calc_max_r 0 argv in
-        if max_r >= 16 (* 2^4 *) then
+        if max_r >= low then
         (
           let argv_ty = D.get_argv dx (D.get_mit dx mid)
           and cid = D.get_cid_from_mid dx mid in
@@ -1302,14 +1303,14 @@ object
 
       (* registers for unary *)
       | _, I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
-      when 0x7b <= hx && hx <= 0x8f && (d >= 16 || s >= 16) (* 2^4 *) ->
+      when 0x7b <= hx && hx <= 0x8f && (d >= low || s >= low) ->
       (
         let op_s = mv_op (get_sort (op, opr) s)
         and op_d = mv_op (get_sort (op, opr) d) in
-        let new_s = if s >= 16 then 0 else s
-        and new_d = if d >= 16 then 2 else d in
-        let mv_s = if s < 16 then [] else [I.new_move op_s new_s s]
-        and mv_d = if d < 16 then [] else [I.new_move op_d d new_d]
+        let new_s = if s >= low then 0 else s
+        and new_d = if d >= low then 2 else d in
+        let mv_s = if s < low then [] else [I.new_move op_s new_s s]
+        and mv_d = if d < low then [] else [I.new_move op_d d new_d]
         and uop = [I.new_un_op hx [new_d; new_s]] in
         let inss = mv_s @ uop @ mv_d in
         overwrite inss
@@ -1317,7 +1318,7 @@ object
 
       (* registers for binop/2addr *)
       | _, I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
-      when 0xb0 <= hx && hx <= 0xcf && (d >= 16 || s >= 16) -> incr exp_cnt;
+      when 0xb0 <= hx && hx <= 0xcf && (d >= low || s >= low) -> incr exp_cnt;
         D.insrt_ins dx ins (I.new_bin_op (hx - 32) [d; d; s])
       | _ -> ()
     )

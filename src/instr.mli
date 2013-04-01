@@ -331,6 +331,11 @@ val op_to_hx_and_size : opcode -> int * int
 (** {!opcode} to hex *)
 val op_to_hx : opcode -> int
 
+(** number of "low" registers, registers numbers higher 
+ than this must be moved to a low register before they 
+ can be used for some instructions. *)
+val low_reg : opcode -> int
+
 (** sort of links in the [dex] *)
 type link_sort =
   | STRING_IDS
@@ -342,12 +347,6 @@ type link_sort =
 
 (** which {!link_sort} does this {!opcode} access to? *)
 val access_link : opcode -> link_sort
-
-(** number of "low" registers, registers numbers higher 
- than this must be moved to a low register before they 
- can be used for some instructions.
- Or, use *_RANGE invoke instructions *)
-val low_reg : opcode -> int
 
 (** retrieve actual parameters,
  e.g. for [invoke-*/range v0 v2 @...], return a list of v0, v1, and v2 *)

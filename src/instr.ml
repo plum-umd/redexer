@@ -1154,6 +1154,51 @@ let op_to_hx_and_size (op: opcode) : int * int =
 let op_to_hx (op: opcode) : int =
   fst (op_to_hx_and_size op)
 
+(* low_reg : opcode -> int *)
+let low_reg (op: opcode) : int =
+  let hx = op_to_hx op
+  and moves = [0x01; 0x04; 0x07]
+  and b = 2.0 in
+  let pow =
+    (* MOVE *)
+    if L.mem hx moves then b ** 4.0
+    else if L.mem hx (L.map ((+) 1) moves) then b ** 8.0
+    else if L.mem hx (L.map ((+) 2) moves) then b ** 16.0
+    (* MOVE_RESULT and RETURN *)
+    else if L.mem hx (U.range 0x0a 0x0d (U.range 0x0f 0x11 [])) then b ** 8.0
+    (* CONST *)
+    else if 0x12 = hx then b ** 4.0
+    else if 0x13 <= hx && hx <= 0x1c then b ** 8.0
+    (* OBJ *)
+    else if 0x25 = hx then b ** 16.0
+    else if L.mem hx [0x20; 0x21; 0x23; 0x24] then b ** 4.0
+    else if 0x1d <= hx && hx <= 0x27 then b ** 8.0
+    (* SWITCH, cmp, and if-test *)
+    else if 0x32 <= hx && hx <= 0x37 then b ** 4.0
+    else if 0x2b <= hx && hx <= 0x3d then b ** 8.0
+    (* arrayop *)
+    else if 0x44 <= hx && hx <= 0x51 then b ** 8.0
+    (* instanceop *)
+    else if 0x52 <= hx && hx <= 0x5f then b ** 4.0
+    (* staticop *)
+    else if 0x60 <= hx && hx <= 0x6d then b ** 8.0
+    (* invoke *)
+    else if 0x6e <= hx && hx <= 0x72 then b ** 4.0
+    (* invoke/range *)
+    else if 0x74 <= hx && hx <= 0x78 then b ** 16.0
+    (* unop *)
+    else if 0x7b <= hx && hx <= 0x8f then b ** 4.0
+    (* binop *)
+    else if 0x90 <= hx && hx <= 0xaf then b ** 8.0
+    (* binop/(2addr|lit16) *)
+    else if 0xb0 <= hx && hx <= 0xd7 then b ** 4.0
+    (* binop/lit8 *)
+    else if 0xd8 <= hx && hx <= 0xe2 then b ** 8.0
+    else 0.0
+  in
+  int_of_float pow
+  
+
 type link_sort =
   | STRING_IDS
   | TYPE_IDS
@@ -1173,12 +1218,6 @@ let access_link (op: opcode) : link_sort =
   else if 0x26 <= hx && hx <= 0x2c && hx <> 0x27
   || 0x32 <= hx && hx <= 0x3d then OFFSET
   else NOT_LINK
-
-(* low_reg : opcode -> int *)
-let low_reg (op: opcode) : int =
-  match op with
-  | OP_INVOKE_VIRTUAL -> 16
-  | _ -> -1 (* TODO: not yet *)
 
 (* get_argv : instr -> operand list *)
 let get_argv (ins: instr) : operand list =
