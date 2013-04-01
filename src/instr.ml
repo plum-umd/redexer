@@ -374,6 +374,14 @@ let of_i32 = I32.to_int
 let to_i64 = I64.of_int
 let of_i64 = I64.to_int
 
+let to_con c = OPR_CONST c
+let to_reg r = OPR_REGISTER r
+let to_idx i = OPR_INDEX i
+let to_off f = OPR_OFFSET f
+
+(* of_reg : operand -> int *)
+let of_reg = function OPR_REGISTER r -> r
+
 (* instr_to_string : instr -> string *)
 let rec instr_to_string (op, opr) =
   let buf = B.create 80 in
@@ -1196,12 +1204,131 @@ type reg_sort =
 
 (* get_reg_sorts : instr -> (int * reg_sort) list *)
 let get_reg_sorts (ins: instr) : (int * reg_sort) list =
+  let wrap_normal opr =
+    let r = of_reg opr in (r, R_NORMAL)
+  and wrap_wide opr =
+    let r = of_reg opr in [(r, R_WIDE); (r+1, R_WIDE_L)]
+  in
   let op, opr = ins in
+  let hx = op_to_hx op in
   match op, opr with
-  | OP_MOVE_RESULT_OBJECT, OPR_REGISTER r :: []
-  | OP_RETURN_OBJECT,      OPR_REGISTER r :: []
-  | OP_CHECK_CAST,         OPR_REGISTER r :: _  -> [(r, R_OBJ)]
-  | _, _ -> [] (* TODO *)
+  | _, OPR_REGISTER d :: OPR_REGISTER s :: []
+  when 0x01 <= hx && hx <= 0x09 -> (* MOVE *)
+  (
+    if 0x01 <= hx && hx <= 0x03 then [(d, R_NORMAL); (s, R_NORMAL)]
+    else if 0x07 <= hx && hx <= 0x09 then [(d, R_OBJ); (s, R_OBJ)]
+    else [(d, R_WIDE); (d+1, R_WIDE_L); (s, R_WIDE); (s+1, R_WIDE_L)]
+  )
+
+  | _, OPR_REGISTER r :: []
+  when 0x0a <= hx && hx <= 0x11 -> (* MOVE_RESULT and RETURN *)
+  (
+    if L.mem hx [0x0c; 0x0d; 0x11] then [(r, R_OBJ)]
+    else if L.mem hx [0x0b; 0x10] then [(r, R_WIDE); (r+1, R_WIDE_L)]
+    else [(r, R_NORMAL)]
+  )
+
+  | _, OPR_REGISTER r :: _
+  when 0x12 <= hx && hx <= 0x1c -> (* CONST *)
+  (
+    if 0x12 <= hx && hx <= 0x15 then [(r, R_NORMAL)]
+    else if 0x1a <= hx && hx <= 0x1c then [(r, R_OBJ)]
+    else [(r, R_WIDE); (r+1, R_WIDE_L)]
+  )
+
+  | OP_MONITOR_ENTER,   OPR_REGISTER r :: []
+  | OP_MONITOR_EXIT,    OPR_REGISTER r :: []
+  | OP_CHECK_CAST,      OPR_REGISTER r :: _ 
+  | OP_NEW_INSTANCE,    OPR_REGISTER r :: _
+  | OP_FILL_ARRAY_DATA, OPR_REGISTER r :: _
+  | OP_THROW,           OPR_REGISTER r :: [] -> [(r, R_OBJ)]
+
+  | OP_INSTANCE_OF,  OPR_REGISTER d :: OPR_REGISTER o :: _
+  | OP_ARRAY_LENGTH, OPR_REGISTER d :: OPR_REGISTER o :: [] ->
+    [(d, R_NORMAL); (o, R_OBJ)]
+
+  | OP_NEW_ARRAY, OPR_REGISTER d :: OPR_REGISTER s :: _ ->
+    [(d, R_OBJ); (s, R_NORMAL)]
+
+(* reference types are acceptable...
+  | OP_FILLED_NEW_ARRAY,       _
+  | OP_FILLED_NEW_ARRAY_RANGE, _
+  | OP_PACKED_SWITCH, _
+  | OP_SPARSE_SWITCH, _ ->
+    L.map (fun opr -> wrap_normal opr) (U.rm_last opr)
+*)
+
+  | _, OPR_REGISTER d :: OPR_REGISTER s1 :: OPR_REGISTER s2 :: []
+  when 0x2d <= hx && hx <= 0x31 -> (* CMP *)
+  (
+    if 0x2d <= hx && hx <= 0x2e then L.map wrap_normal opr
+    else L.flatten (L.map wrap_wide opr)
+  )
+
+(* reference types are acceptable...
+  | _, OPR_REGISTER s1 :: OPR_REGISTER s2 :: _
+  when 0x32 <= hx && hx <= 0x37 -> (* IF-test *)
+    [(s1, R_NORMAL); (s2, R_NORMAL)]
+  | _, OPR_REGISTER t :: _
+  when 0x38 <= hx && hx <= 0x3d -> (* IF-testz *)
+    [(t, R_NORMAL)]
+*)
+
+  | _, OPR_REGISTER d :: OPR_REGISTER a :: OPR_REGISTER i :: []
+  when 0x44 <= hx && hx <= 0x51 -> (* arrayop *)
+  (
+    let common = [(a, R_OBJ); (i, R_NORMAL)] in
+    if L.mem hx [0x45; 0x4c] then (d, R_WIDE) :: (d+1, R_WIDE_L) :: common
+    else if L.mem hx [0x46; 0x4d] then (d, R_OBJ) :: common
+    else (d, R_NORMAL) :: common
+  )
+
+  | _, OPR_REGISTER d :: OPR_REGISTER o :: _
+  when 0x52 <= hx && hx <= 0x5f -> (* instanceop *)
+  (
+    let common = [(o, R_OBJ)] in
+    if L.mem hx [0x53; 0x5a] then (d, R_WIDE) :: (d+1, R_WIDE_L) :: common
+    else if L.mem hx [0x54; 0x5b] then (d, R_OBJ) :: common
+    else (d, R_NORMAL) :: common
+  )
+
+  | _, OPR_REGISTER d :: _
+  when 0x60 <= hx && hx <= 0x6d -> (* staticop *)
+  (
+    if L.mem hx [0x61; 0x68] then [(d, R_WIDE); (d+1, R_WIDE_L)]
+    else if L.mem hx [0x62; 0x69] then [(d, R_OBJ)]
+    else [(d, R_NORMAL)]
+  )
+
+(* can't figure out sorts of registers from an instr perspective
+  | _, _ when 0x63 <= hx && hx <= 0x78 -> (* invoke *)
+*)
+
+  | _, OPR_REGISTER d :: OPR_REGISTER s :: []
+  when 0x7b <= hx && hx <= 0x8f -> (* unop *)
+  (
+    let s_sorts =
+      if L.mem hx [0x7d; 0x7e; 0x80; 0x84; 0x85; 0x86; 0x8a; 0x8b; 0x8c]
+      then [(s, R_WIDE); (s+1, R_WIDE_L)] else [(s, R_NORMAL)]
+    and d_sorts =
+      if L.mem hx [0x7d; 0x7e; 0x80; 0x81; 0x83; 0x86; 0x88; 0x89; 0x8b]
+      then [(d, R_WIDE); (d+1, R_WIDE_L)] else [(d, R_NORMAL)]
+    in
+    s_sorts @ d_sorts
+  )
+
+  | _, _ when 0x90 <= hx && hx <= 0xcf -> (* binop(/2addr) *)
+  (
+    if L.mem hx (U.range 0x9b 0xa5 (U.range 0xab 0xaf []))
+    || L.mem hx (U.range 0xbb 0xc5 (U.range 0xcb 0xcf [])) then
+      L.flatten (L.map wrap_wide opr)
+    else L.map wrap_normal opr
+  )
+
+  | _, _ when 0xd0 <= hx && hx <= 0xe2 -> (* binop/lit(16|8) *)
+    L.map wrap_normal opr
+
+  | _, _ -> []
 
 (***********************************************************************)
 (* Parsing                                                             *)
@@ -1959,11 +2086,6 @@ let instr_to_bytes (base: int) (ins: instr) : char list =
 (***********************************************************************)
 (* New instruction                                                     *)
 (***********************************************************************)
-
-let to_con c = OPR_CONST c
-let to_reg r = OPR_REGISTER r
-let to_idx i = OPR_INDEX i
-let to_off f = OPR_OFFSET f
 
 (* new_const : int -> int -> instr *)
 let new_const (r: int) (c: int) : instr =

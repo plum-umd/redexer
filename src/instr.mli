@@ -307,6 +307,9 @@ and opcode  =
 
 (** {2 Utilities} *)
 
+(** unwrapping [OPR_REGISTER] *)
+val of_reg : operand -> int
+
 (** {!instr} to [string] *)
 val instr_to_string : instr -> string
 
