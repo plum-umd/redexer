@@ -1113,6 +1113,15 @@ let call_trace (dx: D.dex) (re: string list) : unit =
 let exp_cnt = ref 0
 
 class opr_expander (dx: D.dex) =
+  let get_sort ins r =
+    let sorts = I.get_reg_sorts ins in
+    try L.assoc r sorts with Not_found -> I.R_NORMAL
+  in
+  let mv_op = function
+    | I.R_OBJ  -> mv_obj16
+    | I.R_WIDE -> mv_wd_16
+    | _        -> move_f16
+  in
 object
   inherit V.iterator dx
 
@@ -1208,17 +1217,10 @@ object
         St.time "reach" DFA.fixed_pt ();
         let inn = St.time "reach" DFA.inn ins in
         let get_def_sort (d: D.link) (r: int) : I.reg_sort =
-          if d = D.no_off then I.R_NORMAL else
-          let sorts = I.get_reg_sorts (D.get_ins dx d) in
-          try L.assoc r sorts with Not_found -> I.R_NORMAL
+          if d = D.no_off then I.R_NORMAL else get_sort (D.get_ins dx d) r
         in
         let sort_a = get_def_sort (IM.find a inn) a
         and sort_b = get_def_sort (IM.find b inn) b in
-        let mv_op = function
-          | I.R_OBJ  -> mv_obj16
-          | I.R_WIDE -> mv_wd_16
-          | _        -> move_f16
-        in
         let op_a = mv_op sort_a
         and op_b = mv_op sort_b in
         let new_a = if a >= 16 then 0 else a
@@ -1239,11 +1241,7 @@ object
         and new_d = if d >= 16 then 2 else d in
         let mv_o = if o < 16 then [] else [I.new_move mv_obj16 new_o o]
         and mv_d = if d < 16 then [] else
-          let mv_op = match op with
-            | I.OP_IGET_WIDE   | I.OP_IPUT_WIDE   -> mv_wd_16
-            | I.OP_IGET_OBJECT | I.OP_IPUT_OBJECT -> mv_obj16
-            | _ -> move_f16
-          in
+          let mv_op = mv_op (get_sort (op, opr) d) in
           let d, s = if is_iget then d, new_d else new_d, d in
           [I.new_move mv_op d s]
         and i__t = [I.new_ist_fld hx new_d new_o fid] in
@@ -1293,7 +1291,7 @@ object
           in
           let argn = L.length argv in
           let dsts = U.range 0 (argn - 1) []
-          and srcs = L.map (function I.OPR_REGISTER r -> r) argv in
+          and srcs = L.map I.of_reg argv in
           let inss = CL.toList (
             fst (L.fold_left copy_argv (CL.empty, (dsts, srcs)) argv_ty)
             @@ CL.single (I.new_invoke (hx + 6) [0; argn-1; D.of_idx mid])
@@ -1306,15 +1304,10 @@ object
       | _, I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
       when 0x7b <= hx && hx <= 0x8f && (d >= 16 || s >= 16) (* 2^4 *) ->
       (
+        let op_s = mv_op (get_sort (op, opr) s)
+        and op_d = mv_op (get_sort (op, opr) d) in
         let new_s = if s >= 16 then 0 else s
         and new_d = if d >= 16 then 2 else d in
-        let op_s =
-          if L.mem hx [0x7d; 0x7e; 0x80; 0x84; 0x85; 0x86; 0x8a; 0x8b; 0x8c]
-          then mv_wd_16 else move_f16
-        and op_d =
-          if L.mem hx [0x7d; 0x7e; 0x80; 0x81; 0x83; 0x86; 0x88; 0x89; 0x8b]
-          then mv_wd_16 else move_f16
-        in
         let mv_s = if s < 16 then [] else [I.new_move op_s new_s s]
         and mv_d = if d < 16 then [] else [I.new_move op_d d new_d]
         and uop = [I.new_un_op hx [new_d; new_s]] in

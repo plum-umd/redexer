@@ -320,8 +320,6 @@ let has_monitors dx (citm: D.code_item) : bool =
 let vxyz (s: int) : int list =
   L.map (fun i -> i mod 16) (U.range s (s + 2) [])
 
-let get_reg = function I.OPR_REGISTER r -> r
-
 class logger (dx: D.dex) =
   let logger_cid = D.get_cid dx logger in
   let m_ent_mid, _ = D.get_the_mtd dx logger_cid logMEnt
@@ -489,7 +487,7 @@ object
             (* not to alter current cursor, do this part first *)
             let rety = D.get_rety dx mit in
             let vr =
-              if mname = J.init then get_reg (L.hd opr) else
+              if mname = J.init then I.of_reg (L.hd opr) else
               let op, opr = M.get_ins dx cur_citm ext_cursor in
               match op, opr with
               | I.OP_MOVE_RESULT,        I.OPR_REGISTER r :: []
@@ -556,7 +554,7 @@ object
               acc @@ (CL.fromList (ins_c::ins_a)),
               (arr_i + 1, if J.is_wide tname then L.tl tl else tl)
             in
-            let params = L.map get_reg (I.get_argv (op, opr)) in
+            let params = L.map I.of_reg (I.get_argv (op, opr)) in
             let ent_insns = CL.toList (
               CL.fromList [ins0; ins1]
               @@ fst (L.fold_left copy_argv (CL.empty, (0, params)) argv)

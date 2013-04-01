@@ -107,10 +107,8 @@ let val_to_str = function
 let all (n: int) v : value IM.t =
   L.fold_left (fun acc i -> IM.add i v acc) IM.empty (U.range (-1) (n - 1) [])
 
-let get_reg = function I.OPR_REGISTER r -> r
-
 let rec get_nth n args =
-  if n = 0 then get_reg (L.hd args) else get_nth (n-1) (L.tl args)
+  if n = 0 then I.of_reg (L.hd args) else get_nth (n-1) (L.tl args)
 
 let get_this args = get_nth 0 args
 let get_1st  args = get_nth 1 args
@@ -123,26 +121,26 @@ let rec transfer (dx: D.dex) (inn: value IM.t) (ins: D.link) : value IM.t =
   else if L.mem hx (U.range 0x01 0x09 []) then (* MOVE *)
   (
     let dst::src::[] = opr in
-    let d = get_reg dst
-    and s = get_reg src in
+    let d = I.of_reg dst
+    and s = I.of_reg src in
     IM.add d (IM.find s inn) inn
   )
   else if L.mem hx (U.range 0x0a 0x0d []) then (* MOVE_RESULT *)
   (
     let dst::[] = opr in
-    let d = get_reg dst in
+    let d = I.of_reg dst in
     IM.add d (IM.find (-1) inn) inn
   )
   else if L.mem hx (U.range 0x12 0x1c []) then (* CONST *)
   (
     let dst::src::[] = opr in
-    let d = get_reg dst in
+    let d = I.of_reg dst in
     IM.add d (read_const dx op src) inn
   )
   else if 0x22 = hx then (* NEW *)
   (
     let dst::id::[] = opr in
-    let d = get_reg dst
+    let d = I.of_reg dst
     and cid = D.opr2idx id in
     let cname = D.get_ty_str dx cid in
     (* java.lang.StringBuilder, java.net.InetSocketAddress,
@@ -160,7 +158,7 @@ let rec transfer (dx: D.dex) (inn: value IM.t) (ins: D.link) : value IM.t =
   else if L.mem hx (U.range 0x60 0x66 []) then (* SGET *)
   (
     let dst::id::[] = opr in
-    let d = get_reg dst
+    let d = I.of_reg dst
     and fid = D.opr2idx id in
     let cid = D.get_cid_from_fid dx fid in
     let cname = J.of_java_ty (D.get_ty_str dx cid)
@@ -263,7 +261,7 @@ let rec transfer (dx: D.dex) (inn: value IM.t) (ins: D.link) : value IM.t =
   (
     try
       let dst::_ = opr in
-      let d = get_reg dst in
+      let d = I.of_reg dst in
       IM.add d BOT inn
     with Match_failure _ -> inn
   )

@@ -70,8 +70,6 @@ let meet_off off1 off2 =
 let all (n: int) v : D.link IM.t =
   L.fold_left (fun acc i -> IM.add i v acc) IM.empty (U.range 0 (n - 1) [])
 
-let get_reg = function I.OPR_REGISTER r -> r
-
 let transfer (dx: D.dex) (inn: D.link IM.t) (ins: D.link) : D.link IM.t =
   let op, opr = D.get_ins dx ins in
   let hx = I.op_to_hx op in
@@ -85,10 +83,7 @@ let transfer (dx: D.dex) (inn: D.link IM.t) (ins: D.link) : D.link IM.t =
   || L.mem hx (U.range 0x60 0x66 []) (* SGET *)
   || (0x7b <= hx && hx <= 0xe2) (* mathematical op *)
   then
-  (
-    let d = get_reg (L.hd opr) in
-    IM.add d ins inn
-  )
+    let d = I.of_reg (L.hd opr) in IM.add d ins inn
   else inn
 
 (* NOTE: cannot use Df instead of Dataflow here *)
