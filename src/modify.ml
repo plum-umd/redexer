@@ -51,7 +51,9 @@ module A  = Android
 module V  = Visitor
 module Cf = Ctrlflow
 
-module IM = I.IM
+module Rc = Reaching
+
+module IM = U.IM
 module IS = Set.Make(Int32)
 
 module I32 = Int32
@@ -237,7 +239,7 @@ let find_or_new_ty_lst (dx: D.dex) (tl: D.link list) : D.link =
       ( found := true; off := (D.Off k) )
     | _ -> ()
   in
-  IM.iter iter dx.D.d_data;
+  I.IM.iter iter dx.D.d_data;
   if !found then !off else
   (
     off := get_fresh_addr ();
@@ -1187,14 +1189,42 @@ object
       when cur_citm.D.insns_size > 65536 (* 2^16 *) -> incr exp_cnt;
         D.insrt_ins dx ins (I.new_goto (hx + 1) off)
 
+      (* offset for switch might be altered *)
+      | I.OP_PACKED_SWITCH, _ :: off :: []
+      | I.OP_SPARSE_SWITCH, _ :: off :: [] ->
+      (
+        match D.get_data_item dx (D.opr2off off) with
+        | D.SWITCH sw -> sw.D.sw_base <- ins
+      )
+
       (* registers for if-test *)
       | _, I.OPR_REGISTER a :: I.OPR_REGISTER b :: I.OPR_OFFSET off :: []
       when 0x32 <= hx && hx <= 0x37 && (a >= 16 || b >= 16) (* 2^4 *) ->
       (
+        let dfa = St.time "reach" (Rc.make_dfa dx) cur_citm in
+        let module DFA = (val dfa: Dataflow.ANALYSIS
+          with type st = D.link and type l = (D.link IM.t))
+        in
+        St.time "reach" DFA.fixed_pt ();
+        let inn = St.time "reach" DFA.inn ins in
+        let get_def_sort (d: D.link) (r: int) : I.reg_sort =
+          if d = D.no_off then I.R_NORMAL else
+          let sorts = I.get_reg_sorts (D.get_ins dx d) in
+          try L.assoc r sorts with Not_found -> I.R_NORMAL
+        in
+        let sort_a = get_def_sort (IM.find a inn) a
+        and sort_b = get_def_sort (IM.find b inn) b in
+        let mv_op = function
+          | I.R_OBJ  -> mv_obj16
+          | I.R_WIDE -> mv_wd_16
+          | _        -> move_f16
+        in
+        let op_a = mv_op sort_a
+        and op_b = mv_op sort_b in
         let new_a = if a >= 16 then 0 else a
         and new_b = if b >= 16 then 1 else b in
-        let mv_a = if a < 16 then [] else [I.new_move move_f16 new_a a]
-        and mv_b = if b < 16 then [] else [I.new_move move_f16 new_b b]
+        let mv_a = if a < 16 then [] else [I.new_move op_a new_a a]
+        and mv_b = if b < 16 then [] else [I.new_move op_b new_b b]
         and test = [I.new_if hx new_a new_b off] in
         let inss = mv_a @ mv_b @ test in
         overwrite inss

@@ -350,6 +350,16 @@ val low_reg : opcode -> int
  e.g. for [invoke-*/range v0 v2 @...], return a list of v0, v1, and v2 *)
 val get_argv : instr -> operand list
 
+(** sort of values in registers *)
+type reg_sort =
+  | R_OBJ
+  | R_WIDE
+  | R_WIDE_L
+  | R_NORMAL
+
+(** for the given {!instr}, make mappings from register to its {!reg_sort} *)
+val get_reg_sorts : instr -> (int * reg_sort) list
+
 (** {2 Parsing and Dumping} *)
 
 (** build {!instr} using {!opcode} and a [list] of arguments *)

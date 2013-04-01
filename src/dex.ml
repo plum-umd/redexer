@@ -203,7 +203,7 @@ and code_item = {
 }
 
 and switch = {
-  sw_base         : link;
+  mutable sw_base : link;
   sw_size         : int;
   sw_keys         : int list;
   sw_targets      : link list;

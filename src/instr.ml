@@ -1188,6 +1188,21 @@ let get_argv (ins: instr) : operand list =
   )
   | _ -> []
 
+type reg_sort =
+  | R_OBJ
+  | R_WIDE
+  | R_WIDE_L
+  | R_NORMAL
+
+(* get_reg_sorts : instr -> (int * reg_sort) list *)
+let get_reg_sorts (ins: instr) : (int * reg_sort) list =
+  let op, opr = ins in
+  match op, opr with
+  | OP_MOVE_RESULT_OBJECT, OPR_REGISTER r :: []
+  | OP_RETURN_OBJECT,      OPR_REGISTER r :: []
+  | OP_CHECK_CAST,         OPR_REGISTER r :: _  -> [(r, R_OBJ)]
+  | _, _ -> [] (* TODO *)
+
 (***********************************************************************)
 (* Parsing                                                             *)
 (***********************************************************************)

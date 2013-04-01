@@ -213,7 +213,7 @@ and code_item = {
 
 (** [packed-switch] and [sparse-switch] format in [insns] of {!code_item} *)
 and switch = {
-  sw_base         : link;
+  mutable sw_base : link;
   sw_size         : int;
   sw_keys         : int list;
   sw_targets      : link list;
