@@ -1365,7 +1365,7 @@ let get_reg_sorts (ins: instr) : (int * reg_sort) list =
   )
 
   | _, _ when 0xd0 <= hx && hx <= 0xe2 -> (* binop/lit(16|8) *)
-    L.map wrap_normal opr
+    L.map wrap_normal (U.rm_last opr)
 
   | _, _ -> []
 
