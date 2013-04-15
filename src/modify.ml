@@ -1218,7 +1218,7 @@ object
         St.time "reach" DFA.fixed_pt ();
         let inn = St.time "reach" DFA.inn ins in
         let get_def_sort (d: D.link) (r: int) : I.reg_sort =
-          if d = D.no_off then I.R_NORMAL else get_sort (D.get_ins dx d) r
+          if D.is_ins dx d then get_sort (D.get_ins dx d) r else I.R_NORMAL
         in
         let sort_a = get_def_sort (IM.find a inn) a
         and sort_b = get_def_sort (IM.find b inn) b in
