@@ -28,7 +28,7 @@ Publications
   UCLA TR #110017, Jul 2011.
 
 [spsm]: http://dx.doi.org/10.1145/2381934.2381938
-[tr2]: http://hdl.handle.net/1903/12852
+[tr2]: http://dx.doi.org/1903/12852
 [tr1]: http://fmdb.cs.ucla.edu/Treports/110017.pdf
 
 Requirements
@@ -37,7 +37,7 @@ Requirements
 * OCaml and Ruby
 
 This tool is tested under [OCaml][ml] 3.12 and [Ruby][rb] 1.8.6(7),
-so you need to install them (or higher version of them).
+so you need to install them (or higher versions of them).
 
 * OCaml SHA library (ocamlfind/findlib or FlexDLL)
 
@@ -48,7 +48,7 @@ You can find the original source codes at [here][sha].
 Build it by running make, and link the resulting directory into ocamlfind's
 root site-lib directory; or sudo make install.
 
-If you're PC, you need to install [ocamlfind/findlib][flib]
+If you're using a PC, you need to install [ocamlfind/findlib][flib]
 and [FlexDLL][fdll] first.  Please make sure that your environment
 variables are set correctly as follows:
 
