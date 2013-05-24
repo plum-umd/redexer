@@ -1580,7 +1580,11 @@ and trans_code_item insns (ci: D.code_item) : char CL.clist =
   and dff = write_off ci.D.debug_info_off
   and nsz = write32  (ci.D.insns_size / 2)
   in
-  let ins  = trans_ins insns ci.D.insns in
+  let ins =
+    let wo_pad = trans_ins insns ci.D.insns in
+    let gap = ci.D.insns_size - (CL.length wo_pad) in
+    if 0 = gap then wo_pad else wo_pad @@ (fill null gap)
+  in
   let tri, hdl = if ci.D.tries_size = 0 then CL.empty, CL.empty else
     let from_b = from_base ci.D.insns insns in
     let pad = if (ci.D.insns_size / 2) mod 2 = 0 then CL.empty
