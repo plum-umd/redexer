@@ -823,8 +823,11 @@ let get_the_mtd dx (cid: link) (mname: string) : link * method_id_item =
     0 = ty_comp dx mit.m_class_id cid' &&
     0 = S.compare mname (get_str dx mit.m_name_id)
   in
-  get_the_mtd_abstr dx cid finder
-
+  try
+    get_the_mtd_abstr dx cid finder
+  with (Wrong_dex _) ->
+    raise (Wrong_dex ("get_the_mtd : can't find method " ^ mname))
+      
 (* get_the_mtd_shorty : dex -> link -> string -> string
   -> link * method_id_item *)
 let get_the_mtd_shorty dx cid mname shorty : link * method_id_item =
