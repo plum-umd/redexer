@@ -145,9 +145,13 @@ object
     and sid = cdef.D.superclass in
     (* override all the overridable methods for target components *)
     let per_on mname =
-      if mname <> App.onUnbind && not (M.override dx cid mname) then
+      if not (L.mem mname [App.onBind; App.onUnbind])
+      && not (M.override dx cid mname) then
       ( M.insrt_return_void dx cid mname; incr override_cnt )
     in
+    (* to avoid the Logger *)
+    let cname = D.get_ty_str dx cid in
+    if U.begins_with cname logging then () else
     (* NOTE: this would explore all superclasses in hierarchy *)
     L.iter per_on (trans_in_hierarchy dx sid)
 
@@ -161,6 +165,8 @@ let add_transition (dx: D.dex) : unit =
   (* insert method sig first so that M.override can find method_id_item *)
   let insrt_void_no_arg cid mname =
     ignore (M.new_sig dx cid mname J.v [])
+  and insrt_void_intent cid mname =
+    ignore (M.new_sig dx cid mname J.v [Acn.intent])
   in
   (* Activity family *)
   let per_act (comp: string) : unit =
@@ -176,11 +182,8 @@ let add_transition (dx: D.dex) : unit =
     let cid = M.new_class dx comp D.pub in
     (* Service.(onCreate | onDestroy) *)
     L.iter (insrt_void_no_arg cid) [App.onCreate; App.onDestroy];
-    (* Service.(onBind | onRebind) *)
-    let insrt_void_intent mname =
-      ignore (M.new_sig dx cid mname J.v [Acn.intent])
-    in
-    L.iter insrt_void_intent [App.onBind; App.onRebind]
+    (* Service.onRebind *)
+    L.iter (insrt_void_intent cid) [App.onRebind]
   in
   L.iter per_srv [App.service];
   (* then add super() into those overriable methods *)

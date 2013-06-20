@@ -826,7 +826,7 @@ let get_the_mtd dx (cid: link) (mname: string) : link * method_id_item =
   try
     get_the_mtd_abstr dx cid finder
   with (Wrong_dex _) ->
-    raise (Wrong_dex ("get_the_mtd : can't find method " ^ mname))
+    raise (Wrong_dex ("get_the_mtd: can't find method: "^mname))
       
 (* get_the_mtd_shorty : dex -> link -> string -> string
   -> link * method_id_item *)
@@ -860,7 +860,7 @@ let get_emtd dx (cid: link) (mid: link) : encoded_method =
     L.find emth_finder mtds
   with Not_found ->
     let mname = get_mtd_name dx mid in
-    raise (Wrong_dex ("get_emtd: not defined : "^mname))
+    raise (Wrong_dex ("get_emtd: not defined: "^mname))
 
 (* get_citm : dex -> link -> link -> link * code_item *)
 let get_citm dx (cid: link) (mid: link) : link * code_item =
