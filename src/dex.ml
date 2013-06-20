@@ -570,7 +570,7 @@ let get_str dx (sid: link) : string =
 let find_str dx (str: string) : link =
   let finder off : bool =
     match get_data_item dx off with
-    | STRING_DATA str' when str' = str -> true
+    | STRING_DATA str' when 0 = S.compare str' str -> true
     | _ -> false
   in
   try to_idx (DA.index_of finder dx.d_string_ids)
@@ -583,7 +583,7 @@ let get_ty_str dx (tid: link) : string =
 (* find_ty_str : dex -> string -> link *)
 let find_ty_str dx (str: string) : link =
   let finder sid : bool =
-    str = get_str dx sid
+    0 = S.compare str (get_str dx sid)
   in
   try to_idx (DA.index_of finder dx.d_type_ids)
   with Not_found -> no_idx
@@ -691,11 +691,7 @@ let get_mtd_name dx (mid: link) : string =
 
 (* get_cid: dex -> string -> link *)
 let get_cid dx (name: string) : link =
-  let folder (i, acc) (l: link) =
-    if 0 = S.compare name (get_str dx l)
-    then (i+1, to_idx i) else (i+1, acc)
-  in
-  snd (DA.fold_left folder (0, no_idx) dx.d_type_ids)
+  find_ty_str dx name
 
 (* get_cdef : dex -> link -> class_def_item *)
 let get_cdef dx (cid: link) : class_def_item =
@@ -772,7 +768,7 @@ let own_the_fld dx (cid: link) (fid: link) : bool =
 let get_mtds dx (cid: link) : (link * method_id_item) list =
   let folder (id, acc) (mit: method_id_item) =
     let nid = id + 1 in
-    if mit.m_class_id = cid
+    if 0 = ty_comp dx mit.m_class_id cid
     then (nid, (to_idx id, mit)::acc) else (nid, acc)
   in
   snd (DA.fold_left folder (0,[]) dx.d_method_ids)
@@ -824,7 +820,8 @@ let rec get_the_mtd_abstr dx (cid: link) finder : link * method_id_item =
 (* get_the_mtd : dex -> link -> string -> link * method_id_item *)
 let get_the_mtd dx (cid: link) (mname: string) : link * method_id_item =
   let finder (cid': link) (mit: method_id_item) : bool =
-    mit.m_class_id = cid' && get_str dx mit.m_name_id = mname
+    0 = ty_comp dx mit.m_class_id cid' &&
+    0 = S.compare mname (get_str dx mit.m_name_id)
   in
   get_the_mtd_abstr dx cid finder
 
@@ -833,8 +830,9 @@ let get_the_mtd dx (cid: link) (mname: string) : link * method_id_item =
 let get_the_mtd_shorty dx cid mname shorty : link * method_id_item =
   let finder (cid': link) (mit: method_id_item) : bool =
     let pit = get_pit dx mit in
-    mit.m_class_id = cid' && get_str dx mit.m_name_id = mname
-    && get_str dx pit.shorty = shorty
+    0 = S.compare shorty (get_str dx pit.shorty) &&
+    0 = ty_comp dx mit.m_class_id cid' &&
+    0 = S.compare mname (get_str dx mit.m_name_id)
   in
   get_the_mtd_abstr dx cid finder
 
