@@ -1113,9 +1113,12 @@ let call_trace (dx: D.dex) (re: string list) : unit =
 let exp_cnt = ref 0
 
 class opr_expander (dx: D.dex) =
-  let get_sort ins r =
-    let sorts = I.get_reg_sorts ins in
-    try L.assoc r sorts with Not_found -> I.R_NORMAL
+  let get_sort ins rs =
+    let sort_finder (acc, sorts) r =
+      try ((L.assoc r sorts) :: acc, L.remove_assoc r sorts)
+      with Not_found -> (I.R_NORMAL :: acc, sorts)
+    and sorts = I.get_reg_sorts ins in
+    let rs', _ = L.fold_left sort_finder ([], sorts) rs in L.rev rs'
   in
   let mv_op = function
     | I.R_OBJ  -> mv_obj16
@@ -1225,7 +1228,7 @@ object
         St.time "reach" DFA.fixed_pt ();
         let inn = St.time "reach" DFA.inn ins in
         let get_def_sort (d: D.link) (r: int) : I.reg_sort =
-          if D.is_ins dx d then get_sort (D.get_ins dx d) r
+          if D.is_ins dx d then L.hd (get_sort (D.get_ins dx d) [r])
           (* parameters won't have def; rather, refer to method sig *)
           else if D.is_param cur_citm r then
             let argv = D.get_argv dx (D.get_mit dx cur_mid) in
@@ -1234,7 +1237,7 @@ object
               let cur_cid = D.get_cid_from_mid dx cur_mid in cur_cid :: argv
             in
             let p_finder (i, sort) arg =
-              let tname = D.get_ty_str dx arg in
+              let tname = J.of_type_descr (D.get_ty_str dx arg) in
               let i' = if L.mem tname [J.j; J.d] then i + 2 else i + 1 in
               let sort' = if i <> r then sort else
                 if L.mem tname [J.j; J.d] then I.R_WIDE
@@ -1267,7 +1270,7 @@ object
         and new_d = if d >= low then 2 else d in
         let mv_o = if o < low then [] else [I.new_move mv_obj16 new_o o]
         and mv_d = if d < low then [] else
-          let mv_op = mv_op (get_sort (op, opr) d) in
+          let mv_op::[] = L.map mv_op (get_sort (op, opr) [d]) in
           let d, s = if is_iget then d, new_d else new_d, d in
           [I.new_move mv_op d s]
         and i__t = [I.new_ist_fld hx new_d new_o fid] in
@@ -1330,8 +1333,7 @@ object
       | _, I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
       when 0x7b <= hx && hx <= 0x8f && (d >= low || s >= low) ->
       (
-        let op_s = mv_op (get_sort (op, opr) s)
-        and op_d = mv_op (get_sort (op, opr) d) in
+        let op_d::op_s::[] = L.map mv_op (get_sort (op, opr) [d;s]) in
         let new_s = if s >= low then 0 else s
         and new_d = if d >= low then 2 else d in
         let mv_s = if s < low then [] else [I.new_move op_s new_s s]

@@ -1346,14 +1346,14 @@ let get_reg_sorts (ins: instr) : (int * reg_sort) list =
   | _, OPR_REGISTER d :: OPR_REGISTER s :: []
   when 0x7b <= hx && hx <= 0x8f -> (* unop *)
   (
-    let s_sorts =
-      if L.mem hx [0x7d; 0x7e; 0x80; 0x84; 0x85; 0x86; 0x8a; 0x8b; 0x8c]
-      then [(s, R_WIDE); (s+1, R_WIDE_L)] else [(s, R_NORMAL)]
-    and d_sorts =
+    let d_sorts =
       if L.mem hx [0x7d; 0x7e; 0x80; 0x81; 0x83; 0x86; 0x88; 0x89; 0x8b]
       then [(d, R_WIDE); (d+1, R_WIDE_L)] else [(d, R_NORMAL)]
+    and s_sorts =
+      if L.mem hx [0x7d; 0x7e; 0x80; 0x84; 0x85; 0x86; 0x8a; 0x8b; 0x8c]
+      then [(s, R_WIDE); (s+1, R_WIDE_L)] else [(s, R_NORMAL)]
     in
-    s_sorts @ d_sorts
+    d_sorts @ s_sorts
   )
 
   | _, _ when 0x90 <= hx && hx <= 0xcf -> (* binop(/2addr) *)
