@@ -584,6 +584,9 @@ val get_citm : dex -> link -> link -> link * code_item
 (** calculate a register number that holds [this] pointer *)
 val calc_this : code_item -> int
 
+(** [true] if the given register is used as a parameter *)
+val is_param : code_item -> int -> bool
+
 (** {2 Modification helper} *)
 
 (** empty {!section} *)

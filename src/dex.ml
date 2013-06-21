@@ -874,6 +874,11 @@ let get_citm dx (cid: link) (mid: link) : link * code_item =
 let calc_this (citm: code_item) : int =
   citm.registers_size - citm.ins_size
 
+(* is_param : code_item -> int -> bool *)
+let is_param (citm: code_item) (r: int) : bool =
+  let this = calc_this citm in
+  this <= r && r < citm.registers_size
+
 (***********************************************************************)
 (* DEX modification helper                                             *)
 (***********************************************************************)

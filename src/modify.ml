@@ -1125,6 +1125,13 @@ class opr_expander (dx: D.dex) =
 object
   inherit V.iterator dx
 
+  (* to keep track of parameters types *)
+  val mutable cur_mid = D.no_idx
+  val mutable is_static = false
+  method v_emtd (emtd: D.encoded_method) : unit =
+    cur_mid   <- emtd.D.method_idx;
+    is_static <- D.is_static emtd.D.m_access_flag
+
   (* to update goto instructions whose offset would be truncated
     due to aggressive instrumentations *)
   val mutable cur_citm = D.empty_citm ()
@@ -1218,7 +1225,25 @@ object
         St.time "reach" DFA.fixed_pt ();
         let inn = St.time "reach" DFA.inn ins in
         let get_def_sort (d: D.link) (r: int) : I.reg_sort =
-          if D.is_ins dx d then get_sort (D.get_ins dx d) r else I.R_NORMAL
+          if D.is_ins dx d then get_sort (D.get_ins dx d) r
+          (* parameters won't have def; rather, refer to method sig *)
+          else if D.is_param cur_citm r then
+            let argv = D.get_argv dx (D.get_mit dx cur_mid) in
+            let argv = if is_static then argv else
+              (* including *this* unless static methods *)
+              let cur_cid = D.get_cid_from_mid dx cur_mid in cur_cid :: argv
+            in
+            let p_finder (i, sort) arg =
+              let tname = D.get_ty_str dx arg in
+              let i' = if L.mem tname [J.j; J.d] then i + 2 else i + 1 in
+              let sort' = if i <> r then sort else
+                if L.mem tname [J.j; J.d] then I.R_WIDE
+                else if L.mem tname J.shorties then I.R_NORMAL
+                else I.R_OBJ
+              in (i', sort')
+            in
+            snd (L.fold_left p_finder (D.calc_this cur_citm, I.R_OBJ) argv)
+          else I.R_NORMAL
         in
         let sort_a = get_def_sort (IM.find a inn) a
         and sort_b = get_def_sort (IM.find b inn) b in
