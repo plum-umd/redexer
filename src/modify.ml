@@ -1361,6 +1361,20 @@ object
       | _, I.OPR_REGISTER d :: I.OPR_REGISTER s :: []
       when 0xb0 <= hx && hx <= 0xcf && (d >= low || s >= low) -> incr exp_cnt;
         D.insrt_ins dx ins (I.new_bin_op (hx - 32) [d; d; s])
+
+      (* registers for binop/lit16 *)
+      | _, I.OPR_REGISTER d :: I.OPR_REGISTER s :: I.OPR_CONST c :: []
+      when 0xd0 <= hx && hx <= 0xd7 && (d >= low || s >= low) ->
+      (
+        let new_s = if s >= low then 0 else s
+        and new_d = if d >= low then 1 else d in
+        let mv_s = if s < low then [] else [I.new_move move_f16 new_s s]
+        and mv_d = if d < low then [] else [I.new_move move_f16 d new_d]
+        and bop = [I.new_bin_lit_op hx [new_d; new_s] c] in
+        let inss = mv_s @ bop @ mv_d in
+        overwrite inss
+      )
+
       | _ -> ()
     )
 

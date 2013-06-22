@@ -2201,6 +2201,11 @@ let new_arr_op (hx: int) (argv: int list) : instr =
 let new_bin_op (hx: int) (regs: int list) : instr =
   wrap_reg hx regs
 
+(* new_bin_lit_op : int -> int list -> int64 -> instr *)
+let new_bin_lit_op (hx: int) (regs: int list) (c: int64) : instr =
+  let op = hx_to_op hx
+  and opr = (L.map to_reg regs) @ [to_con c] in op, opr
+
 (* new_un_op : int -> int list -> instr *)
 let new_un_op (hx: int) (regs: int list) : instr =
   wrap_reg hx regs

@@ -412,6 +412,10 @@ val new_arr_op : int -> int list -> instr
  generate a new binary operation {!instr} *)
 val new_bin_op : int -> int list -> instr
 
+(** for the given binary op, registers, and constant,
+ generate a new binary-lit(16|8) operation {!instr} *)
+val new_bin_lit_op : int -> int list -> int64 -> instr
+
 (** for the given unary op and registers,
  generate a new unary operation {!instr} *)
 val new_un_op : int -> int list -> instr
