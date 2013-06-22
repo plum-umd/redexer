@@ -1175,6 +1175,20 @@ object
       when d >= low -> incr exp_cnt;
         D.insrt_ins dx ins (I.new_move (hx + 1) d s)
 
+      (* registers for instance-of *)
+      | I.OP_INSTANCE_OF,
+        I.OPR_REGISTER d :: I.OPR_REGISTER o :: I.OPR_INDEX cid :: []
+        when d >= low || o >= low ->
+      (
+        let new_o = if o >= low then 0 else o
+        and new_d = if d >= low then 1 else d in
+        let mv_o = if o < low then [] else [I.new_move mv_obj16 new_o o]
+        and mv_d = if d < low then [] else [I.new_move move_f16 d new_d]
+        and i_of = [I.new_ist_of new_d new_o cid] in
+        let inss = mv_o @ i_of @ mv_d in
+        overwrite inss
+      )
+
       (* registers for array-length *)
       | I.OP_ARRAY_LENGTH, I.OPR_REGISTER d :: I.OPR_REGISTER a :: []
       when d >= low || a >= low ->

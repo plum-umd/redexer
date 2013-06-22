@@ -2168,6 +2168,11 @@ let new_const_id (hx: int) (r: int) (i: int) : instr =
 let new_move (hx: int) (dst: int) (src: int) : instr =
   mv_reg_to_reg hx dst src
 
+(* new_ist_of : int -> int -> int -> instr *)
+let new_ist_of (dst: int) (src: int) (typ: int) : instr =
+  let hx = op_to_hx OP_INSTANCE_OF in
+  refer_last hx [dst; src; typ]
+
 (* new_obj : int -> int -> instr *)
 let new_obj (dst: int) (typ: int) : instr =
   let hx = op_to_hx OP_NEW_INSTANCE in

@@ -372,17 +372,21 @@ val instr_to_bytes : int -> instr -> char list
 
 (** {2 Generating} *)
 
-(** for given a register number and constant,
+(** for given register number and constant,
  generate [OP_CONST]-kind {!instr} *)
 val new_const : int -> int -> instr
 
-(** for given register number and string or class id,
+(** for a given register number, along with string or class id,
  generate [OP_CONST]-kind {!instr} *)
 val new_const_id : int -> int -> int -> instr
 
-(** for a given source and destination register,
+(** for given destination and source registers,
  generate a new [OP_MOVE]-kind {!instr} *)
 val new_move : int -> int -> int -> instr
+
+(** for given destination and source registers, along with type,
+ generate a new [OP_INSTANCE_OF] {!instr} *)
+val new_ist_of : int -> int -> int -> instr
 
 (** for a given destination register and type,
  generate a new [OP_NEW_INSTANCE] {!instr} *)
