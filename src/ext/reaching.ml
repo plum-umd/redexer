@@ -61,8 +61,11 @@ module B = Buffer
 let compare_off off1 off2 = match off1, off2 with
   | D.Off o1, D.Off o2 -> I32.compare o1 o2
 
+(* bot_off = D.no_off *)
+let top_off = D.to_off (I32.to_int I32.max_int)
+
 let meet_off off1 off2 =
-  if 0 < compare_off off1 off2 then off1 else off2
+  if compare_off off1 off2 < 0 then off1 else off2
 
 let all (n: int) v : D.link IM.t =
   L.fold_left (fun acc i -> IM.add i v acc) IM.empty (U.range 0 (n - 1) [])
@@ -96,7 +99,7 @@ let make_dfa (dx: D.dex) (citm: D.code_item) : reaching =
   struct
     type l = D.link IM.t
     let bot = all citm.D.registers_size D.no_off
-    let top = all citm.D.registers_size (D.to_off (I32.to_int I32.max_int))
+    let top = all citm.D.registers_size top_off
 
     let meet l1 l2 =
       let wrapper _ vo1 vo2 = match vo1, vo2 with
@@ -116,7 +119,7 @@ let make_dfa (dx: D.dex) (citm: D.code_item) : reaching =
         if v <> D.no_off then
         (
           B.add_string buf ("v"^(string_of_int k)^": ");
-          B.add_string buf (Pf.sprintf "%08X\n" (D.of_off v))
+          B.add_string buf (Pf.sprintf "0x%08X\n" (D.of_off v))
         )
       in
       IM.iter per_kv l;
@@ -131,7 +134,7 @@ let make_dfa (dx: D.dex) (citm: D.code_item) : reaching =
     let init (ins: st) : l =
       let _, opr = D.get_ins dx ins in
       let per_opr acc = function
-        | I.OPR_REGISTER v -> IM.add v D.no_off acc
+        | I.OPR_REGISTER v -> IM.add v top_off acc
         | _ -> acc
       in
       L.fold_left per_opr IM.empty opr
