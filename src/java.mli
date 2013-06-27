@@ -76,6 +76,9 @@ val init : string
 (** [<clinit>] *)
 val clinit : string
 
+(** [hashCode] *)
+val hashCode : string
+
 (** {2 Type Descriptions} *)
 
 (** [true] if given [string] is fit for type description *)

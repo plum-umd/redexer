@@ -368,7 +368,7 @@ object
   val mutable is_void = false
   method v_emtd (emtd: D.encoded_method) : unit =
     mname <- D.get_mtd_name dx emtd.D.method_idx;
-    skip_mtd <- L.mem mname [J.init; J.clinit]
+    skip_mtd <- L.mem mname [J.init; J.clinit; J.hashCode]
       || D.is_synthetic emtd.D.m_access_flag;
     let mit = D.get_mit dx emtd.D.method_idx in
     argv <- D.get_argv dx mit;
