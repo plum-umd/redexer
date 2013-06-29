@@ -114,17 +114,22 @@ val get_fst_ins : Dex.dex -> Dex.code_item -> Instr.instr
 (** get the last {!Instr.instr} *)
 val get_last_ins : Dex.dex -> Dex.code_item -> Instr.instr
 
-(** insert an {!Instr.instr} at {!cursor} point; {!cursor} would be advanced *)
+(** insert an {!Instr.instr} at {!cursor} point; {!cursor} will be advanced *)
 val insrt_ins : Dex.dex -> Dex.code_item -> cursor -> Instr.instr -> cursor
 
-(** remove an {!Instr.instr} at {!cursor} point; {!cursor} would remain as same *)
+(** remove an {!Instr.instr} at {!cursor} point; {!cursor} will remain as same *)
 val rm_ins : Dex.dex -> Dex.code_item -> cursor -> cursor
 
-(** insert {!Instr.instr}s at {!cursor} point: {!cursor} will be advanced *)
+(** insert {!Instr.instr}s at {!cursor} point; {!cursor} will be advanced *)
 val insrt_insns : Dex.dex -> Dex.code_item -> cursor -> Instr.instr list -> cursor
 
-(** insert {!Instr.instr}s while preserving the {!Dex.offset} at {!cursor} point *)
-val insrt_insns_at_off : Dex.dex -> Dex.code_item -> cursor -> Instr.instr list -> cursor
+(** insert {!Instr.instr}s under the specified {!Dex.offset},
+ while preserving that {!Dex.offset} at {!cursor} point *)
+val insrt_insns_under_off : Dex.dex -> Dex.code_item -> cursor -> Instr.instr list -> cursor
+
+(** insert {!Instr.instr}s over the specified {!Dex.offset},
+ while preserving that {!Dex.offset} at {!cursor} point *)
+val insrt_insns_over_off : Dex.dex -> Dex.code_item -> cursor -> Instr.instr list -> cursor
 
 (** insert {!Instr.instr}s before the start of {!Dex.code_item} *)
 val insrt_insns_before_start : Dex.dex -> Dex.code_item -> Instr.instr list -> cursor

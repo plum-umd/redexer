@@ -493,8 +493,16 @@ let rm_ins (dx: D.dex) (citm: D.code_item) cur : cursor =
 let insrt_insns (dx: D.dex) (citm: D.code_item) cur (insns: I.instr list) =
   L.fold_left (insrt_ins dx citm) cur insns
 
-(* insrt_insns_at_off : D.dex -> D.code_item -> cursor -> I.instr list -> cursor *)
-let insrt_insns_at_off dx (citm: D.code_item) cur (insns: I.instr list) =
+(*
+         +---------+                          +---------+
+  off -> |  instr  |         ==>       off -> |  added  |
+         +---------+                          | snippet |
+                                              +---------+
+                                              |  instr  |
+                                              +---------+
+*)
+(* insrt_insns_under_off : D.dex -> D.code_item -> cursor -> I.instr list -> cursor *)
+let insrt_insns_under_off dx (citm: D.code_item) cur (insns: I.instr list) =
   let hd::tl = insns
   and nxt_cur = next cur
   and off = DA.get citm.D.insns cur in
@@ -503,11 +511,35 @@ let insrt_insns_at_off dx (citm: D.code_item) cur (insns: I.instr list) =
   (* shift the current ins *)
   D.insrt_ins dx sft_off ins;
   DA.insert citm.D.insns nxt_cur sft_off;
-  (* overwrite the current ins with new one, which should be 'hd' of insns *)
+  (* overwrite the current ins with the first element of insns *)
   D.insrt_ins dx off hd;
   incr_insns_size citm hd;
   (* insert the remaining instructions from the next cursor *)
   insrt_insns dx citm nxt_cur tl
+
+(*
+                                              +---------+
+                                              |  instr  |
+                                              +---------+
+         +---------+                          |  added  |
+  off -> |  instr  |         ==>       off -> | snippet |
+         +---------+                          +---------+
+*)
+(* insrt_insns_over_off : D.dex -> D.code_item -> cursor -> I.instr list -> cursor *)
+let insrt_insns_over_off dx (citm: D.code_item) cur (insns: I.instr list) =
+  let rest, last = U.rm_last insns, U.get_last insns
+  and nxt_cur = next cur
+  and off = DA.get citm.D.insns cur in
+  let ins = D.get_ins dx off
+  and sft_off = get_fresh_addr () in
+  (* shift the current ins *)
+  D.insrt_ins dx sft_off ins;
+  DA.insert citm.D.insns cur sft_off;
+  (* overwrite the current ins with the last element of insns *)
+  D.insrt_ins dx off last;
+  incr_insns_size citm last;
+  (* insert the remaining instructions from the previous cursor *)
+  insrt_insns dx citm nxt_cur rest
 
 (* insrt_insns_before_start : D.dex -> D.code_item -> I.instr list -> cursor *)
 let insrt_insns_before_start dx (citm: D.code_item) (insns: I.instr list) =
@@ -515,7 +547,7 @@ let insrt_insns_before_start dx (citm: D.code_item) (insns: I.instr list) =
   if 0 = citm.D.insns_size then (* empty body: nothing to shift *)
     insrt_insns dx citm cur insns
   else
-    insrt_insns_at_off dx citm cur insns
+    insrt_insns_under_off dx citm cur insns
 
 (* insrt_insns_after_start : D.dex -> D.code_item -> I.instr list -> cursor *)
 let insrt_insns_after_start dx (citm: D.code_item) (insns: I.instr list) =
@@ -524,7 +556,7 @@ let insrt_insns_after_start dx (citm: D.code_item) (insns: I.instr list) =
 (* insrt_insns_before_end : D.dex -> D.code_item -> I.instr list -> cursor *)
 let insrt_insns_before_end dx (citm: D.code_item) (insns: I.instr list) =
   let cur = get_last_cursor dx citm in
-  insrt_insns_at_off dx citm cur insns
+  insrt_insns_under_off dx citm cur insns
 
 (* insrt_insns_after_end : D.dex -> D.code_item -> I.instr list -> cursor *)
 let insrt_insns_after_end dx (citm: D.code_item) (insns: I.instr list) =

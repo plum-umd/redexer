@@ -522,11 +522,11 @@ object
               @@ (if ret_moved then copy_ret vr vx else CL.empty)
               @@ CL.fromList [ins2; ins3; ins4]
             ) in
-            let cursor =
-              if mname <> J.init && ret_moved then M.next ext_cursor
-              else ext_cursor
+            (* not to alter the control-flow, use ..._over_off *)
+            let _ = if mname <> J.init && ret_moved then
+                M.insrt_insns_over_off dx cur_citm ext_cursor ext_insns
+              else M.insrt_insns dx cur_citm ext_cursor ext_insns
             in
-            let _ = M.insrt_insns dx cur_citm cursor ext_insns in
             api_cnt := !api_cnt + (L.length ext_insns);
 
             (* code snippet for API entries *)
@@ -567,8 +567,8 @@ object
             let cursor =
               if mname = J.init then M.next ent_cursor else ent_cursor
             in
-            (* not to alter the control-flow, use ..._at_off *)
-            let _ = M.insrt_insns_at_off dx cur_citm cursor ent_insns in
+            (* not to alter the control-flow, use ..._under_off *)
+            let _ = M.insrt_insns_under_off dx cur_citm cursor ent_insns in
             api_cnt := !api_cnt + (L.length ent_insns);
 
             M.update_reg_usage dx cur_citm
