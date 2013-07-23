@@ -72,7 +72,7 @@ public class Logger {
       } else if (arg.getClass() == Class.class) {
         s_arg = ((Class)arg).getName();
       } else {
-        s_arg = arg.getClass().getName() + "@" + arg.hashCode();
+        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
       }
       buf.append(s_arg);
       if (!iter.hasNext()) break;                  
