@@ -146,10 +146,12 @@ val insrt_insns_after_end : Dex.dex -> Dex.code_item -> Instr.instr list -> curs
 (** insert {!Instr.rv} at the end of the method *)
 val insrt_return_void : Dex.dex -> Dex.link -> string -> unit
 
-(** shift register usage so as to secure free registers around 0 *)
+(** shift register usage so as to secure free registers around 0
+ to avoid register truncations, you may need to call [expand_opr] *)
 val shift_reg_usage : Dex.dex -> Dex.code_item -> int -> unit
 
-(** shift parameters so as to secure free registers around "this" *)
+(** shift parameters so as to secure free registers around "this"
+ to avoid register truncations, you may need to call [expand_opr] *)
 val shift_params : Dex.dex -> Dex.code_item -> int -> unit
 
 (** update register usage: [registers_size] and [outs_size] *)
