@@ -3,10 +3,8 @@
 from optparse import OptionParser
 import sys
 import os
-from subprocess import call
+from subprocess import call, Popen, PIPE
 import re
-
-sys.dont_write_bytecode = True
 
 f_log = "log.txt"
 
@@ -31,7 +29,7 @@ def main():
 
   if not opt.offline: call([adb, log, "-c"])
 
-  a = os.popen(' '.join([adb, log] + opts))
+  a = Popen([adb, log] + opts, stdout=PIPE).stdout
   f = open(f_log, 'w')
   indent = -2
   while True:
@@ -50,7 +48,6 @@ def main():
         f.write("%*s%s\n" % (indent, "", msg))
         indent -= 2
     except KeyboardInterrupt: break
-  a.close()
   f.close()
 
 if __name__ == "__main__":
