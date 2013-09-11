@@ -2130,9 +2130,9 @@ let instr_to_bytes (base: int) (ins: instr) : char list =
 let new_const (r: int) (c: int) : instr =
   let op =
     (* const/4: 4 bits signed int and 4 bits destination register *)
-    if -1 * 0x8 <= c && c < 0x8 && r < 16 then OP_CONST_4 
+    if -1 * 0x8 <= c && c <= 0x7 && r < 16 then OP_CONST_4 
     (* const/16: 16 bits signed int and 8 bits destination register *)
-    else if -1 * 0x8fff <= c && c < 0x8fff && r < 256 then OP_CONST_16
+    else if -1 * 0x8000 <= c && c <= 0x7fff && r < 256 then OP_CONST_16
     else OP_CONST
   and opr = [to_reg r; to_con (to_i64 c)] in op, opr
 
