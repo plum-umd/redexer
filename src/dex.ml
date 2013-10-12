@@ -797,12 +797,9 @@ let rec get_supermethod dx (cid: link) (mid: link) : link =
     mtd_comp dx mit mit' = 0
   in
   let sid = get_superclass dx cid in
-  try fst (L.find finder (get_mtds dx sid))
-  with Not_found ->
-  (
-    if sid <> no_idx then get_supermethod dx sid mid
-    else no_idx
-  )
+  if sid = no_idx then no_idx else
+    try fst (L.find finder (get_mtds dx sid))
+    with Not_found -> get_supermethod dx sid mid
 
 (* get_the_mtd_abstr : dex -> link -> (link -> method_id_item -> bool)
   -> link * method_id_item *)
