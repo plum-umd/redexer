@@ -64,7 +64,7 @@ class Dex
     self.runcmd("#{REDEXER} -classes #{dex_name} #{QUIET}")
   end
 
-  def self.api(de_name=DEX)
+  def self.api(dex_name=DEX)
     self.runcmd("#{REDEXER} -api #{dex_name} #{QUIET}")
   end
 
