@@ -136,28 +136,42 @@ class Dex
     @@out
   end
 
-  def self.toPDF(pdf)
-    "| dot -Tpdf -o #{pdf}"
+  @@pdf = true
+
+  def self.pdf
+    @@pdf
+  end
+
+  def self.pdf= (v)
+    @@pdf = v
+  end
+
+  def self.toPDF(cmd, pdf)
+    if @@pdf
+      `#{cmd} | dot -Tpdf -o #{pdf}`
+    else
+      self.runcmd(cmd)
+    end
   end
 
   def self.callgraph(dex_name=DEX, *pdf_name)
-    pdf = self.pdf(dex_name, pdf_name)
-    `#{REDEXER} -cg #{dex_name} #{self.toPDF(pdf)}`
+    pdf = self.extract_pdf(dex_name, pdf_name)
+    self.toPDF("#{REDEXER} -cg #{dex_name}", pdf)
   end
 
   def self.cfg(dex_name, cls, mtd, *pdf_name)
-    pdf = self.pdf(dex_name, pdf_name)
-    `#{REDEXER} -cls #{cls} -mtd #{mtd} -cfg #{dex_name} #{self.toPDF(pdf)}`
+    pdf = self.extract_pdf(dex_name, pdf_name)
+    self.toPDF("#{REDEXER} -cls #{cls} -mtd #{mtd} -cfg #{dex_name}", pdf)
   end
   
   def self.dom(dex_name, cls, mtd, *pdf_name)
-    pdf = self.pdf(dex_name, pdf_name)
-    `#{REDEXER} -cls #{cls} -mtd #{mtd} -dom #{dex_name} #{self.toPDF(pdf)}`
+    pdf = self.extract_pdf(dex_name, pdf_name)
+    self.toPDF("#{REDEXER} -cls #{cls} -mtd #{mtd} -dom #{dex_name}", pdf)
   end
 
   def self.pdom(dex_name, cls, mtd, *pdf_name)
-    pdf = self.pdf(dex_name, pdf_name)
-    `#{REDEXER} -cls #{cls} -mtd #{mtd} -pdom #{dex_name} #{self.toPDF(pdf)}`
+    pdf = self.extract_pdf(dex_name, pdf_name)
+    self.toPDF("#{REDEXER} -cls #{cls} -mtd #{mtd} -pdom #{dex_name}", pdf)
   end
  
   def self.dump_method(dex_name, cls, mtd)
@@ -213,7 +227,7 @@ private
     end
   end
 
-  def self.pdf(dex_name, pdf_name)
+  def self.extract_pdf(dex_name, pdf_name)
     if pdf_name.length > 0
       pdf_name[0]
     else

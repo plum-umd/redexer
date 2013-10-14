@@ -80,6 +80,9 @@ option_parser = OptionParser.new do |opts|
   opts.on("--to blah.(yml|pdf|apk|dex)", "result file name") do |t|
     to = t
   end
+  opts.on("--no-pdf", "do not convert dot output to pdf") do
+    Dex.pdf = false
+  end
   opts.on_tail("-h", "--help", "show this message") do
     puts opts
     exit
@@ -170,13 +173,14 @@ when "opstat"
   end
   puts Dex.out if dex_succ?(apk, cmd)
 when "cg"
-  if to
-    pdf = to
-  else
-    pdf = cmd + ".pdf"
-  end
+  pdf = cmd + ".pdf"
+  pdf = to if to
   Dex.callgraph(dex, pdf)
-  system("mv -f #{HOME}/#{pdf} #{RES}") unless to
+  if Dex.pdf
+    system("mv -f #{HOME}/#{pdf} #{RES}") unless to
+  else
+    puts Dex.out if dex_succ?(apk, cmd)
+  end
 when "cfg", "dom", "pdom"
   if not mtd
     close(apk)
@@ -185,13 +189,14 @@ when "cfg", "dom", "pdom"
   part = mtd.split('.')
   cls = part[0..-2].join('.')
   mtd = part[-1]
-  if to
-    pdf = to
-  else
-    pdf = cmd + ".pdf"
-  end
+  pdf = cmd + ".pdf"
+  pdf = to if to
   Dex.send(cmd.to_sym, dex, cls, mtd, pdf)
-  system("mv -f #{HOME}/#{pdf} #{RES}") unless to
+  if Dex.pdf
+    system("mv -f #{HOME}/#{pdf} #{RES}") unless to
+  else
+    puts Dex.out if dex_succ?(apk, cmd)
+  end
 when "dump_method", "dependants", "live", "const", "reach"
   if not mtd
     close(apk)

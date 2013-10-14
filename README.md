@@ -165,21 +165,21 @@ For instance,
 This option generates a pdf file that depicts a call graph of the given file.
 If you don't specify the pdf name, cg.pdf will be used.
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd cg [--to blah.pdf]
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd cg [--to blah.pdf] [--no-pdf]
 
 * control-flow graph
 
 This option generates a pdf file that shows a control-flow graph of the given
 method.  Append a method name to a class name with dot: class_name.method_name
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd cfg --mtd cls.mtd [--to blah.pdf]
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd cfg --mtd cls.mtd [--to blah.pdf] [--no-pdf]
 
 * (post) dominator tree
 
 This option is similar to the above feature, except for that it depicts
 (post) dominator tree.
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd (p)dom --mtd cls.mtd [--to blah.pdf]
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd (p)dom --mtd cls.mtd [--to blah.pdf] [--no-pdf]
 
 * liveness analysis
 
