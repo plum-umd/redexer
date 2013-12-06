@@ -868,9 +868,7 @@ let subst_cls_helper (dx: D.dex) (crs: class_replacement_option list) =
     if xid <> D.no_idx then
     (
       let x_flds = D.get_flds dx xid
-      and y_flds = D.get_fldS dx yid
       and x_mtds = D.get_mtds dx xid
-      and y_mtds = D.get_mtdS dx yid
       in
       if is_snd then
       (
@@ -882,6 +880,9 @@ let subst_cls_helper (dx: D.dex) (crs: class_replacement_option list) =
       );
       if yid <> D.no_idx then
       (
+        let y_flds = D.get_fldS dx yid
+        and y_mtds = D.get_mtdS dx yid
+        in
         if not is_snd then
         (
           make_cmap maps xid yid;
