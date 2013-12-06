@@ -115,7 +115,11 @@ class Apk
   def launcher
     @manifest.launcher
   end
-  
+
+  def permissions
+    @manifest.permissions
+  end
+
   def sdk
     @manifest.sdk
   end

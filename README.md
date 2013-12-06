@@ -211,6 +211,12 @@ This option prints out the launching activity name of the given apk
 
     $ ruby scripts/cmd.rb target.apk --cmd launcher
 
+* permissions declared in the app's manifest
+
+This option prints out permissions the apk uses
+
+    $ ruby scripts/cmd.rb target.apk --cmd permissions
+
 * target SDK version
 
 This option prints out what SDK version the apk requires

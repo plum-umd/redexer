@@ -60,6 +60,10 @@ class Manifest
     @out = ""
   end
 
+  def lookup_name(a)
+    a[NAME] || a[ANDNAME]
+  end
+
   def launcher
     @out = ""
     main_acts = Set.new
@@ -68,14 +72,14 @@ class Manifest
     actions = @doc.xpath(ACTN)
     actions.each do |action|
       if action[NAME].split('.')[-1] == "MAIN"
-        main_acts << action.parent.parent[NAME]
+        main_acts << lookup_name(action.parent.parent)
       end
     end
 
     categories = @doc.xpath(CATG)
     categories.each do |category|
       if category[NAME].split('.')[-1] == "LAUNCHER"
-        launchers << category.parent.parent[NAME]
+        launchers << lookup_name(category.parent.parent)
       end
     end
 
@@ -90,7 +94,18 @@ class Manifest
     f.close
     @out << "saved to #{file_name}\n"
   end
-  
+
+  PERM = "uses-permission"
+
+  def permissions
+    perms = Array.new
+    permissions = @doc.xpath(ROOT + "/" + PERM)
+    permissions.each do |perm|
+      perms << lookup_name(perm)
+    end
+    @out = perms
+  end
+
   def sdk
     v = 3 # minSdkVersion
     sdks = @doc.xpath(ROOT + "/uses-sdk")
