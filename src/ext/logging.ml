@@ -79,7 +79,7 @@ let logAExt = "logAPIExit"
 
 module SM = Map.Make(String)
 
-(* from descriptor to wrapper class: { boolean => java.lang.Boolean, ... } *)
+(* from descriptor to wrapper class: { Z => java.lang.Boolean, ... } *)
 let descr_to_class =
   L.fold_left2 (fun acc descr cls -> SM.add descr cls acc) SM.empty
     (L.tl (L.map J.to_type_descr J.shorties)) (* to remove void *)
@@ -333,17 +333,20 @@ class logger (dx: D.dex) =
   let thrw = M.new_ty dx (J.to_java_ty JL.thr)
   and objs = M.new_ty dx (J.to_java_ty ("["^JL.obj))
   and ty_void = D.find_ty_str dx (J.to_type_descr J.v) in
-  let c_map = SM.map (fun cname -> M.new_ty dx cname) descr_to_class in
-  let of_v_map = SM.map (fun cid -> fst (D.get_the_mtd dx cid JL.v_of)) c_map
+  let c_map = SM.map (fun cname -> M.new_ty dx cname) descr_to_class
+  and get_v_of descr cid =
+    fst (D.get_the_mtd_shorty dx cid JL.v_of ("L"^descr))
+  in
+  let v_of_map = SM.mapi get_v_of c_map
   in
   let auto_boxing (r: int) (ty: D.link) : I.instr =
     let tname = D.get_ty_str dx ty in
     (* below will raise an exception unless primitive type *)
-    let of_v = SM.find tname of_v_map in
+    let v_of = SM.find tname v_of_map in
     (* long or double *)
     let args = if J.is_wide tname then [r; r+1] else [r; r] in
     (* use invoke-*-range to support registers whose index is over 1 byte *)
-    I.new_invoke stt_rnge (args @ [D.of_idx of_v])
+    I.new_invoke stt_rnge (args @ [D.of_idx v_of])
   in
 object
   inherit V.iterator dx

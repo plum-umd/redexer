@@ -595,10 +595,10 @@ let ty_comp_possibly_relaxed dx tid1 tid2 r =
     try
       let c1 = J.get_class_name s1
       and c2 = J.get_class_name s2
-      in compare c1 c2
-    with _ -> compare s1 s2
+      in S.compare c1 c2
+    with _ -> S.compare s1 s2
   else
-    compare s1 s2
+    S.compare s1 s2
 
 (* ty_comp : dex -> link -> link -> int *)
 let ty_comp dx (tid1: link) (tid2: link) : int =
