@@ -266,9 +266,15 @@ Assume path to ANDROID_SDK is set.
 * logging
 
 This is a variant of the rewrite feature.  Using this feature, you can log
-apps behavior from specific points of view.
+apps behavior from specific points of view.  First, build logging/ as follows.
 
-    $ cd logging; ant debug
+    $ cd logging
+    $ android update project -p .
+    $ ant debug
+    $ cd ..
+
+After logging/bin/classes.dex is generated correctly, use the following command.
+
     $ ruby scripts/cmd.rb target.apk --cmd logging
 
 trim.py can capture the call-return sequences of the instrumented app.
