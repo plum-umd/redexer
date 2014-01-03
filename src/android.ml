@@ -251,14 +251,26 @@ end
 (* API usage                                                           *)
 (***********************************************************************)
 
-let begins_w_adr cname : bool =
-  U.begins_with cname adr
+let sdk = ref "android."
+
+let begins_w_sdk cname : bool =
+  U.begins_with cname !sdk
 
 class api_visitor (dx: D.dex) =
 object
   inherit V.iterator dx
 
+  val mutable cur_cname = ""
+  val mutable skip_cls = false
+  method v_cdef (cdef: D.class_def_item) : unit =
+    (* set up the current class *)
+    cur_cname <- J.of_java_ty (D.get_ty_str dx cdef.D.c_class_id);
+    skip_cls <- begins_w_sdk cur_cname (* to avoid SDK itself *)
+
+  val mutable cur_mname = ""
   method v_emtd (emtd: D.encoded_method) : unit =
+    (* set up the current method *)
+    cur_mname <- D.get_mtd_name dx emtd.D.method_idx;
     let mid = emtd.D.method_idx in
     let cid = D.get_cid_from_mid dx mid in
     let s_mid = D.get_supermethod dx cid mid in
@@ -267,12 +279,15 @@ object
       let s_cid = D.get_cid_from_mid dx s_mid in
       let s_cname = J.of_java_ty (D.get_ty_str dx s_cid) in
       let s_mname = D.get_mtd_name dx s_mid in
-      if begins_w_adr s_cname && 0 <> S.compare s_mname J.init then
-        Log.i (Pf.sprintf "override: %s->%s" s_cname s_mname)
+      if begins_w_sdk s_cname && 0 <> S.compare s_mname J.init then
+      (
+        Log.i (Pf.sprintf "at %s.%s" cur_cname cur_mname);
+        Log.i (Pf.sprintf "override: %s.%s" s_cname s_mname)
+      )
     )
 
   method v_ins (ins: D.link) : unit =
-    if not (D.is_ins dx ins) then () else
+    if not (D.is_ins dx ins) || skip_cls then () else
       let op, opr = D.get_ins dx ins in
       match I.access_link op with
       | I.METHOD_IDS (* super call would be captured as 'override' *)
@@ -280,16 +295,12 @@ object
       (
         let mid = D.opr2idx (U.get_last opr) in
         let cid = D.get_cid_from_mid dx mid in
-        try ignore (D.get_citm dx cid mid)
-        (* means that method will be loaded at run-time, i.e., libraries *)
-        with D.Wrong_dex _ ->
+        let cname = J.of_java_ty (D.get_ty_str dx cid) in
+        let mname = D.get_mtd_name dx mid in
+        if begins_w_sdk cname && 0 <> S.compare mname J.init then
         (
-          let sid = D.get_superclass dx cid in
-          let lid = if sid = D.no_idx then cid else sid in
-          let lname = J.of_java_ty (D.get_ty_str dx lid) in
-          let mname = D.get_mtd_name dx mid in
-          if begins_w_adr lname && 0 <> S.compare mname J.init then
-            Log.i (Pf.sprintf "invoke: %s->%s" lname mname)
+          Log.i (Pf.sprintf "at %s.%s" cur_cname cur_mname);
+          Log.i (Pf.sprintf "invoke: %s.%s" cname mname)
         )
       )
       | _ -> ()

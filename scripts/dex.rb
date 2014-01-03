@@ -64,8 +64,8 @@ class Dex
     self.runcmd("#{REDEXER} -classes #{dex_name} #{QUIET}")
   end
 
-  def self.api(dex_name=DEX)
-    self.runcmd("#{REDEXER} -api #{dex_name} #{QUIET}")
+  def self.api(dex_name=DEX, sdk="android.")
+    self.runcmd("#{REDEXER} -api #{dex_name} -sdk #{sdk} #{QUIET}")
   end
 
   def self.dump(dex_name=DEX, *out_name)

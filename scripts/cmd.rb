@@ -55,6 +55,7 @@ cmds = [
 
 cmd = ""
 op = nil
+sdk = nil
 mtd = nil
 lib = nil
 to = nil
@@ -67,6 +68,9 @@ option_parser = OptionParser.new do |opts|
   end
   opts.on("--op opcodes", Array, "opcode statistics") do |l|
     op = l
+  end
+  opts.on("--sdk com.name", "SDK name of interest") do |s|
+    sdk = s
   end
   opts.on("--mtd class.method", "target method for CG, CFG, etc.") do |m|
     mtd = m
@@ -163,7 +167,11 @@ when "combine"
     system("mv -f #{HOME}/classes.dex #{RES}") if dex.succ
   end
 when "info", "classes", "api"
-  Dex.send(cmd.to_sym, dex)
+  if cmd == "api" and sdk
+    Dex.send(cmd.to_sym, dex, sdk)
+  else
+    Dex.send(cmd.to_sym, dex)
+  end
   puts Dex.out if dex_succ?(apk, cmd)
 when "opstat"
   if op

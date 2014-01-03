@@ -317,6 +317,9 @@ end
 
 (** {2 Utilities} *)
 
+(** SDK name of interest *)
+val sdk : string ref
+
 (** report API usage (including overrides) in the dex file *)
 val api_usage : Dex.dex -> unit
 

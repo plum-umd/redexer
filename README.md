@@ -145,7 +145,8 @@ It may be useful to search specific third-party libraries, e.g.,
 
 This option prints out API usage in the dex file.
 
-    $ ruby scripts/cmd.rb target.(apk|dex) --cmd api
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd api [--sdk android.]
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd api --sdk com.facebook.
 
 * opcode statistics
 
