@@ -351,19 +351,16 @@ class logger (dx: D.dex) =
 object
   inherit V.iterator dx
 
-  (* to avoid the Logger class as well as libraries *)
-  val mutable skip_cls = false
   val mutable cid = D.no_idx
   method v_cdef (cdef: D.class_def_item) : unit =
     cid <- cdef.D.c_class_id;
     let cname = D.get_ty_str dx cid in
+    (* to avoid the Logger class as well as libraries *)
     skip_cls <- L.exists (U.begins_with cname) [logging; "Ljava"; "Landroid"]
-      || not (adr_relevant dx cdef.D.c_class_id)
+             || not (adr_relevant dx cdef.D.c_class_id)
 
   (* to determine supercall in constructors *)
   val mutable mname = ""
-  (* to skip constructors and synthetic methods (static blocks) *)
-  val mutable skip_mtd = false
   (* the type of arguments, if exists *)
   val mutable argv = ([]: D.link list)
   (* the type of return value, if exists *)
@@ -371,8 +368,9 @@ object
   val mutable is_void = false
   method v_emtd (emtd: D.encoded_method) : unit =
     mname <- D.get_mtd_name dx emtd.D.method_idx;
+    (* to skip constructors and synthetic methods (static blocks) *)
     skip_mtd <- L.mem mname [J.init; J.clinit; J.hashCode]
-      || D.is_synthetic emtd.D.m_access_flag;
+             || D.is_synthetic emtd.D.m_access_flag;
     let mit = D.get_mit dx emtd.D.method_idx in
     argv <- D.get_argv dx mit;
     if not (D.is_static emtd.D.m_access_flag) then
@@ -385,8 +383,7 @@ object
   method v_citm (citm: D.code_item) : unit =
     cur_citm <- citm;
     (* TODO: what happens if an exception raised in a synchronized block? *)
-    skip_mtd <- skip_mtd || has_monitors dx citm;
-    if not skip_cls && not skip_mtd (* && U.begins_with mname "on" *) then
+    if not (has_monitors dx citm) (* && U.begins_with mname "on" *) then
     (
       (* to secure at least three registers for logging *)
       (* 3 is minimum, but 5 here to expand invoke-* operands *)
@@ -463,7 +460,7 @@ object
     )
 
   method v_ins (ins: D.link) : unit =
-    if D.is_ins dx ins && not skip_cls && not skip_mtd then
+    if D.is_ins dx ins then
     (
       let op, opr = D.get_ins dx ins in
       match I.access_link op with

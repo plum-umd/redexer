@@ -52,6 +52,12 @@ object
   (** visiting {!Dex.method_id_item} *)
   method v_mit  : Dex.method_id_item -> unit
 
+  (** skip the current class *)
+  val mutable skip_cls : bool
+
+  (** getter for {!skip_cls} *)
+  method get_skip_cls : unit -> bool
+
   (** visiting {!Dex.class_def_item} *)
   method v_cdef : Dex.class_def_item -> unit
 
@@ -66,6 +72,12 @@ object
 
   (** visiting {!Dex.encoded_field} *)
   method v_efld : Dex.encoded_field -> unit
+
+  (** skip the current method *)
+  val mutable skip_mtd : bool
+
+  (** getter for {!skip_mtd} *)
+  method get_skip_mtd : unit -> bool
 
   (** visiting {!Dex.encoded_method} *)
   method v_emtd : Dex.encoded_method -> unit

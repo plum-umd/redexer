@@ -1089,7 +1089,6 @@ class insrt_tracer_call (dx: D.dex) (mid: D.link) res_cls =
 object
   inherit V.iterator dx
 
-  val mutable skip_cls = false
   method v_cdef (cdef: D.class_def_item) : unit =
     let cid = cdef.D.c_class_id in
     let cname = D.get_ty_str dx cid in
@@ -1098,12 +1097,10 @@ object
     skip_cls <- skip_cls || cid = tr_cid
 
   method v_citm (citm: D.code_item) : unit =
-    if not skip_cls then
-    (
-      let inss = [I.new_invoke call_stt [D.of_idx mid]] in
-      let _ = insrt_insns_before_start dx citm inss in
-      incr trc_cnt
-    )
+    let inss = [I.new_invoke call_stt [D.of_idx mid]] in
+    let _ = insrt_insns_before_start dx citm inss in
+    incr trc_cnt
+
 end
 
 (* call_trace : D.dex -> string list -> unit *)

@@ -57,12 +57,18 @@ object
   method v_fit  : D.field_id_item -> unit
   method v_mit  : D.method_id_item -> unit
 
+  val mutable skip_cls : bool
+  method get_skip_cls : unit -> bool
   method v_cdef : D.class_def_item -> unit
+
   method r_eval : D.encoded_value -> D.encoded_value
   method v_anno : D.encoded_annotation -> unit
 
   method v_cdat : D.class_data_item -> unit
   method v_efld : D.encoded_field -> unit
+
+  val mutable skip_mtd : bool
+  method get_skip_mtd : unit -> bool
   method v_emtd : D.encoded_method -> unit
 
   method v_citm : D.code_item -> unit
@@ -82,6 +88,8 @@ object (self)
   method v_fit _ = ()
   method v_mit _ = ()
 
+  val mutable skip_cls = false
+  method get_skip_cls () = skip_cls
   method v_cdef _ = ()
 
   method r_eval ev: D.encoded_value =
@@ -97,6 +105,9 @@ object (self)
 
   method v_cdat _ = ()
   method v_efld _ = ()
+
+  val mutable skip_mtd = false
+  method get_skip_mtd () = skip_mtd
   method v_emtd _ = ()
 
   method v_citm _ = ()
@@ -131,6 +142,7 @@ let rec iter (v: visitor) : unit =
     L.iter v#v_efld cdat.D.instance_fields;
     let v_mtd (emtd: D.encoded_method) : unit =
       v#v_emtd emtd;
+      if v#get_skip_mtd () then () else
       if emtd.D.code_off = D.no_off then () else
       match D.get_data_item dx emtd.D.code_off with
       | D.CODE_ITEM citm -> per_citm citm
@@ -150,7 +162,8 @@ let rec iter (v: visitor) : unit =
       | _ -> raise (D.Wrong_match "cdef: not STATIC_VALUE")
     );
     iter_anno_dir dx v#v_anno cdef.D.annotations;
-    if cdef.D.class_data <> D.no_off then
+    if v#get_skip_cls () then () else
+    if cdef.D.class_data = D.no_off then () else
     (
       match D.get_data_item dx cdef.D.class_data with
       | D.CLASS_DATA cdat -> per_cdat cdat

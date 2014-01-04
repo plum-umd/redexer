@@ -297,12 +297,12 @@ object
   inherit V.iterator dx
 
   val mutable cur_cname = ""
-  val mutable skip_cls = false
   method v_cdef (cdef: D.class_def_item) : unit =
     (* set up the current class *)
     cur_cname <- J.of_java_ty (D.get_ty_str dx cdef.D.c_class_id);
     skip_cls <- begins_w_sdk cur_cname (* to avoid SDK itself *)
              || U.begins_with cur_cname "android.support"
+             || U.begins_with cur_cname "com.google"
              || Ads.is_ads_pkg cur_cname
 
   val mutable cur_mname = ""
@@ -325,7 +325,7 @@ object
     )
 
   method v_ins (ins: D.link) : unit =
-    if not (D.is_ins dx ins) || skip_cls then () else
+    if not (D.is_ins dx ins) then () else
       let op, opr = D.get_ins dx ins in
       match I.access_link op with
       | I.METHOD_IDS (* super call would be captured as 'override' *)
