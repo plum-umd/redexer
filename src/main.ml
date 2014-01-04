@@ -237,7 +237,7 @@ let arg_specs = A.align
     ("-classes", A.Unit do_classes, " print class names in dex file");
 
     ("-api", A.Unit do_api,       " print API usage in dex file");
-    ("-api", A.Set_string Ad.sdk, " SDK of interest (default: "^(!Ad.sdk)^")");
+    ("-sdk", A.Set_string Ad.sdk, " SDK of interest (default: "^(!Ad.sdk)^")");
 
     ("-out",   A.Set_string dex, " output file name (default: "^(!dex)^")");
     ("-dump",  A.Unit do_dump,   " dump dex binary");
