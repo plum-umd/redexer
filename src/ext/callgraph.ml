@@ -52,13 +52,7 @@ module S = String
 (* Basic Types/Elements                                                *)
 (***********************************************************************)
 
-module IdxKey =
-struct
-  type t = D.link
-  let compare id1 id2 = Pervasives.compare (D.of_idx id1) (D.of_idx id2)
-end
-
-module IS = Set.Make(IdxKey)
+module IS = Set.Make(D.IdxKey)
 
 type clzz = {
   c_idx : D.link;

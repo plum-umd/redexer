@@ -338,6 +338,18 @@ val of_idx : link -> int
 (** unwrapping [Off] *)
 val of_off : link -> int
 
+module IdxKey :
+sig
+  type t = link
+  val compare : t -> t -> int
+end
+
+module OffKey :
+sig
+  type t = link
+  val compare : t -> t -> int
+end
+
 (** from [OPR_INDEX] to [Idx] *)
 val opr2idx : Instr.operand -> link
 

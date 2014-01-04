@@ -324,6 +324,18 @@ let of_off (l: link) : int =
   | Off off -> I32.to_int off
   | _ -> raise (Wrong_link "of_off")
 
+module IdxKey =
+struct
+  type t = link
+  let compare id1 id2 = Pervasives.compare (of_idx id1) (of_idx id2)
+end
+
+module OffKey =
+struct
+  type t = link
+  let compare o1 o2 = Pervasives.compare (of_off o1) (of_off o2)
+end
+
 (* opr2idx : I.operand -> link *)
 let opr2idx (opr: I.operand) : link =
   match opr with
