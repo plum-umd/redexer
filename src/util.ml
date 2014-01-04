@@ -39,6 +39,8 @@
 module S = String
 module L = List
 
+module RE = Str
+
 module IntKey =
 struct
   type t = int
@@ -141,4 +143,10 @@ let begins_with (str: string) (prefix: string) : bool =
       | _ -> false
   in
   h (explode str) (explode prefix)
+
+(* contains : string -> string -> bool *)
+let contains (str: string) (sub: string) : bool =
+  let re = RE.regexp_string sub in
+  try ignore (RE.search_forward re str 0); true
+  with Not_found -> false
 

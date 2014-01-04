@@ -315,6 +315,16 @@ sig
 
 end
 
+(** {2 Ads} *)
+
+module Ads :
+sig
+
+  (** [true] if given class is inside [Ads] package *)
+  val is_ads_pkg : string -> bool
+
+end
+
 (** {2 Utilities} *)
 
 (** SDK name of interest *)

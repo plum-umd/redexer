@@ -77,3 +77,7 @@ val split_string : string -> char -> string list
 
 (** [true] if the given [string] begins with the given prefix *)
 val begins_with : string -> string -> bool
+
+(** [true] if the given [string] contains the other [string] *)
+val contains : string -> string -> bool
+

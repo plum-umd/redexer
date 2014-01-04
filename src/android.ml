@@ -248,6 +248,42 @@ struct
 end
 
 (***********************************************************************)
+(* Ads                                                                 *)
+(***********************************************************************)
+
+module Ads =
+struct
+  let admob = "admob"
+  let g_ads = "google.ads"
+  let flury = "flurry"
+  let g_anl = "google.analytics"
+  let mille = "millennialmedia"
+  let mobcx = "mobclix"
+  let whirl = "adwhirl"
+  let qwapi = "qwapi"
+  let youmi = "youmi"
+  let mobfx = "mobfox"
+  let zestz = "zestadz"
+  let cauly = "cauly"
+  let inmob = "inmobi"
+  let woboo = "wooboo"
+  let marvl = "admarvel"
+  let smato = "smaato"
+  let mobck = "mobclick"
+  let nobot = "jp.co.nobot"
+  let apush = "airpush"
+  let mdotm = "mdotm"
+
+  let ads = [admob; g_ads; flury; g_anl; mille; mobcx; whirl; qwapi; youmi;
+    mobfx; zestz; cauly; inmob; woboo; marvl; smato; mobck; nobot; apush; mdotm]
+
+  let is_ads_pkg (cname: string) : bool =
+    let cname = J.of_java_ty cname in
+    L.exists (fun ads -> U.contains cname ads) ads
+
+end
+
+(***********************************************************************)
 (* API usage                                                           *)
 (***********************************************************************)
 
@@ -266,6 +302,8 @@ object
     (* set up the current class *)
     cur_cname <- J.of_java_ty (D.get_ty_str dx cdef.D.c_class_id);
     skip_cls <- begins_w_sdk cur_cname (* to avoid SDK itself *)
+             || U.begins_with cur_cname "android.support"
+             || Ads.is_ads_pkg cur_cname
 
   val mutable cur_mname = ""
   method v_emtd (emtd: D.encoded_method) : unit =
