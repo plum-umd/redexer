@@ -5,8 +5,9 @@ SOURCES := \
 	src/util.ml src/log.ml src/java.ml src/instr.ml src/dex.ml \
 	src/parse.ml src/visitor.ml src/android.ml \
 	src/ext/unparse.ml src/ext/htmlunparse.ml \
-	src/ext/callgraph.ml src/ext/ctrlflow.ml src/ext/dataflow.ml \
+	src/ext/ctrlflow.ml src/ext/dataflow.ml \
 	src/ext/liveness.ml src/ext/propagation.ml src/ext/reaching.ml \
+	src/ext/callgraph.ml \
 	src/modify.ml src/combine.ml src/dump.ml \
 	src/ext/logging.ml src/main.ml
 

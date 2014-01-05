@@ -36,13 +36,23 @@
 (* Callgraph                                                           *)
 (***********************************************************************)
 
+module St = Stats
 module DA = DynArray
 
-module U = Util
+module U  = Util
+module IM = U.IM
 
 module I = Instr
 module D = Dex
+module J = Java
 module V = Visitor
+
+module Adr = Android
+module App = Adr.App
+module Con = Adr.Content
+module Ads = Adr.Ads
+
+module P = Propagation
 
 module L = List
 module H = Hashtbl
@@ -141,19 +151,55 @@ class cg_maker (dx: D.dex) =
 object
   inherit V.iterator dx
 
+  method v_cdef (cdef: D.class_def_item) : unit =
+    let cname = J.of_java_ty (D.get_ty_str dx cdef.D.c_class_id) in
+    skip_cls <- Adr.is_static_library cname || Ads.is_ads_pkg cname
+
   val mutable caller = D.no_idx
-  method v_emtd (emtd: D.encoded_method) =
+  method v_emtd (emtd: D.encoded_method) : unit =
     caller <- emtd.D.method_idx
 
-  method v_ins (ins: D.link) =
+  val mutable cur_citm = D.empty_citm ()
+  method v_citm (citm: D.code_item) : unit =
+    cur_citm <- citm
+
+  method v_ins (ins: D.link) : unit =
     if not (D.is_ins dx ins) then () else
     let op, opr = D.get_ins dx ins in
     match I.access_link op with
     | I.METHOD_IDS ->
       (* last opr at invoke-kind must be method id *)
       let callee = D.opr2idx (U.get_last opr) in
-      (* explicit call relations *)
-      add_call dx cg caller callee
+      let mname = D.get_mtd_name dx callee in
+      (* component transition *)
+      if 0 = S.compare mname Con.start_act
+      || 0 = S.compare mname Con.start_srv then
+      (
+        let dfa = St.time "const" (P.make_dfa dx) cur_citm in
+        let module DFA = (val dfa: Dataflow.ANALYSIS
+          with type st = D.link and type l = (P.value U.IM.t))
+        in
+        St.time "const" DFA.fixed_pt ();
+        let inn = St.time "const" DFA.inn ins
+        and reg = U.get_last (U.rm_last opr) in
+        match IM.find (I.of_reg reg) inn with
+        | P.Intent i when D.no_idx <> D.get_cid dx (J.to_java_ty i) ->
+        (
+          let cid = D.get_cid dx (J.to_java_ty i) in
+          try
+            let callee, _ = D.get_the_mtd dx cid App.onCreate in
+            add_call dx cg caller callee
+          with D.Wrong_dex _ ->
+          (
+            if 0 = S.compare mname Con.start_act then
+              let callee, _ = D.get_the_mtd dx cid App.onResume in
+              add_call dx cg caller callee
+          )
+        )
+        | _ -> ()
+      )
+      else (* explicit call relations *)
+        add_call dx cg caller callee
     | _ -> ()
 end
 

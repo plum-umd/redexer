@@ -105,6 +105,9 @@ struct
   let appended = "withAppendedId"
   let query = "query"
 
+  let start_act = "startActivity"
+  let start_srv = "startService"
+
   let uri = "content://com.android.contacts"
 
   module PM =
@@ -224,6 +227,11 @@ let is_library (cname: string) : bool =
   || L.mem cname (Preference.clazz ())
   || L.mem cname (Util.clazz ())
 
+(* is_static_library : string -> bool *)
+let is_static_library (cname: string) : bool =
+     U.begins_with cname "android.support"
+  || U.begins_with cname "com.google"
+
 (* is_abstract : string -> bool *)
 let is_abstract (mname: string) : bool =
      L.mem mname (View.view_abstract ())
@@ -300,10 +308,8 @@ object
   method v_cdef (cdef: D.class_def_item) : unit =
     (* set up the current class *)
     cur_cname <- J.of_java_ty (D.get_ty_str dx cdef.D.c_class_id);
-    skip_cls <- begins_w_sdk cur_cname (* to avoid SDK itself *)
-             || U.begins_with cur_cname "android.support"
-             || U.begins_with cur_cname "com.google"
-             || Ads.is_ads_pkg cur_cname
+    skip_cls <- is_static_library cur_cname || Ads.is_ads_pkg cur_cname
+             || begins_w_sdk cur_cname (* to avoid SDK itself *)
 
   val mutable cur_mname = ""
   method v_emtd (emtd: D.encoded_method) : unit =

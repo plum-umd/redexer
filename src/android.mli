@@ -136,6 +136,12 @@ sig
   (** [query] *)
   val query : string
 
+  (** [startActivity] *)
+  val start_act : string
+
+  (** [startService] *)
+  val start_srv : string
+
   (** [content://com.android.contacts] *)
   val uri : string
 
@@ -280,6 +286,9 @@ end
 
 (** [true] if given class is [Android] library *)
 val is_library : string -> bool
+
+(** [true] if given class is [Android] static library *)
+val is_static_library : string -> bool
 
 (** [true] if given method is abstract *)
 val is_abstract : string -> bool
