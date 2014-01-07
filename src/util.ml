@@ -110,6 +110,10 @@ let implode l =
     | c :: l -> result.[i] <- c; imp (i + 1) l in
   imp 0 l
 
+(* str_rev : string -> string *)
+let str_rev s =
+  implode (L.rev (explode s))
+
 (* split_string : string -> char -> string list *)
 let split_string str (split: char) : string list =
   let rec helper (str: char list) (cur_accum: char list) accums : string list =
@@ -136,13 +140,19 @@ let split_string str (split: char) : string list =
 let begins_with (str: string) (prefix: string) : bool =
   let rec h a b =
     match a with
-      | hd::tl ->
-        (match b with
-          | hd'::tl' -> if hd'=hd then h tl tl' else false
-          | [] -> true)
-      | _ -> false
+    | hd :: tl ->
+    (
+      match b with
+      | hd' :: tl' -> if hd' = hd then h tl tl' else false
+      | [] -> true
+    )
+    | _ -> false
   in
   h (explode str) (explode prefix)
+
+(* ends_with : string -> string -> bool *)
+let ends_with (str: string) (suffix: string) : bool =
+  begins_with (str_rev str) (str_rev suffix)
 
 (* contains : string -> string -> bool *)
 let contains (str: string) (sub: string) : bool =

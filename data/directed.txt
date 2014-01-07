@@ -1,0 +1,2 @@
+Lcom/facebook/android/Facebook;->authorize
+Lcom/facebook/android/Facebook;->dialog

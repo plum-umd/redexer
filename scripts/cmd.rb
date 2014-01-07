@@ -50,7 +50,8 @@ cmds = [
   "info", "classes", "api", "opstat",
   "cg", "cfg", "dom", "pdom",
   "dump_method", "dependants", "live", "const", "reach",
-  "permissions", "sdk", "launcher", "hello", "logging"
+  "permissions", "sdk", "launcher",
+  "hello", "logging", "directed"
 ]
 
 cmd = ""
@@ -222,7 +223,7 @@ when "permissions", "sdk", "launcher"
     puts ARGV[0]
     puts res
   end
-when "logging"
+when "logging", "directed"
   apk.send(cmd.to_sym)
   if not apk.succ
     puts apk.out

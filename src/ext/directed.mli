@@ -33,24 +33,11 @@
  *)
 
 (***********************************************************************)
-(* Callgraph                                                           *)
+(* Directed Exploration                                                *)
 (***********************************************************************)
 
-(** This module defines a type for call graph and provides functions for
- generating and printing a call graph. *)
-
-(** Call Graph *)
-type cg
-
-(** make call graph for overall {!Dex.dex} file *)
-val make_cg : Dex.dex -> cg
-
-(** find callers for the given method, with a certain depth *)
-val callers : Dex.dex -> int -> cg -> Dex.link -> Dex.link list list
-
-(** find dependent classes for the given class *)
-val dependants : Dex.dex -> cg -> Dex.link -> Dex.link list
-
-(** print {!cg} in dot format *)
-val cg2dot : Dex.dex -> cg -> unit
+(** given APIs of interest and the main Activity,
+  instrument the target dex file such that the rewritten dex is directed to
+  the pages that have target API usages *)
+val directed_explore : Dex.dex -> string -> string list -> unit
 

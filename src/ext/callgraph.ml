@@ -219,21 +219,29 @@ let make_cg (dx: D.dex) : cg =
   DA.iteri iter dx.D.d_method_ids;
   cg
 
-(* callers : D.dex -> int -> cg -> D.link -> D.link list *)
-let rec callers (dx: D.dex) depth cg (mid: D.link) : D.link list =
-  if depth <= 0 then [] else
+(**
+  m1 -> m4; m2 -> m4; m3 -> m5;
+       m4 -> m6;      m5 -> m6;
+
+  callers... m6 = [ [m6; m4; m1]; [m6; m4; m2]; [m6; m5; m3] ]
+*)
+(* callers : D.dex -> int -> cg -> D.link -> D.link list list *)
+let rec callers (dx: D.dex) depth cg (mid: D.link) : D.link list list =
+  if depth <= 0 then [[]] else
   let node = find_or_new_method dx cg mid in
   let pred = IS.elements node.m_preds in
-  pred @@ (L.flatten (L.rev_map (callers dx (depth-1) cg) pred))
+  if pred = [] then [[mid]] else
+    let call_chains = L.rev_map (callers dx (depth-1) cg) pred in
+    L.rev_map (fun cc -> mid :: cc) (L.flatten call_chains)
 
 (* dependants : D.dex -> cg -> D.link -> D.link list *)
 let dependants (dx: D.dex) cg (cid: D.link) : D.link list =
   let mtds = D.get_mtds dx cid
   and mapper (mid, _) =
-    let mids = callers dx 9 cg mid in
-    L.map (D.get_cid_from_mid dx) mids
+    let mids = L.flatten (callers dx 9 cg mid) in
+    L.rev_map (D.get_cid_from_mid dx) mids
   in
-  let cids = L.flatten (L.map mapper mtds) in
+  let cids = L.flatten (L.rev_map mapper mtds) in
   IS.elements (L.fold_left (fun acc id -> IS.add id acc) IS.empty cids)
 
 (* cg2dot : D.dex -> cg -> unit *)

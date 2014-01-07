@@ -45,6 +45,8 @@ module Ad = Android
 module D  = Dex
 module P  = Parse
 
+module V = Visitor
+
 module Up  = Unparse
 module Hup = Htmlunparse
 
@@ -57,6 +59,7 @@ module Rc = Reaching
 
 module Md  = Modify
 module Lgg = Logging
+module Dre = Directed
 
 module Cm  = Combine
 module Dp  = Dump
@@ -170,8 +173,10 @@ and do_reach (tag: string) (tx: D.dex) (citm: D.code_item) : unit =
 let dat = ref "data"
 
 (***********************************************************************)
-(* Logging                                                             *)
+(* Rewrite                                                             *)
 (***********************************************************************)
+
+let act = ref "activity.txt"
 
 let instrument_logging (tx: D.dex) : unit =
   let rnm = !dat^"/rename" in
@@ -194,6 +199,17 @@ try (
   St.time "rename" (Md.rename_cls cx) res;
   (* finally, dump the rewritten dex *)
   St.time "dump" (Dp.dump !dex) cx
+)
+with End_of_file -> prerr_endline "EOF"
+
+let rewrite_directed (tx: D.dex) : unit =
+  let apis = !dat^"/directed.txt" in
+try (
+  let ch = open_in !act in
+  let acts = U.read_lines ch in
+  close_in ch;
+  St.time "directed" (Dre.directed_explore tx apis) acts;
+  St.time "dump" (Dp.dump !dex) tx
 )
 with End_of_file -> prerr_endline "EOF"
 
@@ -227,6 +243,7 @@ let do_const         () = task := Some (do_dfa "const")
 let do_reach         () = task := Some (do_dfa "reach")
 
 let do_logging       () = task := Some instrument_logging
+let do_directed      () = task := Some rewrite_directed
 
 let arg_specs = A.align
   [
@@ -265,8 +282,14 @@ let arg_specs = A.align
     ("-const",      A.Unit do_const,      " constant propagation");
     ("-reach",      A.Unit do_reach,      " reaching definition");
 
-    ("-logging", A.Unit do_logging,
+    ("-logging",  A.Unit do_logging,
      " instrument logging feature into the given dex");
+    ("-directed", A.Unit do_directed,
+     " instrument the dex such that it is directed to certain call sites");
+
+    ("-act", A.Set_string act,
+     " file containing activity names (default: "^(!act)^")");
+
   ]
 
 (***********************************************************************)
@@ -300,6 +323,10 @@ let main () =
       (
         let dex = St.time "parse" P.parse ch in
         k ();
+        let ch2 = open_in (!dat^"/skip.txt") in
+        let res = U.read_lines ch2 in
+        close_in ch2;
+        V.set_skip_pkgs res;
         f dex
       );
       St.print stderr "====== redexer performance statistics ======\n"

@@ -88,6 +88,19 @@ class Apk
     @out << Dex.out
     @succ = Dex.succ
   end
+
+  def directed()
+    f = Tempfile.new("redexer", HOME)
+    begin
+      f.puts @manifest.launcher
+      f.close
+      Dex.directed(dex, f.path, dex)
+    ensure
+      f.unlink
+    end
+    @out << Dex.out
+    @succ = Dex.succ
+  end
   
   JAR = TOOL + "/signapk.jar"
   PEM = TOOL + "/platform.x509.pem"

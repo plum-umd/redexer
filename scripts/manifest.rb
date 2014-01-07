@@ -71,16 +71,20 @@ class Manifest
 
     actions = @doc.xpath(ACTN)
     actions.each do |action|
-      if action[NAME].split('.')[-1] == "MAIN"
-        main_acts << lookup_name(action.parent.parent)
-      end
+      begin
+        if lookup_name(action).split('.')[-1] == "MAIN"
+          main_acts << lookup_name(action.parent.parent)
+        end
+      rescue; end;
     end
 
     categories = @doc.xpath(CATG)
     categories.each do |category|
-      if category[NAME].split('.')[-1] == "LAUNCHER"
-        launchers << lookup_name(category.parent.parent)
-      end
+      begin
+        if category[NAME].split('.')[-1] == "LAUNCHER"
+          launchers << lookup_name(category.parent.parent)
+        end
+      rescue; end;
     end
 
     inter = main_acts & launchers

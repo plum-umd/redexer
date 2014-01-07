@@ -38,8 +38,11 @@
 
 module DA = DynArray
 
-module I  = Instr
-module D  = Dex
+module U = Util
+
+module J = Java
+module I = Instr
+module D = Dex
 
 module IM = I.IM
 
@@ -123,6 +126,16 @@ end
 (* DEX Iteration                                                       *)
 (***********************************************************************)
 
+let skips = ref ([]: string list)
+
+(* set_skip_pkgs : string list -> unit *)
+let set_skip_pkgs (pkgs: string list) : unit =
+  skips := pkgs
+
+let to_be_skipped (cname: string) : bool =
+  let cname = J.of_java_ty cname in
+  L.exists (fun pkg -> U.begins_with cname pkg) !skips
+
 (* iter: visitor -> unit *)
 let rec iter (v: visitor) : unit =
   let dx = v#get_dx () in
@@ -162,6 +175,8 @@ let rec iter (v: visitor) : unit =
       | _ -> raise (D.Wrong_match "cdef: not STATIC_VALUE")
     );
     iter_anno_dir dx v#v_anno cdef.D.annotations;
+    let cname = D.get_ty_str dx cdef.D.c_class_id in
+    if to_be_skipped cname then () else
     if v#get_skip_cls () then () else
     if cdef.D.class_data = D.no_off then () else
     (
@@ -209,3 +224,4 @@ and iter_anno_itm dx v_anno a_itm : unit =
   match D.get_data_item dx a_itm with
   | D.ANNOTATION an -> v_anno an.D.annotation
   | _ -> raise (D.Wrong_match "iter_anno_itm: not ANNOTATION")
+

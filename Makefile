@@ -9,7 +9,8 @@ SOURCES := \
 	src/ext/liveness.ml src/ext/propagation.ml src/ext/reaching.ml \
 	src/ext/callgraph.ml \
 	src/modify.ml src/combine.ml src/dump.ml \
-	src/ext/logging.ml src/main.ml
+	src/ext/logging.ml src/ext/directed.ml \
+	src/main.ml
 
 DOC_FILES := \
 	src/util.mli src/log.mli src/java.mli src/instr.mli src/dex.mli \

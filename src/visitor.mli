@@ -104,6 +104,9 @@ end
 (** iterator *)
 class iterator : Dex.dex -> visitor
 
+(** set packages names to be skipped *)
+val set_skip_pkgs : string list -> unit
+
 (** traversing {!Dex.dex} using {!iterator}-like {!visitor} *)
 val iter : visitor -> unit
 

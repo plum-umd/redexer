@@ -80,7 +80,12 @@ class Dex
   
   def self.logging(dex_name=DEX, *out_name)
     opt = self.out_opt(out_name)
-    self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging")
+    self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging #{TOO}")
+  end
+
+  def self.directed(dex_name, acts, *out_name)
+    opt = self.out_opt(out_name)
+    self.runcmd("#{REDEXER} #{opt} #{dex_name} -act #{acts} -directed #{TOO}")
   end
   
   CSS = DAT + "/dex-format.css"
