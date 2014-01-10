@@ -110,7 +110,7 @@ let find_class cg (cid: D.link) : clzz =
 let find_method cg (mid: D.link) : meth =
   H.find cg.meth_h mid
 
-let find_or_new_method (dx: D.dex) cg (mid: D.link) : meth =
+let find_or_new_method (dx: D.dex) cg (mid: D.link) : meth * bool =
   let cid = D.get_cid_from_mid dx mid in
   let clz =
     try find_class cg cid
@@ -122,21 +122,22 @@ let find_or_new_method (dx: D.dex) cg (mid: D.link) : meth =
       H.add cg.clzz_h cid nod; nod
   in
   clz.c_mtd <- IS.add mid clz.c_mtd;
-  try find_method cg mid
+  try find_method cg mid, false
   with Not_found ->
     let nod = {
       m_idx = mid;
       m_succs = IS.empty;
       m_preds = IS.empty;
     } in
-    H.add cg.meth_h mid nod; nod
+    H.add cg.meth_h mid nod; nod, true
 
-let add_call (dx: D.dex) cg (caller: D.link) (callee: D.link) : unit =
-  let caller_n = find_or_new_method dx cg caller
-  and callee_n = find_or_new_method dx cg callee
+let add_call (dx: D.dex) cg (caller: D.link) (callee: D.link) : bool =
+  let caller_n, changed_r = find_or_new_method dx cg caller
+  and callee_n, changed_e = find_or_new_method dx cg callee
   in
   caller_n.m_succs <- IS.add callee caller_n.m_succs;
-  callee_n.m_preds <- IS.add caller callee_n.m_preds
+  callee_n.m_preds <- IS.add caller callee_n.m_preds;
+  changed_r || changed_e
 
 (***********************************************************************)
 (* Call Graph                                                          *)
@@ -146,6 +147,52 @@ let cg = {
   clzz_h = H.create 31;
   meth_h = H.create 153;
 }
+
+(**
+  given instruction, add an edge from caller to callee, if exists,
+  and return the callee id so as to visit it incrementally
+*)
+let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link =
+  if not (D.is_ins dx ins) then D.no_idx else
+  let op, opr = D.get_ins dx ins in
+  match I.access_link op with
+  | I.METHOD_IDS ->
+    (* last opr at invoke-kind must be method id *)
+    let callee = D.opr2idx (U.get_last opr) in
+    let mname = D.get_mtd_name dx callee in
+    (* component transition *)
+    if 0 = S.compare mname Con.start_act
+    || 0 = S.compare mname Con.start_srv then
+    (
+      let cid = D.get_cid_from_mid dx caller in
+      let _, citm = D.get_citm dx cid caller in
+      let dfa = St.time "const" (P.make_dfa dx) citm in
+      let module DFA = (val dfa: Dataflow.ANALYSIS
+        with type st = D.link and type l = (P.value U.IM.t))
+      in
+      St.time "const" DFA.fixed_pt ();
+      let inn = St.time "const" DFA.inn ins
+      and reg = U.get_last (U.rm_last opr) in
+      match IM.find (I.of_reg reg) inn with
+      | P.Intent i when D.no_idx <> D.get_cid dx (J.to_java_ty i) ->
+      (
+        let cid = D.get_cid dx (J.to_java_ty i) in
+        try
+          let callee, _ = D.get_the_mtd dx cid App.onCreate in
+          if add_call dx cg caller callee then callee else D.no_idx
+        with D.Wrong_dex _ ->
+        (
+          if 0 = S.compare mname Con.start_act then
+            let callee, _ = D.get_the_mtd dx cid App.onResume in
+            if add_call dx cg caller callee then callee else D.no_idx
+          else D.no_idx
+        )
+      )
+      | _ -> D.no_idx
+    )
+    else (* explicit call relations *)
+      if add_call dx cg caller callee then callee else D.no_idx
+  | _ -> D.no_idx
 
 class cg_maker (dx: D.dex) =
 object
@@ -159,48 +206,9 @@ object
   method v_emtd (emtd: D.encoded_method) : unit =
     caller <- emtd.D.method_idx
 
-  val mutable cur_citm = D.empty_citm ()
-  method v_citm (citm: D.code_item) : unit =
-    cur_citm <- citm
-
   method v_ins (ins: D.link) : unit =
-    if not (D.is_ins dx ins) then () else
-    let op, opr = D.get_ins dx ins in
-    match I.access_link op with
-    | I.METHOD_IDS ->
-      (* last opr at invoke-kind must be method id *)
-      let callee = D.opr2idx (U.get_last opr) in
-      let mname = D.get_mtd_name dx callee in
-      (* component transition *)
-      if 0 = S.compare mname Con.start_act
-      || 0 = S.compare mname Con.start_srv then
-      (
-        let dfa = St.time "const" (P.make_dfa dx) cur_citm in
-        let module DFA = (val dfa: Dataflow.ANALYSIS
-          with type st = D.link and type l = (P.value U.IM.t))
-        in
-        St.time "const" DFA.fixed_pt ();
-        let inn = St.time "const" DFA.inn ins
-        and reg = U.get_last (U.rm_last opr) in
-        match IM.find (I.of_reg reg) inn with
-        | P.Intent i when D.no_idx <> D.get_cid dx (J.to_java_ty i) ->
-        (
-          let cid = D.get_cid dx (J.to_java_ty i) in
-          try
-            let callee, _ = D.get_the_mtd dx cid App.onCreate in
-            add_call dx cg caller callee
-          with D.Wrong_dex _ ->
-          (
-            if 0 = S.compare mname Con.start_act then
-              let callee, _ = D.get_the_mtd dx cid App.onResume in
-              add_call dx cg caller callee
-          )
-        )
-        | _ -> ()
-      )
-      else (* explicit call relations *)
-        add_call dx cg caller callee
-    | _ -> ()
+    ignore (interpret_ins dx caller ins)
+
 end
 
 (* make_cg : D.dex -> cg *)
@@ -213,11 +221,48 @@ let make_cg (dx: D.dex) : cg =
     let sid = D.get_supermethod dx cid mid in
     if sid <> D.no_idx then
       (* implicit call relations, i.e. super() *)
-      add_call dx cg mid sid
+      ignore (add_call dx cg mid sid)
   in
   (* visitor see only impl methods; rather, see ids directly *)
   DA.iteri iter dx.D.d_method_ids;
   cg
+
+(* make_partial_cg : D.dex -> int -> D.link list -> cg *)
+let make_partial_cg (dx: D.dex) depth (cids: D.link list) : cg =
+  H.clear cg.clzz_h; H.clear cg.meth_h;
+  let worklist = ref IS.empty
+  and changed = ref true
+  and iter_cnt = ref 0 in
+  let v_method (mid: D.link) : unit =
+    let v_ins (ins: D.link) =
+      let callee = interpret_ins dx mid ins in
+      if callee <> D.no_idx then worklist := IS.add callee !worklist
+    in
+    let cid = D.get_cid_from_mid dx mid in
+    let sid = D.get_supermethod dx cid mid in
+    if sid <> D.no_idx && add_call dx cg mid sid then
+      worklist := IS.add sid !worklist;
+    try
+      let _, citm = D.get_citm dx cid mid in
+      DA.iter v_ins citm.D.insns
+    with D.Wrong_dex _ -> ()
+  in
+  let init_worklist acc (cid: D.link) =
+    let mids, _ = L.split (D.get_mtds dx cid) in
+    L.fold_left (fun acc' mid -> IS.add mid acc') acc mids
+  in
+  worklist := L.fold_left init_worklist IS.empty cids;
+  while !changed && !iter_cnt < depth do
+    changed := false; incr iter_cnt;
+    let mids = IS.elements !worklist in
+    worklist := IS.empty;
+    L.iter v_method mids
+  done;
+  cg
+
+(***********************************************************************)
+(* Call Chain                                                          *)
+(***********************************************************************)
 
 (**
   m1 -> m4; m2 -> m4; m3 -> m5;
@@ -225,10 +270,13 @@ let make_cg (dx: D.dex) : cg =
 
   callers... m6 = [ [m6; m4; m1]; [m6; m4; m2]; [m6; m5; m3] ]
 *)
-(* callers : D.dex -> int -> cg -> D.link -> D.link list list *)
-let rec callers (dx: D.dex) depth cg (mid: D.link) : D.link list list =
+
+type cc = D.link list
+
+(* callers : D.dex -> int -> cg -> D.link -> cc list *)
+let rec callers (dx: D.dex) depth cg (mid: D.link) : cc list =
   if depth <= 0 then [[]] else
-  let node = find_or_new_method dx cg mid in
+  let node, _ = find_or_new_method dx cg mid in
   let pred = IS.elements node.m_preds in
   if pred = [] then [[mid]] else
     let call_chains = L.rev_map (callers dx (depth-1) cg) pred in
@@ -243,6 +291,10 @@ let dependants (dx: D.dex) cg (cid: D.link) : D.link list =
   in
   let cids = L.flatten (L.rev_map mapper mtds) in
   IS.elements (L.fold_left (fun acc id -> IS.add id acc) IS.empty cids)
+
+(***********************************************************************)
+(* DOTtify                                                             *)
+(***********************************************************************)
 
 (* cg2dot : D.dex -> cg -> unit *)
 let cg2dot (dx: D.dex) cg : unit =

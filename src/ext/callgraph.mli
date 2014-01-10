@@ -45,8 +45,14 @@ type cg
 (** make call graph for overall {!Dex.dex} file *)
 val make_cg : Dex.dex -> cg
 
+(** partial call graph starting from the given classes, with a certain depth *)
+val make_partial_cg : Dex.dex -> int -> Dex.link list -> cg
+
+(** Call Chain in a reversed order *)
+type cc = Dex.link list
+
 (** find callers for the given method, with a certain depth *)
-val callers : Dex.dex -> int -> cg -> Dex.link -> Dex.link list list
+val callers : Dex.dex -> int -> cg -> Dex.link -> cc list
 
 (** find dependent classes for the given class *)
 val dependants : Dex.dex -> cg -> Dex.link -> Dex.link list

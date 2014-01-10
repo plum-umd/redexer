@@ -73,6 +73,8 @@ module IPS = Set.Make(IdxPair)
 
 module IS = Set.Make(D.IdxKey)
 
+type path = Cg.cc list
+
 (***********************************************************************)
 (* Step 1. find the methods in which the target calls appear           *)
 (***********************************************************************)
@@ -143,11 +145,13 @@ let find_api_usage (dx: D.dex) (data: string) : IPS.t =
 (* Step 2. build call graph, including component transition            *)
 (***********************************************************************)
 
-let make_cg (dx: D.dex) : Cg.cg =
-  St.time "cg" Cg.make_cg dx
+let depth = ref 9
+
+let make_cg (dx: D.dex) (cids: D.link list)  : Cg.cg =
+  St.time "cg" (Cg.make_partial_cg dx !depth) cids
 
 (***********************************************************************)
-(* Step 3. backtrack from the target methods to the main Activity      *)
+(* Step 3. backtrack from the target methods to the target classes     *)
 (***********************************************************************)
 
 (**
@@ -163,13 +167,13 @@ let make_cg (dx: D.dex) : Cg.cg =
 
   callers... mb = [ [mb; ma] ]
 
-    finish if ma is inside one of target activities
+    finish if ma is inside one of target classes
 
   backtrack... = [ [ [mb; ma]; [m6; m4; m2] ]; ... ]
 
 *)
 
-let print_call_chain (dx: D.dex) (cc: D.link list list) : unit =
+let path_to_str (dx: D.dex) (p: path) : string =
   let mtd_to_str mid =
     let cid = D.get_cid_from_mid dx mid in
     let cname = D.get_ty_str dx cid
@@ -187,22 +191,20 @@ let print_call_chain (dx: D.dex) (cc: D.link list list) : unit =
     let next = per_explicit mids in
     if acc = "" then "      "^next else acc^"\n-UI-> "^next
   in
-  Log.i (L.fold_left per_ui "" cc)
+  L.fold_left per_ui "" p
 
-let backtrack (dx: D.dex) cg (call_sites: IPS.t) (acts: string list) =
-  let add_cid acc act = IS.add (D.get_cid dx act) acc in
-  let act_cids = L.fold_left add_cid IS.empty acts
-  in
+let backtrack (dx: D.dex) cg (call_sites: IPS.t) (tgt_cids: IS.t) : path list =
   let is_act =
     let ends_with_act cid = U.ends_with (D.get_ty_str dx cid) "Activity;" in
     D.in_hierarchy dx ends_with_act
   in
-  let rec gen_call_chain ccs : D.link list list list =
-    let per_cc cc =
-      let last_mid = U.get_last (L.hd cc) in
+  let rec gen_path ps : path list =
+    let per_path p =
+      if [] = p then [] else
+      let last_mid = U.get_last (L.hd p) in
       let cid = D.get_cid_from_mid dx last_mid in
-      (* reach one of the target activities *)
-      if IS.mem cid act_cids then [cc]
+      (* reach one of the target classes *)
+      if IS.mem cid tgt_cids then [p]
       (* go to Activity.onCreate(), assuming user interaction *)
       else if is_act cid then
       (
@@ -210,11 +212,11 @@ let backtrack (dx: D.dex) cg (call_sites: IPS.t) (acts: string list) =
           try D.get_the_mtd dx cid App.onCreate
           with D.Wrong_dex _ -> D.get_the_mtd dx cid App.onResume
         in
-        let callers = Cg.callers dx 9 cg on_mid in
+        let ccs = Cg.callers dx 9 cg on_mid in
         (* if |callers| == 1 then no more interesting call chains *)
-        if 1 = L.length callers && 1 = L.length (L.hd callers) then [cc] else
-          let ccs' = L.rev_map (fun cc' -> cc' :: cc) callers in
-          gen_call_chain ccs'
+        if 1 = L.length ccs && 1 = L.length (L.hd ccs) then [p] else
+          let ps' = L.rev_map (fun cc -> cc :: p) ccs in
+          gen_path ps'
       )
       else (* unexplored boundary *)
       (
@@ -224,11 +226,11 @@ let backtrack (dx: D.dex) cg (call_sites: IPS.t) (acts: string list) =
         []
       )
     in
-    L.flatten (L.rev_map per_cc ccs)
+    L.flatten (L.rev_map per_path ps)
   in
-  let to_cc (_, mid) = L.rev_map (fun cc -> [cc]) (Cg.callers dx 9 cg mid) in
-  let ccs = L.flatten (L.rev_map to_cc (IPS.elements call_sites)) in
-  St.time "call chain" gen_call_chain ccs
+  let to_path (_, mid) = L.rev_map (fun p -> [p]) (Cg.callers dx 9 cg mid) in
+  let ps = L.flatten (L.rev_map to_path (IPS.elements call_sites)) in
+  St.time "backtrack" gen_path ps 
 
 (***********************************************************************)
 (* Step 4. instrument necessary user interactions                      *)
@@ -240,14 +242,32 @@ let backtrack (dx: D.dex) cg (call_sites: IPS.t) (acts: string list) =
 (* Putting all together                                                *)
 (***********************************************************************)
 
+let compare_path (p1: path) (p2: path) : int =
+  let c = compare (L.length p1) (L.length p2) in
+  if 0 <> c then c else
+    let len_sum acc cc = acc + (L.length cc) in
+    let l1 = L.fold_left len_sum 0 p1
+    and l2 = L.fold_left len_sum 0 p2 in
+    compare l1 l2
+
 (* directed_explore : D.dex -> string -> string list -> unit *)
 let directed_explore (dx: D.dex) (data: string) (acts: string list) : unit =
-  let call_sites = find_api_usage dx data
-  and cg = make_cg dx in
-  let ccs = backtrack dx cg call_sites acts
-  and per_cc cc =
-    Log.i "\n====== call chain ======";
-    print_call_chain dx cc
+  let add_cid acc act =
+    let cid = D.get_cid dx (J.to_java_ty act) in
+    if cid = D.no_idx then acc else
+      let cids = D.get_superclasses dx cid in
+      L.fold_left (fun acc' cid -> IS.add cid acc') acc cids
   in
-  L.iter per_cc ccs
+  let act_cids = L.fold_left add_cid IS.empty acts
+  and call_sites = find_api_usage dx data in
+  let cg = make_cg dx (IS.elements act_cids) in
+  (* assume the first element is the main Activity *)
+  let main_act = L.hd acts in
+  let main_cid = IS.add (D.get_cid dx main_act) IS.empty in
+  let ps = L.stable_sort compare_path (backtrack dx cg call_sites main_cid)
+  and per_path p =
+    Log.i "\n====== path ======";
+    Log.i (path_to_str dx p)
+  in
+  L.iter per_path ps
 

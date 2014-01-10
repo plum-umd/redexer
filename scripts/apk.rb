@@ -40,6 +40,14 @@ class Apk
   require "#{HOME}/manifest"
   attr_reader :out, :succ
 
+  def org_in_manifest
+    @org_app = @manifest.application
+    @org_launcher = @manifest.launcher
+    comps = @manifest.find_comps("activity")
+    @org_acts = comps[0].keys + comps[1]
+    @org_acts = "no" if @org_acts.length < 1
+  end
+
   def initialize(file_or_dir, *to_dir_or_file)
     if File.directory?(file_or_dir) # already unpacked
       @dir = file_or_dir
@@ -78,6 +86,7 @@ class Apk
       runcmd("java -Djava.awt.headless=true -jar #{APKT} d -f --no-src --keep-broken-res #{@apk} #{@dir}")
       if @succ
         @manifest = Manifest.new(xml)
+        org_in_manifest()
       end
     end
     @succ
@@ -92,7 +101,8 @@ class Apk
   def directed()
     f = Tempfile.new("redexer", HOME)
     begin
-      f.puts @manifest.launcher
+      f.puts @org_launcher # to place launcher first
+      f.puts @org_acts - [@org_launcher]
       f.close
       Dex.directed(dex, f.path, dex)
     ensure
@@ -127,6 +137,10 @@ class Apk
   
   def launcher
     @manifest.launcher
+  end
+
+  def find_comps(tag)
+    @manifest.find_comps(tag)
   end
 
   def permissions

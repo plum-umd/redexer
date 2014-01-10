@@ -36,6 +36,9 @@
 (* Directed Exploration                                                *)
 (***********************************************************************)
 
+(** a level of partial call graph *)
+val depth : int ref
+
 (** given APIs of interest and the main Activity,
   instrument the target dex file such that the rewritten dex is directed to
   the pages that have target API usages *)

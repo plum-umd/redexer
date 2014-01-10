@@ -50,6 +50,9 @@ class Manifest
   NAME = "name"
   PKG  = "package"
   ENABLED = "enabled"
+  RW_PERM = "permission"
+  R_PERM = "readPermission"
+  W_PERM = "writePermission"
   ANDNAME = "android:name"
 
   def initialize(file_name)
@@ -89,6 +92,39 @@ class Manifest
 
     inter = main_acts & launchers
     @out = self.class.class_name(@pkg, inter.to_a[0]) unless inter.empty?
+  end
+
+  def find_comps(tag)
+    # all components are protected by application's permission by default
+    app = @doc.xpath(APP)[0]
+    apps_perm = app[RW_PERM] if app and app[RW_PERM]
+    protected_comps = Hash.new
+    unprotected_comps = Set.new
+    comps = @doc.xpath(APP + "/" + tag)
+    comps.each do |comp|
+      next if comp[ENABLED] == "false"
+      comp_name = self.class.class_name(@pkg, lookup_name(comp))
+      comp_perm  = comp[RW_PERM]
+      comp_rperm = comp[R_PERM]
+      comp_wperm = comp[W_PERM]
+      if comp_perm
+        protected_comps[comp_name] = comp_perm
+      elsif comp_rperm
+        protected_comps[comp_name] = comp_rperm
+      elsif comp_wperm
+        protected_comps[comp_name] = comp_wperm
+      elsif apps_perm
+        protected_comps[comp_name] = apps_perm
+      else
+        unprotected_comps << comp_name
+      end
+    end
+    @out = [protected_comps, unprotected_comps.to_a]
+  end
+
+  def application
+    app = lookup_name(@doc.xpath(APP)[0])
+    self.class.class_name(@pkg, app) if app
   end
 
   def save_to(file_name)
