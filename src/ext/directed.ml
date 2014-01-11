@@ -73,6 +73,8 @@ module IPS = Set.Make(IdxPair)
 
 module IS = Set.Make(D.IdxKey)
 
+let id_folder acc id = IS.add id acc
+
 type path = Cg.cc list
 
 (***********************************************************************)
@@ -148,6 +150,9 @@ let find_api_usage (dx: D.dex) (data: string) : IPS.t =
 let depth = ref 9
 
 let make_cg (dx: D.dex) (cids: D.link list)  : Cg.cg =
+(*
+  St.time "cg" Cg.make_cg dx
+*)
   St.time "cg" (Cg.make_partial_cg dx !depth) cids
 
 (***********************************************************************)
@@ -193,6 +198,19 @@ let path_to_str (dx: D.dex) (p: path) : string =
   in
   L.fold_left per_ui "" p
 
+exception PATH_W_CYCLE
+
+let has_cycle (visited: IS.t) (p: path) : bool =
+  let v_mid acc mid =
+    if IS.mem mid acc then raise PATH_W_CYCLE else id_folder acc mid
+  in
+  try ignore (L.fold_left v_mid visited (L.flatten p)); false
+  with PATH_W_CYCLE -> true
+
+let induce_cycle (cc: Cg.cc) (p: path) : bool =
+  let visited = L.fold_left id_folder IS.empty cc in
+  has_cycle visited p
+
 let backtrack (dx: D.dex) cg (call_sites: IPS.t) (tgt_cids: IS.t) : path list =
   let is_act =
     let ends_with_act cid = U.ends_with (D.get_ty_str dx cid) "Activity;" in
@@ -215,8 +233,10 @@ let backtrack (dx: D.dex) cg (call_sites: IPS.t) (tgt_cids: IS.t) : path list =
         let ccs = Cg.callers dx 9 cg on_mid in
         (* if |callers| == 1 then no more interesting call chains *)
         if 1 = L.length ccs && 1 = L.length (L.hd ccs) then [p] else
-          let ps' = L.rev_map (fun cc -> cc :: p) ccs in
-          gen_path ps'
+          let add_unless_cycle cc =
+            if induce_cycle cc p then [] else cc :: p
+          in
+          gen_path (L.rev_map add_unless_cycle ccs)
       )
       else (* unexplored boundary *)
       (
@@ -255,15 +275,14 @@ let directed_explore (dx: D.dex) (data: string) (acts: string list) : unit =
   let add_cid acc act =
     let cid = D.get_cid dx (J.to_java_ty act) in
     if cid = D.no_idx then acc else
-      let cids = D.get_superclasses dx cid in
-      L.fold_left (fun acc' cid -> IS.add cid acc') acc cids
+      L.fold_left id_folder acc (D.get_superclasses dx cid)
   in
   let act_cids = L.fold_left add_cid IS.empty acts
   and call_sites = find_api_usage dx data in
   let cg = make_cg dx (IS.elements act_cids) in
   (* assume the first element is the main Activity *)
   let main_act = L.hd acts in
-  let main_cid = IS.add (D.get_cid dx main_act) IS.empty in
+  let main_cid = IS.singleton (D.get_cid dx main_act) in
   let ps = L.stable_sort compare_path (backtrack dx cg call_sites main_cid)
   and per_path p =
     Log.i "\n====== path ======";
