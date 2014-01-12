@@ -230,12 +230,18 @@ let make_partial_cg (dx: D.dex) depth (cids: D.link list) : cg =
   let v_method (mid: D.link) : unit =
     let v_ins (ins: D.link) =
       let callee = interpret_ins dx mid ins in
-      if callee <> D.no_idx then worklist := IS.add callee !worklist
+      if callee <> D.no_idx then
+      (
+        changed := true;
+        worklist := IS.add callee !worklist
+      )
     in
     let cid = D.get_cid_from_mid dx mid in
     let sid = D.get_supermethod dx cid mid in
-    if sid <> D.no_idx && add_call dx cg mid sid then
-      worklist := IS.add sid !worklist;
+    (
+      if sid <> D.no_idx && add_call dx cg mid sid then
+        worklist := IS.add sid !worklist
+    );
     try
       let _, citm = D.get_citm dx cid mid in
       DA.iter v_ins citm.D.insns
