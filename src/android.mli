@@ -98,6 +98,12 @@ sig
   (** [managedQuery] *)
   val query : string
 
+  (** [Activity] lifecycle methods *)
+  val lifecycle_act : string list
+
+  (** [Service] lifecycle methods *)
+  val lifecycle_srv : string list
+
 end
 
 module Content :
@@ -292,6 +298,9 @@ val is_static_library : string -> bool
 
 (** [true] if given method is abstract *)
 val is_abstract : string -> bool
+
+(** find [Activity] lifecycle methods *)
+val find_lifecycle_act : Dex.dex -> Dex.link -> Dex.link list
 
 (** {2 Permissions} *)
 

@@ -87,13 +87,9 @@ let descr_to_class =
 
 let act_comps = [App.activity; App.lst_act; App.tab_act; Apr.activity]
 
-let act_trans =
-  [App.onCreate; App.onStart; App.onResume;
-    App.onPause; App.onStop; App.onDestroy]
+let act_trans = App.lifecycle_act
 
-let srv_trans =
-  [App.onCreate; App.onDestroy;
-    App.onBind; App.onRebind; App.onUnbind]
+let srv_trans = App.lifecycle_srv
 
 (* from component to transition: { Activity => [onCreate; ...], ... } *)
 let comp_to_tran =
@@ -337,7 +333,7 @@ class logger (dx: D.dex) =
   and get_v_of descr cid =
     fst (D.get_the_mtd_shorty dx cid JL.v_of ("L"^descr))
   in
-  let v_of_map = SM.mapi get_v_of c_map
+  let v_of_map = SM.mapi get_v_of c_map 
   in
   let auto_boxing (r: int) (ty: D.link) : I.instr =
     let tname = D.get_ty_str dx ty in

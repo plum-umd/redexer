@@ -177,16 +177,10 @@ let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link =
       | P.Intent i when D.no_idx <> D.get_cid dx (J.to_java_ty i) ->
       (
         let cid = D.get_cid dx (J.to_java_ty i) in
-        try
-          let callee, _ = D.get_the_mtd dx cid App.onCreate in
+        let mids = Adr.find_lifecycle_act dx cid in
+        if [] = mids then D.no_idx else
+          let callee = L.hd mids in
           if add_call dx cg caller callee then callee else D.no_idx
-        with D.Wrong_dex _ ->
-        (
-          if 0 = S.compare mname Con.start_act then
-            let callee, _ = D.get_the_mtd dx cid App.onResume in
-            if add_call dx cg caller callee then callee else D.no_idx
-          else D.no_idx
-        )
       )
       | _ -> D.no_idx
     )

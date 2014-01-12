@@ -84,6 +84,9 @@ struct
   let query = "managedQuery"
 
   let clazz () = L.map J.to_java_ty [activity; service; application]
+
+  let lifecycle_act = [onCreate; onStart; onResume; onPause; onStop; onDestroy]
+  let lifecycle_srv = [onCreate; onBind; onRebind; onUnbind; onDestroy]
 end
 
 module Content =
@@ -237,6 +240,17 @@ let is_abstract (mname: string) : bool =
      L.mem mname (View.view_abstract ())
   || L.mem mname (View.KeyEvent.key_abstract ())
   || L.mem mname (View.MenuItem.menu_abstract ())
+
+(* find_lifecycle_act : D.dex -> D.link -> D.link list *)
+let find_lifecycle_act (dx: D.dex) (cid: D.link) : D.link list =
+  let mid_folder mname acc =
+    try
+      let mid, _ = D.get_the_mtd dx cid mname in
+      mid :: acc
+      (* if D.own_the_mtd dx cid mid then mid :: acc else acc *)
+    with D.Wrong_dex _ -> acc
+  in
+  L.fold_right mid_folder App.lifecycle_act []
 
 (***********************************************************************)
 (* Permissions                                                         *)

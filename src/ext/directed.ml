@@ -37,6 +37,7 @@
 (***********************************************************************)
 
 module St = Stats
+module DA = DynArray
 
 module U = Util
 
@@ -147,13 +148,31 @@ let find_api_usage (dx: D.dex) (data: string) : IPS.t =
 (* Step 2. build call graph, including component transition            *)
 (***********************************************************************)
 
-let depth = ref 9
+let depth = ref 6
 
-let make_cg (dx: D.dex) (cids: D.link list)  : Cg.cg =
+let make_cg (dx: D.dex) (acts: string list)  : Cg.cg =
 (*
   St.time "cg" Cg.make_cg dx
 *)
-  St.time "cg" (Cg.make_partial_cg dx !depth) cids
+  (* Activity(s) declared in the manifest, along with their superclasses *)
+  let add_act acc act =
+    let cid = D.get_cid dx (J.to_java_ty act) in
+    if cid = D.no_idx then acc else
+      L.fold_left id_folder acc (D.get_superclasses dx cid)
+  in
+  let act_cids = L.fold_left add_act IS.empty acts
+  in
+  (* *Listener that reacts to user interactions *)
+  let is_listener cid =
+    let ends_w_listener cid = U.ends_with (D.get_ty_str dx cid) "Listener;" in
+    L.exists ends_w_listener (D.get_interfaces dx cid)
+  in
+  let add_listener acc cdef =
+    let cid = cdef.D.c_class_id in
+    if is_listener cid then id_folder acc cid else acc
+  in
+  let cids = DA.fold_left add_listener act_cids dx.D.d_class_defs in
+  St.time "cg" (Cg.make_partial_cg dx !depth) (IS.elements cids)
 
 (***********************************************************************)
 (* Step 3. backtrack from the target methods to the target classes     *)
@@ -213,8 +232,8 @@ let induce_cycle (cc: Cg.cc) (p: path) : bool =
 
 let backtrack (dx: D.dex) cg (call_sites: IPS.t) (tgt_cids: IS.t) : path list =
   let is_act =
-    let ends_with_act cid = U.ends_with (D.get_ty_str dx cid) "Activity;" in
-    D.in_hierarchy dx ends_with_act
+    let ends_w_act cid = U.ends_with (D.get_ty_str dx cid) "Activity;" in
+    D.in_hierarchy dx ends_w_act
   in
   let rec gen_path ps : path list =
     let per_path p =
@@ -226,17 +245,16 @@ let backtrack (dx: D.dex) cg (call_sites: IPS.t) (tgt_cids: IS.t) : path list =
       (* go to Activity.onCreate(), assuming user interaction *)
       else if is_act cid then
       (
-        let on_mid, _ =
-          try D.get_the_mtd dx cid App.onCreate
-          with D.Wrong_dex _ -> D.get_the_mtd dx cid App.onResume
-        in
-        let ccs = Cg.callers dx 9 cg on_mid in
-        (* if |callers| == 1 then no more interesting call chains *)
-        if 1 = L.length ccs && 1 = L.length (L.hd ccs) then [p] else
-          let add_unless_cycle cc =
-            if induce_cycle cc p then [] else cc :: p
-          in
-          gen_path (L.rev_map add_unless_cycle ccs)
+        let mids = Adr.find_lifecycle_act dx cid in
+        if [] = mids then [] else
+          let on_mid = L.hd mids in
+          let ccs = Cg.callers dx 9 cg on_mid in
+          (* if |callers| == 1 then no more interesting call chains *)
+          if 1 = L.length ccs && 1 = L.length (L.hd ccs) then [p] else
+            let add_unless_cycle cc =
+              if induce_cycle cc p then [] else cc :: p
+            in
+            gen_path (L.rev_map add_unless_cycle ccs)
       )
       else (* unexplored boundary *)
       (
@@ -272,21 +290,15 @@ let compare_path (p1: path) (p2: path) : int =
 
 (* directed_explore : D.dex -> string -> string list -> unit *)
 let directed_explore (dx: D.dex) (data: string) (acts: string list) : unit =
-  let add_cid acc act =
-    let cid = D.get_cid dx (J.to_java_ty act) in
-    if cid = D.no_idx then acc else
-      L.fold_left id_folder acc (D.get_superclasses dx cid)
-  in
-  let act_cids = L.fold_left add_cid IS.empty acts
-  and call_sites = find_api_usage dx data in
-  let cg = make_cg dx (IS.elements act_cids) in
+  let call_sites = find_api_usage dx data
+  and cg = make_cg dx acts in
   (* assume the first element is the main Activity *)
   let main_act = L.hd acts in
   let main_cid = IS.singleton (D.get_cid dx main_act) in
-  let ps = L.stable_sort compare_path (backtrack dx cg call_sites main_cid)
+  let ps = backtrack dx cg call_sites main_cid
   and per_path p =
     Log.i "\n====== path ======";
     Log.i (path_to_str dx p)
   in
-  L.iter per_path ps
+  L.iter per_path (L.stable_sort compare_path ps)
 
