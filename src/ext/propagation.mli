@@ -42,6 +42,7 @@ type value =
   |  Const of int64           (** numerical constant *)
   | String of string          (** const-string *)
   |  Clazz of string          (** const-class *)
+  | Object of string          (** instance *)
   | Intent of string          (** Intent for a specific component *)
   |  Field of string * string (** static fields *)
   | BOT                       (** non-const *)
