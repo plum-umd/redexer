@@ -52,6 +52,7 @@ module App = Adr.App
 module Ads = Adr.Ads
 
 module Cg = Callgraph
+module P  = Propagation
 
 module L = List
 
@@ -73,10 +74,37 @@ end
 module IPS = Set.Make(IdxPair)
 
 module IS = Set.Make(D.IdxKey)
+module IM = Map.Make(D.IdxKey)
 
 let id_folder acc id = IS.add id acc
 
 type path = Cg.cc list
+
+let rec compare_path (p1: path) (p2: path) : int =
+  let c = compare (L.length p1) (L.length p2) in
+  if 0 <> c then c else (* same length *)
+  match p1, p2 with
+  | [], [] -> 0
+  | cc1 :: tl1, cc2 :: tl2 ->
+    let c' = compare_cc cc1 cc2 in
+    if 0 <> c' then c' else compare_path tl1 tl2
+
+and compare_cc (cc1: Cg.cc) (cc2: Cg.cc) : int =
+  let c = compare (L.length cc1) (L.length cc2) in
+  if 0 <> c then c else (* same length *)
+  match cc1, cc2 with
+  | [], [] -> 0
+  | id1 :: tl1, id2 :: tl2 ->
+    let c' = compare (D.of_idx id1) (D.of_idx id2) in
+    if 0 <> c' then c' else compare_cc tl1 tl2
+
+module PathKey =
+struct
+  type t = path
+  let compare = compare_path
+end
+
+module PS = Set.Make(PathKey)
 
 (***********************************************************************)
 (* Step 1. find the methods in which the target calls appear           *)
@@ -114,7 +142,7 @@ object
 
 end
 
-let find_api_usage (dx: D.dex) (data: string) : IPS.t =
+let find_api_usage (dx: D.dex) (data: string) =
   let ch = open_in data in
   let lst = U.read_lines ch in
   close_in ch;
@@ -141,45 +169,125 @@ let find_api_usage (dx: D.dex) (data: string) : IPS.t =
   L.iter find_ids s_apis;
 
   call_sites := IPS.empty;
-  St.time "api" V.iter (new target_finder dx !apis);
-  !call_sites
+  V.iter (new target_finder dx !apis)
 
 (***********************************************************************)
 (* Step 2. build call graph, including component transition            *)
 (***********************************************************************)
 
-let depth = ref 6
+let depth = ref 4
 
-let make_cg (dx: D.dex) (acts: string list)  : Cg.cg =
+(* ...Activity; *)
+let is_act (dx: D.dex) (cid: D.link) : bool =
+  let ends_w_act cid' =
+    U.ends_with (D.get_ty_str dx cid') "Activity;"
+  in
+  D.in_hierarchy dx ends_w_act cid
+
+(* ... implements ...Listener { ... } *)
+let is_listener (dx: D.dex) (cid: D.link) : bool =
+  let ends_w_listener cid' =
+    U.ends_with (D.get_ty_str dx cid') "Listener;"
+  in
+  L.exists ends_w_listener (D.get_interfaces dx cid)
+
+let make_cg (dx: D.dex) (acts: string list) : Cg.cg =
 (*
   St.time "cg" Cg.make_cg dx
 *)
+(*
   (* Activity(s) declared in the manifest, along with their superclasses *)
   let add_act acc act =
     let cid = D.get_cid dx (J.to_java_ty act) in
     if cid = D.no_idx then acc else
       L.fold_left id_folder acc (D.get_superclasses dx cid)
-  in
-  let act_cids = L.fold_left add_act IS.empty acts
-  in
-  (* *Listener that reacts to user interactions *)
-  let is_listener cid =
-    let ends_w_listener cid = U.ends_with (D.get_ty_str dx cid) "Listener;" in
-    L.exists ends_w_listener (D.get_interfaces dx cid)
-  in
-  let add_listener acc cdef =
+*)
+  (* Activity(s) defined in the dex file *)
+  let add_act acc cdef =
     let cid = cdef.D.c_class_id in
-    if is_listener cid then id_folder acc cid else acc
+    if is_act dx cid then id_folder acc cid else acc
+  (* *Listener that reacts to user interactions *)
+  and add_listener acc cdef =
+    let cid = cdef.D.c_class_id in
+    if is_listener dx cid then id_folder acc cid else acc
   in
+(*
+  let act_cids = L.fold_left add_act IS.empty acts in
+*)
+  let act_cids = DA.fold_left add_act IS.empty dx.D.d_class_defs in
   let cids = DA.fold_left add_listener act_cids dx.D.d_class_defs in
-  St.time "cg" (Cg.make_partial_cg dx !depth) (IS.elements cids)
+  Cg.make_partial_cg dx !depth (IS.elements cids)
 
 (***********************************************************************)
-(* Step 3. backtrack from the target methods to the target classes     *)
+(* Step 3. find which listeners are related to which activities        *)
+(***********************************************************************)
+
+let listeners = ref IM.empty
+
+let lkup_listener cid : D.link =
+  try IM.find cid !listeners
+  with Not_found -> D.no_idx
+
+(* android...set...Listener() *)
+let is_set_listener (dx: D.dex) (mid: D.link) : bool =
+  let cid = D.get_cid_from_mid dx mid in
+  let cname = D.get_ty_str dx cid
+  and mname = D.get_mtd_name dx mid in
+  U.begins_with cname "Landroid" &&
+  U.begins_with mname "set" && U.ends_with mname "Listener"
+
+class listener_finder (dx: D.dex) =
+object
+  inherit V.iterator dx
+
+  val mutable cur_cid = D.no_idx
+  method v_cdef (cdef: D.class_def_item) : unit =
+    cur_cid <- cdef.D.c_class_id;
+    skip_cls <- not (is_act dx cur_cid)
+
+  val mutable cur_mid = D.no_idx
+  method v_emtd (emtd: D.encoded_method) : unit =
+    cur_mid <- emtd.D.method_idx
+
+  method v_ins (ins: D.link) : unit =
+    if not (D.is_ins dx ins) then () else
+      let op, opr = D.get_ins dx ins in
+      match I.access_link op with
+      | I.METHOD_IDS ->
+        let callee = D.opr2idx (U.get_last opr) in
+        (* android...set...Listener() *)
+        if is_set_listener dx callee then
+        (
+          let cid = D.get_cid_from_mid dx cur_mid in
+          let _, citm = D.get_citm dx cid cur_mid in
+          let dfa = St.time "const" (P.make_dfa dx) citm in
+          let module DFA = (val dfa: Dataflow.ANALYSIS
+            with type st = D.link and type l = (P.value U.IM.t))
+          in
+          St.time "const" DFA.fixed_pt ();
+          let inn = St.time "const" DFA.inn ins
+          and reg = U.get_last (U.rm_last opr) in
+          match U.IM.find (I.of_reg reg) inn with
+          | P.Object o ->
+          (
+            let listener_cid = D.get_cid dx o in
+            listeners := IM.add listener_cid cur_cid !listeners
+          )
+          | _ -> ()
+        )
+      | _ -> ()
+
+end
+
+let find_listener (dx: D.dex) =
+  listeners := IM.empty;
+  V.iter (new listener_finder dx)
+
+(***********************************************************************)
+(* Step 4. backtrack from the target methods to the target classes     *)
 (***********************************************************************)
 
 (**
-
   ma -> mb ---> m2 (* user interaction *)
 
   m1 -> m4; m2 -> m4; m3 -> m5;
@@ -194,7 +302,6 @@ let make_cg (dx: D.dex) (acts: string list)  : Cg.cg =
     finish if ma is inside one of target classes
 
   backtrack... = [ [ [mb; ma]; [m6; m4; m2] ]; ... ]
-
 *)
 
 let path_to_str (dx: D.dex) (p: path) : string =
@@ -211,11 +318,20 @@ let path_to_str (dx: D.dex) (p: path) : string =
     in
     L.fold_left join "" mids
   in
-  let per_ui acc mids =
+  let per_implicit acc mids =
     let next = per_explicit mids in
-    if acc = "" then "      "^next else acc^"\n-UI-> "^next
+    if acc = "" then "      "^next else acc^"\n-##-> "^next
   in
-  L.fold_left per_ui "" p
+  L.fold_left per_implicit "" p
+
+(**
+  has_cycle visited path :=
+    true only if \E m s.t. m \in visited && m \in path
+
+  induce_cycle cc path :=
+    visited = { m \in cc };
+    true only if has_cycle visited path
+*)
 
 exception PATH_W_CYCLE
 
@@ -230,10 +346,28 @@ let induce_cycle (cc: Cg.cc) (p: path) : bool =
   let visited = L.fold_left id_folder IS.empty cc in
   has_cycle visited p
 
-let backtrack (dx: D.dex) cg (call_sites: IPS.t) (tgt_cids: IS.t) : path list =
-  let is_act =
-    let ends_w_act cid = U.ends_with (D.get_ty_str dx cid) "Activity;" in
-    D.in_hierarchy dx ends_w_act
+(**
+  Some apps' main Activity has incoming edges from apps other parts
+  i.e., call chain may already reach the top of the call graph
+
+  sanitize_cc {... m ...} [prev... m post...] [] => [prev... m]
+*)
+
+let reach_top (tgt_mids: IS.t) (mid: D.link) : bool =
+  IS.mem mid tgt_mids
+
+let rec sanitize_cc (tgt_mids: IS.t) cc acc : Cg.cc =
+  match cc with
+  | [] -> L.rev acc
+  | hd :: tl when reach_top tgt_mids hd -> L.rev (hd :: acc)
+  | hd :: tl -> sanitize_cc tgt_mids tl (hd :: acc)
+
+let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
+  let add_lifecycle_mtd acc (cid: D.link) =
+    let mids = Adr.find_lifecycle_act dx cid in
+    if [] = mids then acc else IS.add (L.hd mids) acc
+  in
+  let tgt_mids = L.fold_left add_lifecycle_mtd IS.empty tgt_cids
   in
   let rec gen_path ps : path list =
     let per_path p =
@@ -241,20 +375,19 @@ let backtrack (dx: D.dex) cg (call_sites: IPS.t) (tgt_cids: IS.t) : path list =
       let last_mid = U.get_last (L.hd p) in
       let cid = D.get_cid_from_mid dx last_mid in
       (* reach one of the target classes *)
-      if IS.mem cid tgt_cids then [p]
-      (* go to Activity.onCreate(), assuming user interaction *)
-      else if is_act cid then
+      if reach_top tgt_mids last_mid then [p]
+      (* go to the current Activity's onCreate(), assuming user interaction *)
+      else if is_act dx cid then
       (
         let mids = Adr.find_lifecycle_act dx cid in
-        if [] = mids then [] else
-          let on_mid = L.hd mids in
-          let ccs = Cg.callers dx 9 cg on_mid in
-          (* if |callers| == 1 then no more interesting call chains *)
-          if 1 = L.length ccs && 1 = L.length (L.hd ccs) then [p] else
-            let add_unless_cycle cc =
-              if induce_cycle cc p then [] else cc :: p
-            in
-            gen_path (L.rev_map add_unless_cycle ccs)
+        if [] = mids then [] else add_implicit_call p (L.hd mids)
+      )
+      (* go to the Activity to which this listener belongs *)
+      else if D.no_idx <> lkup_listener cid then
+      (
+        let act_cid = lkup_listener cid in
+        let mids = Adr.find_lifecycle_act dx act_cid in
+        if [] = mids then [] else add_implicit_call p (L.hd mids)
       )
       else (* unexplored boundary *)
       (
@@ -265,13 +398,27 @@ let backtrack (dx: D.dex) cg (call_sites: IPS.t) (tgt_cids: IS.t) : path list =
       )
     in
     L.flatten (L.rev_map per_path ps)
+  and add_implicit_call p mid =
+    let ccs = Cg.callers dx 9 cg mid in
+    (* if |callers| == 1 then no more interesting call chains *)
+    if 1 = L.length ccs && 1 = L.length (L.hd ccs) then [[mid]::p] else
+      let add_unless_cycle cc =
+        if induce_cycle cc p then [] else
+          (sanitize_cc tgt_mids cc []) :: p
+      in
+    gen_path (L.rev_map add_unless_cycle ccs)
   in
   let to_path (_, mid) = L.rev_map (fun p -> [p]) (Cg.callers dx 9 cg mid) in
-  let ps = L.flatten (L.rev_map to_path (IPS.elements call_sites)) in
-  St.time "backtrack" gen_path ps 
+  let init_ps = L.flatten (L.rev_map to_path (IPS.elements !call_sites))
+  in
+  let explored_ps = gen_path init_ps
+  in
+  let v_p acc p = PS.add p acc in
+  let unique_ps = L.fold_left v_p PS.empty explored_ps in
+  PS.elements unique_ps
 
 (***********************************************************************)
-(* Step 4. instrument necessary user interactions                      *)
+(* Step 5. instrument necessary user interactions                      *)
 (***********************************************************************)
 
 
@@ -280,25 +427,18 @@ let backtrack (dx: D.dex) cg (call_sites: IPS.t) (tgt_cids: IS.t) : path list =
 (* Putting all together                                                *)
 (***********************************************************************)
 
-let compare_path (p1: path) (p2: path) : int =
-  let c = compare (L.length p1) (L.length p2) in
-  if 0 <> c then c else
-    let len_sum acc cc = acc + (L.length cc) in
-    let l1 = L.fold_left len_sum 0 p1
-    and l2 = L.fold_left len_sum 0 p2 in
-    compare l1 l2
-
 (* directed_explore : D.dex -> string -> string list -> unit *)
 let directed_explore (dx: D.dex) (data: string) (acts: string list) : unit =
-  let call_sites = find_api_usage dx data
-  and cg = make_cg dx acts in
+  St.time "api" (find_api_usage dx) data;
+  let cg = St.time "cg" (make_cg dx) acts in
+  St.time "listener" find_listener dx;
   (* assume the first element is the main Activity *)
-  let main_act = L.hd acts in
-  let main_cid = IS.singleton (D.get_cid dx main_act) in
-  let ps = backtrack dx cg call_sites main_cid
+  let main_act = J.to_java_ty (L.hd acts) in
+  let main_cid = D.get_cid dx main_act in
+  let ps = St.time "backtrack" (backtrack dx cg) [main_cid]
   and per_path p =
     Log.i "\n====== path ======";
     Log.i (path_to_str dx p)
   in
-  L.iter per_path (L.stable_sort compare_path ps)
+  L.iter per_path ps
 
