@@ -42,6 +42,10 @@
 (** Call Graph *)
 type cg
 
+(** into the {!cg}, add an edge from the caller to the callee
+ returns [true] if a new node is introduced *)
+val add_call : Dex.dex -> cg -> Dex.link -> Dex.link -> bool
+
 (** make call graph for overall {!Dex.dex} file *)
 val make_cg : Dex.dex -> cg
 

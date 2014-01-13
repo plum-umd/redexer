@@ -58,6 +58,8 @@ module L = List
 module H = Hashtbl
 module S = String
 
+module Pf = Printf
+
 (***********************************************************************)
 (* Basic Types/Elements                                                *)
 (***********************************************************************)
@@ -131,6 +133,7 @@ let find_or_new_method (dx: D.dex) cg (mid: D.link) : meth * bool =
     } in
     H.add cg.meth_h mid nod; nod, true
 
+(* add_call : D.dex -> cg -> D.link -> D.link -> bool *)
 let add_call (dx: D.dex) cg (caller: D.link) (callee: D.link) : bool =
   let caller_n, changed_r = find_or_new_method dx cg caller
   and callee_n, changed_e = find_or_new_method dx cg callee
@@ -159,25 +162,37 @@ let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link =
   | I.METHOD_IDS ->
     (* last opr at invoke-kind must be method id *)
     let callee = D.opr2idx (U.get_last opr) in
-    let mname = D.get_mtd_name dx callee in
-    (* component transition *)
+    let cid = D.get_cid_from_mid dx callee in
+    let cname = D.get_ty_str dx cid
+    and mname = D.get_mtd_name dx callee in
+(*
+    (* Component transition *)
     if 0 = S.compare mname Con.start_act
     || 0 = S.compare mname Con.start_srv then
+*)
+    (* Intent creation *)
+    if 0 = S.compare mname J.init
+    && 0 = S.compare cname (J.to_java_ty Con.intent) then
     (
       let cid = D.get_cid_from_mid dx caller in
       let _, citm = D.get_citm dx cid caller in
       let dfa = St.time "const" (P.make_dfa dx) citm in
       let module DFA = (val dfa: Dataflow.ANALYSIS
-        with type st = D.link and type l = (P.value U.IM.t))
+        with type st = D.link and type l = (P.value IM.t))
       in
       St.time "const" DFA.fixed_pt ();
-      let inn = St.time "const" DFA.inn ins
+      let out = St.time "const" DFA.out ins
+(*
+      (* invoke-virtual v_this, v_intent, @mid *)
       and reg = U.get_last (U.rm_last opr) in
-      match IM.find (I.of_reg reg) inn with
-      | P.Intent i when D.no_idx <> D.get_cid dx (J.to_java_ty i) ->
+*)
+      (* invoke-direct v_intent, ... *)
+      and reg = L.hd opr in
+      match IM.find (I.of_reg reg) out with
+      | P.Intent i when D.no_idx <> D.get_cid dx i ->
       (
-        let cid = D.get_cid dx (J.to_java_ty i) in
-        let mids = Adr.find_lifecycle_act dx cid in
+        let act_cid = D.get_cid dx i in
+        let mids = Adr.find_lifecycle_act dx act_cid in
         if [] = mids then D.no_idx else
           let callee = L.hd mids in
           if add_call dx cg caller callee then callee else D.no_idx
@@ -214,7 +229,7 @@ let make_cg (dx: D.dex) : cg =
     and mid = D.to_idx i in
     let sid = D.get_supermethod dx cid mid in
     if sid <> D.no_idx then
-      (* implicit call relations, i.e. super() *)
+      (* implicit super() call relations *)
       ignore (add_call dx cg mid sid)
   in
   (* visitor see only impl methods; rather, see ids directly *)
@@ -225,20 +240,17 @@ let make_cg (dx: D.dex) : cg =
 let make_partial_cg (dx: D.dex) depth (cids: D.link list) : cg =
   H.clear cg.clzz_h; H.clear cg.meth_h;
   let worklist = ref IS.empty
-  and changed = ref true
   and iter_cnt = ref 0 in
   let v_method (mid: D.link) : unit =
     let v_ins (ins: D.link) =
       let callee = interpret_ins dx mid ins in
       if callee <> D.no_idx then
-      (
-        changed := true;
         worklist := IS.add callee !worklist
-      )
     in
     let cid = D.get_cid_from_mid dx mid in
     let sid = D.get_supermethod dx cid mid in
     (
+      (* implicit super() call relations *)
       if sid <> D.no_idx && add_call dx cg mid sid then
         worklist := IS.add sid !worklist
     );
@@ -252,8 +264,8 @@ let make_partial_cg (dx: D.dex) depth (cids: D.link list) : cg =
     L.fold_left (fun acc' mid -> IS.add mid acc') acc mids
   in
   worklist := L.fold_left init_worklist IS.empty cids;
-  while !changed && !iter_cnt < depth do
-    changed := false; incr iter_cnt;
+  while !iter_cnt < depth && not (IS.is_empty !worklist) do
+    incr iter_cnt;
     let mids = IS.elements !worklist in
     worklist := IS.empty;
     L.iter v_method mids
