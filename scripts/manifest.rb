@@ -84,7 +84,7 @@ class Manifest
     categories = @doc.xpath(CATG)
     categories.each do |category|
       begin
-        if category[NAME].split('.')[-1] == "LAUNCHER"
+        if lookup_name(category).split('.')[-1] == "LAUNCHER"
           launchers << lookup_name(category.parent.parent)
         end
       rescue; end;
