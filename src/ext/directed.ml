@@ -55,6 +55,7 @@ module Cg = Callgraph
 module P  = Propagation
 
 module L = List
+module S = String
 
 module Pf = Printf
 module RE = Str
@@ -155,21 +156,24 @@ let find_api_usage (dx: D.dex) (data: string) =
   in
   let s_apis = L.fold_left each_line [] lst
   in
-  let apis = ref IPS.empty in
-  let find_ids (cname, mname) =
+  let find_ids acc (cname, mname) =
     let cid = D.get_cid dx cname in
     if D.no_idx = cid then
-      Log.w (Pf.sprintf "can't find class %s" cname)
-    else try
-      let mid, _ = D.get_the_mtd dx cid mname in
-      apis := IPS.add (cid, mid) !apis
-    with D.Wrong_dex _ ->
-      Log.w (Pf.sprintf "can't find method %s->%s" cname mname)
+    (
+      Log.w (Pf.sprintf "can't find class %s" cname); acc
+    )
+    else
+      let mids, _ = L.split (D.get_mtds dx cid) in
+      let add_mid acc' mid =
+        let mname' = D.get_mtd_name dx mid in
+        if 0 = S.compare mname mname' then IPS.add (cid, mid) acc' else acc'
+      in
+      L.fold_left add_mid acc mids
   in
-  L.iter find_ids s_apis;
-
+  let apis = L.fold_left find_ids IPS.empty s_apis
+  in
   call_sites := IPS.empty;
-  V.iter (new target_finder dx !apis)
+  V.iter (new target_finder dx apis)
 
 (***********************************************************************)
 (* Step 2. build call graph, including component transition            *)
@@ -236,6 +240,16 @@ let is_set_listener (dx: D.dex) (mid: D.link) : bool =
   U.begins_with cname "Landroid" &&
   U.begins_with mname "set" && U.ends_with mname "Listener"
 
+let calc_current_const (dx: D.dex) (mid: D.link) (ins: D.link) =
+  let cid = D.get_cid_from_mid dx mid in
+  let _, citm = D.get_citm dx cid mid in
+  let dfa = St.time "const" (P.make_dfa dx) citm in
+  let module DFA = (val dfa: Dataflow.ANALYSIS
+    with type st = D.link and type l = (P.value U.IM.t))
+  in
+  St.time "const" DFA.fixed_pt ();
+  St.time "const" DFA.inn ins
+
 class listener_finder (dx: D.dex) =
 object
   inherit V.iterator dx
@@ -258,14 +272,7 @@ object
         (* android...set...Listener() *)
         if is_set_listener dx callee then
         (
-          let cid = D.get_cid_from_mid dx cur_mid in
-          let _, citm = D.get_citm dx cid cur_mid in
-          let dfa = St.time "const" (P.make_dfa dx) citm in
-          let module DFA = (val dfa: Dataflow.ANALYSIS
-            with type st = D.link and type l = (P.value U.IM.t))
-          in
-          St.time "const" DFA.fixed_pt ();
-          let inn = St.time "const" DFA.inn ins
+          let inn = calc_current_const dx cur_mid ins
           and reg = U.get_last (U.rm_last opr) in
           match U.IM.find (I.of_reg reg) inn with
           | P.Object o ->
@@ -275,6 +282,20 @@ object
           )
           | _ -> ()
         )
+      (* iput-object v_obj, v_this, @fid *)
+      | I.FIELD_IDS when op = I.OP_IPUT_OBJECT ->
+      (
+        let inn = calc_current_const dx cur_mid ins
+        and reg = L.hd opr in
+        match U.IM.find (I.of_reg reg) inn with
+        | P.Object o ->
+        (
+          let cid = D.get_cid dx o in
+          if is_listener dx cid then
+            listeners := IM.add cid cur_cid !listeners
+        )
+        | _ -> ()
+      )
       | _ -> ()
 
 end
