@@ -531,23 +531,32 @@ val get_cid : dex -> string -> link
  raise [Not_found] unless found *)
 val get_cdef : dex -> link -> class_def_item
 
-(** get superclass id for given class,
+(** get implemented interfaces of the given class *)
+val get_interfaces : dex -> link -> link list
+
+(** get super class id for given class,
  {!no_idx} if it's at the top level *)
 val get_superclass : dex -> link -> link
 
-(** get superclasses for a given class. *)
+(** get super classes for a given class *)
 val get_superclasses : dex -> link -> link list
-
-(** get implemented interfaces of a given class *)
-val get_interfaces : dex -> link -> link list
 
 (** check that some property (given as a function {!link} to [bool])
  holds in hierarchy starting from the given class *)
 val in_hierarchy : dex -> (link -> bool) -> link -> bool
 
-(** check whether some class is a superclass (up through the hierarchy) 
-    of a given class. *)
+(** check whether some class is a super class (up through the hierarchy) 
+    of a given class *)
 val is_superclass : dex -> link -> link -> bool
+
+(** check whether some class is an inner class of the given class *)
+val is_innerclass : dex -> link -> link -> bool
+
+(** get inner classes for the given class *)
+val get_innerclasses : dex -> link -> link list
+
+(** get owning class if the given class is an inner class *)
+val get_owning_class : dex -> link -> link
 
 (** get all fields, along with ids, for given class *)
 val get_flds : dex -> link -> (link * field_id_item) list

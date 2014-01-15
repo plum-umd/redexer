@@ -712,6 +712,11 @@ let get_cdef dx (cid: link) : class_def_item =
   in
   DA.get dx.d_class_defs (DA.index_of finder dx.d_class_defs)
 
+(* get_interfaces: dex -> link -> link list *)
+let get_interfaces dx (cid: link) : link list =
+  try get_ty_lst dx (get_cdef dx cid).interfaces
+  with Not_found -> []
+
 (* get_superclass : dex -> link -> link *)
 let get_superclass dx cid : link =
   try (get_cdef dx cid).superclass
@@ -724,11 +729,6 @@ let get_superclasses dx (cid: link) : link list =
     else h (x::acc) (get_superclass dx x)
   in h [] cid
 
-(* get_interfaces: dex -> link -> link list *)
-let get_interfaces dx (cid: link) : link list =
-  try get_ty_lst dx (get_cdef dx cid).interfaces
-  with Not_found -> []
-  
 (* in_hierarchy : dex -> (link -> bool) -> link -> bool *)
 let rec in_hierarchy dx (f: link -> bool) (cid: link) : bool =
   if cid = no_idx then false else
@@ -737,6 +737,27 @@ let rec in_hierarchy dx (f: link -> bool) (cid: link) : bool =
 (* is_superclass : dex -> link -> link -> bool *)
 let is_superclass dx (cid: link) (sup: link) : bool =
   in_hierarchy dx ((=) sup) cid
+
+(* is_innerclass : dex -> link -> link -> bool *)
+let is_innerclass dx (cid: link) (inner: link) : bool =
+  let cname = get_ty_str dx cid
+  and inner_name = get_ty_str dx inner in
+  0 = S.compare cname (J.get_owning_class inner_name)
+
+(* get_innerclasses: dex -> link -> link list *)
+let get_innerclasses dx (cid: link) : link list =
+  let folder acc (cdef: class_def_item) =
+    let cid' = cdef.c_class_id in
+    if J.is_inner_class (get_ty_str dx cid')
+    && is_innerclass dx cid cid' then cid' :: acc else acc
+  in
+  DA.fold_left folder [] dx.d_class_defs
+
+(* get_owning_class: dex -> link -> link *)
+let get_owning_class dx (cid: link) : link =
+  let cname = get_ty_str dx cid in
+  if not (J.is_inner_class cname) then no_idx else
+    get_cid dx (J.get_owning_class cname)
 
 (* get_flds : dex -> link -> (link * field_id_item) list *)
 let get_flds dx (cid: link) : (link * field_id_item) list =

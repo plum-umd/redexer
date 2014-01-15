@@ -171,6 +171,16 @@ let get_class_name full : string =
   let cls = U.get_last (U.split_string full '/') in
   U.trim_last cls
 
+(* is_inner_class : string -> bool *)
+let is_inner_class full : bool =
+  let cname = get_class_name full in
+  1 < L.length (U.split_string cname '$')
+
+(* get_owning_class : string -> string *)
+let get_owning_class full : string =
+  if not (is_inner_class full) then full else
+    (L.hd (U.split_string full '$'))^";"
+
 (***********************************************************************)
 (* Libraries                                                           *)
 (***********************************************************************)

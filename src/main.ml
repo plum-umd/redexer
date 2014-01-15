@@ -286,6 +286,8 @@ let arg_specs = A.align
      " instrument logging feature into the given dex");
     ("-directed", A.Unit do_directed,
      " instrument the dex such that it is directed to certain call sites");
+    ("-cg_depth", A.Set_int Dre.cg_depth, " a level of partial call graph");
+    ("-path_len", A.Set_int Dre.path_len, " a length of paths");
 
     ("-act", A.Set_string act,
      " file containing activity names (default: "^(!act)^")");

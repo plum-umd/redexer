@@ -114,6 +114,12 @@ val get_package_name : string -> string
 (** from [Ljava/lang/Object;] to [Object] *)
 val get_class_name : string -> string
 
+(** [true] if the given type name is an inner class, such as ...$1 *)
+val is_inner_class : string -> bool
+
+(** from [Lpkg/cls$n;] to [Lpkg/cls;] *)
+val get_owning_class : string -> string
+
 (** {2 Libraries} *)
 
 module Lang :

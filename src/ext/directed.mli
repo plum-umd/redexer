@@ -37,7 +37,10 @@
 (***********************************************************************)
 
 (** a level of partial call graph *)
-val depth : int ref
+val cg_depth : int ref
+
+(** a length of paths *)
+val path_len : int ref
 
 (** given APIs of interest and the main Activity,
   instrument the target dex file such that the rewritten dex is directed to

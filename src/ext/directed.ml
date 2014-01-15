@@ -137,7 +137,14 @@ object
         let mid = D.opr2idx (U.get_last opr) in
         let cid = D.get_cid_from_mid dx mid in
         if IPS.mem (cid, mid) apis then
+        (
+          let er_c = D.get_ty_str dx cur_cid
+          and er_m = D.get_mtd_name dx cur_mid
+          and ee_c = D.get_ty_str dx cid
+          and ee_m = D.get_mtd_name dx mid in
+          Log.d (Pf.sprintf "at %s.%s\n-> %s.%s\n" er_c er_m ee_c ee_m);
           call_sites := IPS.add (cur_cid, cur_mid) !call_sites
+        )
       )
       | _ -> ()
 
@@ -179,14 +186,15 @@ let find_api_usage (dx: D.dex) (data: string) =
 (* Step 2. build call graph, including component transition            *)
 (***********************************************************************)
 
-let depth = ref 4
+(* a level of partial call graph *)
+let cg_depth = ref 5
 
 (* ...Activity; *)
 let is_act (dx: D.dex) (cid: D.link) : bool =
   let ends_w_act cid' =
     U.ends_with (D.get_ty_str dx cid') "Activity;"
   in
-  D.in_hierarchy dx ends_w_act cid
+  cid <> D.no_idx && D.in_hierarchy dx ends_w_act cid
 
 (* ... implements ...Listener { ... } *)
 let is_listener (dx: D.dex) (cid: D.link) : bool =
@@ -203,13 +211,15 @@ let make_cg (dx: D.dex) (acts: string list) : Cg.cg =
   (* Activity(s) declared in the manifest, along with their superclasses *)
   let add_act acc act =
     let cid = D.get_cid dx (J.to_java_ty act) in
-    if cid = D.no_idx then acc else
+    if D.no_idx = cid then acc else
       L.fold_left id_folder acc (D.get_superclasses dx cid)
 *)
-  (* Activity(s) defined in the dex file *)
+  (* Activity(s) defined in the dex file, along with their inner classes *)
   let add_act acc cdef =
     let cid = cdef.D.c_class_id in
-    if is_act dx cid then id_folder acc cid else acc
+    if not (is_act dx cid) then acc else
+      let inners = D.get_innerclasses dx cid in
+      L.fold_left id_folder (id_folder acc cid) inners
   (* *Listener that reacts to user interactions *)
   and add_listener acc cdef =
     let cid = cdef.D.c_class_id in
@@ -220,7 +230,7 @@ let make_cg (dx: D.dex) (acts: string list) : Cg.cg =
 *)
   let act_cids = DA.fold_left add_act IS.empty dx.D.d_class_defs in
   let cids = DA.fold_left add_listener act_cids dx.D.d_class_defs in
-  Cg.make_partial_cg dx !depth (IS.elements cids)
+  Cg.make_partial_cg dx !cg_depth (IS.elements cids)
 
 (***********************************************************************)
 (* Step 3. find which listeners are related to which activities        *)
@@ -302,7 +312,13 @@ end
 
 let find_listener (dx: D.dex) =
   listeners := IM.empty;
-  V.iter (new listener_finder dx)
+  V.iter (new listener_finder dx);
+  let p_map (listener_cid: D.link) (act_cid: D.link) =
+    let listener_name = D.get_ty_str dx listener_cid
+    and act_name = D.get_ty_str dx act_cid in
+    Log.d (Pf.sprintf "%s belongs to %s\n" listener_name act_name)
+  in
+  IM.iter p_map !listeners
 
 (***********************************************************************)
 (* Step 4. backtrack from the target methods to the target classes     *)
@@ -383,6 +399,9 @@ let rec sanitize_cc (tgt_mids: IS.t) cc acc : Cg.cc =
   | hd :: tl when reach_top tgt_mids hd -> L.rev (hd :: acc)
   | hd :: tl -> sanitize_cc tgt_mids tl (hd :: acc)
 
+(* a length of paths *)
+let path_len = ref 5
+
 let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
   let add_lifecycle_mtd acc (cid: D.link) =
     let mids = Adr.find_lifecycle_act dx cid in
@@ -392,7 +411,7 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
   in
   let rec gen_path ps : path list =
     let per_path p =
-      if [] = p then [] else
+      if [] = p || !path_len < L.length p then [] else
       let last_mid = U.get_last (L.hd p) in
       let cid = D.get_cid_from_mid dx last_mid in
       (* reach one of the target classes *)
@@ -407,6 +426,13 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
       else if D.no_idx <> lkup_listener cid then
       (
         let act_cid = lkup_listener cid in
+        let mids = Adr.find_lifecycle_act dx act_cid in
+        if [] = mids then [] else add_implicit_call p (L.hd mids)
+      )
+      (* go to the owning Activity if this is its inner class *)
+      else if is_act dx (D.get_owning_class dx cid) then
+      (
+        let act_cid = D.get_owning_class dx cid in
         let mids = Adr.find_lifecycle_act dx act_cid in
         if [] = mids then [] else add_implicit_call p (L.hd mids)
       )
