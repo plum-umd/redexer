@@ -38,6 +38,9 @@
 
 (** This module provides special functions for logging apps *)
 
-(** instrument logging features into the dex. *)
+(** add non-overriden transition methods *)
+val add_transition : Dex.dex -> unit
+
+(** instrument logging features into the dex accordingly *)
 val modify : Dex.dex -> unit
 

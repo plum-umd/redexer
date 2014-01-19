@@ -53,6 +53,7 @@ module Ads = Adr.Ads
 
 module Cg = Callgraph
 module P  = Propagation
+module Lg = Logging
 
 module L = List
 module S = String
@@ -206,13 +207,6 @@ let is_listener (dx: D.dex) (cid: D.link) : bool =
 let make_cg (dx: D.dex) (acts: string list) : Cg.cg =
 (*
   St.time "cg" Cg.make_cg dx
-*)
-(*
-  (* Activity(s) declared in the manifest, along with their superclasses *)
-  let add_act acc act =
-    let cid = D.get_cid dx (J.to_java_ty act) in
-    if D.no_idx = cid then acc else
-      L.fold_left id_folder acc (D.get_superclasses dx cid)
 *)
   (* Activity(s) defined in the dex file, along with their inner classes *)
   let add_act acc cdef =
@@ -476,6 +470,7 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
 
 (* directed_explore : D.dex -> string -> string list -> unit *)
 let directed_explore (dx: D.dex) (data: string) (acts: string list) : unit =
+  St.time "transition" Lg.add_transition dx;
   St.time "api" (find_api_usage dx) data;
   let cg = St.time "cg" (make_cg dx) acts in
   St.time "listener" find_listener dx;
