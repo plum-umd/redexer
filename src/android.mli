@@ -95,6 +95,9 @@ sig
   (** [onOptionsItemSelected] *)
   val onOptionsItemSelected : string
 
+  (** [findViewById] *)
+  val find_view : string
+
   (** [managedQuery] *)
   val query : string
 

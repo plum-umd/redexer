@@ -81,6 +81,7 @@ struct
   let onCreateOptionsMenu   = "onCreateOptionsMenu"
   let onOptionsItemSelected = "onOptionsItemSelected"
 
+  let find_view = "findViewById"
   let query = "managedQuery"
 
   let clazz () = L.map J.to_java_ty [activity; service; application]

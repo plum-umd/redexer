@@ -51,6 +51,7 @@ module AA = Android.App
 module AC = Android.Content
 module AD = Android.Database
 module AN = Android.Net
+module AV = Android.View
 
 module Cf = Ctrlflow
 module Df = Dataflow
@@ -144,6 +145,17 @@ let rec transfer (dx: D.dex) (inn: value IM.t) (ins: D.link) : value IM.t =
     let dst::src::[] = opr in
     let d = I.of_reg dst in
     IM.add d (read_const dx op src) inn
+  )
+  else if 0x1f = hx then (* CHECK-CAST *)
+  (
+    let dst::id::[] = opr in
+    let d = I.of_reg dst
+    and cid = D.opr2idx id in
+    match IM.find d inn with
+    | Object _ ->
+	  let cname = D.get_ty_str dx cid in
+      IM.add d (Object cname) inn
+    | _ -> IM.add d BOT inn
   )
   else if 0x22 = hx then (* NEW *)
   (
@@ -271,6 +283,11 @@ let rec transfer (dx: D.dex) (inn: value IM.t) (ins: D.link) : value IM.t =
           | _ -> this
         in
         IM.add reg_x z inn
+      )
+      | _ when 0 = S.compare mname AA.find_view ->
+      (
+        let view = J.to_java_ty AV.view in
+        IM.add (-1) (Object view) inn
       )
     with Match_failure _ ->
       let rtid = D.get_rety dx (D.get_mit dx mid) in
