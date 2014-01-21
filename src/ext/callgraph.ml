@@ -82,6 +82,8 @@ type cg = {
   meth_h : (D.link, meth) H.t;
 }
 
+let op_invoke_itfs = [I.OP_INVOKE_INTERFACE; I.OP_INVOKE_INTERFACE_RANGE]
+
 (***********************************************************************)
 (* Utilities                                                           *)
 (***********************************************************************)
@@ -153,13 +155,31 @@ let cg = {
 
 (**
   given instruction, add an edge from caller to callee, if exists,
-  and return the callee id so as to visit it incrementally
+  and return the callee ids so as to visit them incrementally
 *)
-let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link =
-  if not (D.is_ins dx ins) then D.no_idx else
+let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link list =
+  if not (D.is_ins dx ins) then [] else
   let op, opr = D.get_ins dx ins in
   match I.access_link op with
+  | I.METHOD_IDS when L.mem op op_invoke_itfs ->
+  (
+    (* last opr at invoke-kind must be method id *)
+    let itf = D.opr2idx (U.get_last opr) in
+    let iid = D.get_cid_from_mid dx itf in
+    let cname = D.get_ty_str dx iid
+    and mname = D.get_mtd_name dx itf
+    and impls = D.get_implementers dx iid
+    in
+    let per_impl acc cid =
+      let callee, _ = D.get_the_mtd dx cid mname in
+      if add_call dx cg caller callee then callee :: acc else acc
+    in
+    (* not to add edges that correspond to user interactions *)
+    if U.begins_with cname "Landroid" then [] else
+      L.fold_left per_impl [] impls
+  )
   | I.METHOD_IDS ->
+  (
     (* last opr at invoke-kind must be method id *)
     let callee = D.opr2idx (U.get_last opr) in
     let cid = D.get_cid_from_mid dx callee in
@@ -193,15 +213,16 @@ let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link =
       (
         let act_cid = D.get_cid dx i in
         let mids = Adr.find_lifecycle_act dx act_cid in
-        if [] = mids then D.no_idx else
+        if [] = mids then [] else
           let callee = L.hd mids in
-          if add_call dx cg caller callee then callee else D.no_idx
+          if add_call dx cg caller callee then [callee] else []
       )
-      | _ -> D.no_idx
+      | _ -> []
     )
     else (* explicit call relations *)
-      if add_call dx cg caller callee then callee else D.no_idx
-  | _ -> D.no_idx
+      if add_call dx cg caller callee then [callee] else []
+  )
+  | _ -> []
 
 class cg_maker (dx: D.dex) =
 object
@@ -243,9 +264,11 @@ let make_partial_cg (dx: D.dex) depth (cids: D.link list) : cg =
   and iter_cnt = ref 0 in
   let v_method (mid: D.link) : unit =
     let v_ins (ins: D.link) =
-      let callee = interpret_ins dx mid ins in
-      if callee <> D.no_idx then
+      let callees = interpret_ins dx mid ins
+      and add_callee callee =
         worklist := IS.add callee !worklist
+      in
+      L.iter add_callee callees
     in
     let cid = D.get_cid_from_mid dx mid in
     let sid = D.get_supermethod dx cid mid in

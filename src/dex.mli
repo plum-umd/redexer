@@ -524,6 +524,12 @@ val get_fld_name : dex -> link -> string
 (** get name for given method *)
 val get_mtd_name : dex -> link -> string
 
+(** get name for given field, along with class name *)
+val get_fld_full_name : dex -> link -> string
+
+(** get name for given method, along with class name *)
+val get_mtd_full_name : dex -> link -> string
+
 (** get class id from name, {!no_idx} unless found *)
 val get_cid : dex -> string -> link
 
@@ -531,8 +537,11 @@ val get_cid : dex -> string -> link
  raise [Not_found] unless found *)
 val get_cdef : dex -> link -> class_def_item
 
-(** get implemented interfaces of the given class *)
+(** get interfaces implemented by the given class *)
 val get_interfaces : dex -> link -> link list
+
+(** get classes that implement the given interface *)
+val get_implementers : dex -> link -> link list
 
 (** get super class id for given class,
  {!no_idx} if it's at the top level *)

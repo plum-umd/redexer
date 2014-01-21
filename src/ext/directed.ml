@@ -444,8 +444,8 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
     (* if |callers| == 1 then no more interesting call chains *)
     if 1 = L.length ccs && 1 = L.length (L.hd ccs) then [[mid]::p] else
       let add_unless_cycle cc =
-        if induce_cycle cc p then [] else
-          (sanitize_cc tgt_mids cc []) :: p
+        let cc' = sanitize_cc tgt_mids cc [] in
+        if induce_cycle cc' p then [] else cc' :: p
       in
     gen_path (L.rev_map add_unless_cycle ccs)
   in
