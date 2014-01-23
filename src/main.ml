@@ -325,10 +325,13 @@ let main () =
       (
         let dex = St.time "parse" P.parse ch in
         k ();
-        let ch2 = open_in (!dat^"/skip.txt") in
-        let res = U.read_lines ch2 in
-        close_in ch2;
-        V.set_skip_pkgs res;
+        try (
+          let ch2 = open_in (!dat^"/skip.txt") in
+          let res = U.read_lines ch2 in
+          close_in ch2;
+          V.set_skip_pkgs res
+        )
+        with Sys_error _ -> ();
         f dex
       );
       St.print stderr "====== redexer performance statistics ======\n"
