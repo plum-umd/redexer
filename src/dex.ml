@@ -715,6 +715,14 @@ let get_mtd_full_name dx (mid: link) : string =
   and mname = get_mtd_name dx mid in
   cname^"->"^mname
 
+(* get_mtd_sig : dex -> link -> string *)
+let get_mtd_sig dx (mid: link) : string =
+  let mname = get_mtd_full_name dx mid
+  and mit = get_mit dx mid in
+  let argv = L.map (get_ty_str dx) (get_argv dx mit)
+  and rety = get_ty_str dx (get_rety dx mit) in
+  mname^"("^(L.fold_left (^) "" argv)^")"^rety
+
 (* get_cid : dex -> string -> link *)
 let get_cid dx (name: string) : link =
   find_ty_str dx name

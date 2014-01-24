@@ -139,11 +139,9 @@ object
         let cid = D.get_cid_from_mid dx mid in
         if IPS.mem (cid, mid) apis then
         (
-          let er_c = D.get_ty_str dx cur_cid
-          and er_m = D.get_mtd_name dx cur_mid
-          and ee_c = D.get_ty_str dx cid
-          and ee_m = D.get_mtd_name dx mid in
-          Log.d (Pf.sprintf "at %s.%s\n-> %s.%s\n" er_c er_m ee_c ee_m);
+          let caller = D.get_mtd_sig dx cur_mid
+          and callee = D.get_mtd_sig dx mid in
+          Log.i (Pf.sprintf "      %s\n----> %s\n" caller callee);
           call_sites := IPS.add (cur_cid, cur_mid) !call_sites
         )
       )
@@ -242,9 +240,10 @@ let is_set_listener (dx: D.dex) (mid: D.link) : bool =
   let cname = D.get_ty_str dx cid
   and mname = D.get_mtd_name dx mid in
   U.begins_with cname "Landroid" &&
-  U.begins_with mname "set" && U.ends_with mname "Listener"
+  U.begins_with mname "set" &&
+  L.exists (U.ends_with mname) ["Listener"; "Items"; "Button"]
 
-let calc_current_const (dx: D.dex) (mid: D.link) (ins: D.link) =
+let calc_const (dx: D.dex) (mid: D.link) (ins: D.link) =
   let cid = D.get_cid_from_mid dx mid in
   let _, citm = D.get_citm dx cid mid in
   let dfa = St.time "const" (P.make_dfa dx) citm in
@@ -254,6 +253,15 @@ let calc_current_const (dx: D.dex) (mid: D.link) (ins: D.link) =
   St.time "const" DFA.fixed_pt ();
   St.time "const" DFA.inn ins
 
+let add_listener_rel (dx: D.dex) (listener_cid: D.link) (mid: D.link) : unit =
+  if not (is_listener dx listener_cid) then () else
+  let cid = D.get_cid_from_mid dx mid in
+  if is_act dx cid then
+    let mids = Adr.find_lifecycle_act dx cid in
+    listeners := IM.add listener_cid (L.hd mids) !listeners
+  else
+    listeners := IM.add listener_cid mid !listeners
+
 class listener_finder (dx: D.dex) =
 object
   inherit V.iterator dx
@@ -261,7 +269,8 @@ object
   val mutable cur_cid = D.no_idx
   method v_cdef (cdef: D.class_def_item) : unit =
     cur_cid <- cdef.D.c_class_id;
-    skip_cls <- not (is_act dx cur_cid)
+    let cname = J.of_java_ty (D.get_ty_str dx cur_cid) in
+    skip_cls <- Adr.is_static_library cname || Ads.is_ads_pkg cname
 
   val mutable cur_mid = D.no_idx
   method v_emtd (emtd: D.encoded_method) : unit =
@@ -276,28 +285,19 @@ object
         (* android...set...Listener() *)
         if is_set_listener dx callee then
         (
-          let inn = calc_current_const dx cur_mid ins
+          let inn = calc_const dx cur_mid ins
           and reg = U.get_last (U.rm_last opr) in
           match U.IM.find (I.of_reg reg) inn with
-          | P.Object o ->
-          (
-            let listener_cid = D.get_cid dx o in
-            listeners := IM.add listener_cid cur_cid !listeners
-          )
+          | P.Object o -> add_listener_rel dx (D.get_cid dx o) cur_mid
           | _ -> ()
         )
       (* iput-object v_obj, v_this, @fid *)
       | I.FIELD_IDS when op = I.OP_IPUT_OBJECT ->
       (
-        let inn = calc_current_const dx cur_mid ins
+        let inn = calc_const dx cur_mid ins
         and reg = L.hd opr in
         match U.IM.find (I.of_reg reg) inn with
-        | P.Object o ->
-        (
-          let cid = D.get_cid dx o in
-          if is_listener dx cid then
-            listeners := IM.add cid cur_cid !listeners
-        )
+        | P.Object o -> add_listener_rel dx (D.get_cid dx o) cur_mid
         | _ -> ()
       )
       | _ -> ()
@@ -307,10 +307,10 @@ end
 let find_listener (dx: D.dex) =
   listeners := IM.empty;
   V.iter (new listener_finder dx);
-  let p_map (listener_cid: D.link) (act_cid: D.link) =
+  let p_map (listener_cid: D.link) (mid: D.link) =
     let listener_name = D.get_ty_str dx listener_cid
-    and act_name = D.get_ty_str dx act_cid in
-    Log.d (Pf.sprintf "%s belongs to %s\n" listener_name act_name)
+    and caller = D.get_mtd_sig dx mid in
+    Log.i (Pf.sprintf "      %s\n-##-> %s\n" caller listener_name)
   in
   IM.iter p_map !listeners
 
@@ -336,16 +336,9 @@ let find_listener (dx: D.dex) =
 *)
 
 let path_to_str (dx: D.dex) (p: path) : string =
-  let mtd_to_str mid =
-    let mname = D.get_mtd_full_name dx mid
-    and mit = D.get_mit dx mid in
-    let argv = L.map (D.get_ty_str dx) (D.get_argv dx mit)
-    and rety = D.get_ty_str dx (D.get_rety dx mit) in
-    mname^"("^(L.fold_left (^) "" argv)^")"^rety
-  in
   let per_explicit mids =
     let join acc mid =
-      let next = mtd_to_str mid in
+      let next = D.get_mtd_sig dx mid in
       if acc = "" then next else next^"\n----> "^acc
     in
     L.fold_left join "" mids
@@ -420,9 +413,7 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
       (* go to the Activity to which this listener belongs *)
       else if D.no_idx <> lkup_listener cid then
       (
-        let act_cid = lkup_listener cid in
-        let mids = Adr.find_lifecycle_act dx act_cid in
-        if [] = mids then [] else add_implicit_call p (L.hd mids)
+        add_implicit_call p (lkup_listener cid)
       )
       (* go to the owning Activity if this is its inner class *)
       else if is_act dx (D.get_owning_class dx cid) then
@@ -433,9 +424,8 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
       )
       else (* unexplored boundary *)
       (
-        let cname = D.get_ty_str dx cid
-        and mname = D.get_mtd_name dx last_mid in
-        Log.d (Pf.sprintf "can't explore further: %s->%s" cname mname);
+        let mname = D.get_mtd_full_name dx last_mid in
+        Log.d (Pf.sprintf "can't explore further: %s" mname);
         []
       )
     in

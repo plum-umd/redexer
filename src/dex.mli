@@ -530,6 +530,9 @@ val get_fld_full_name : dex -> link -> string
 (** get name for given method, along with class name *)
 val get_mtd_full_name : dex -> link -> string
 
+(** get method signature, e.g., [Lpkg/cls;->mtd(arg1;arg2;...)rety] *)
+val get_mtd_sig : dex -> link -> string
+
 (** get class id from name, {!no_idx} unless found *)
 val get_cid : dex -> string -> link
 
