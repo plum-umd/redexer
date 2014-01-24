@@ -337,10 +337,11 @@ let find_listener (dx: D.dex) =
 
 let path_to_str (dx: D.dex) (p: path) : string =
   let mtd_to_str mid =
-    let cid = D.get_cid_from_mid dx mid in
-    let cname = D.get_ty_str dx cid
-    and mname = D.get_mtd_name dx mid in
-    Pf.sprintf "%s.%s" cname mname
+    let mname = D.get_mtd_full_name dx mid
+    and mit = D.get_mit dx mid in
+    let argv = L.map (D.get_ty_str dx) (D.get_argv dx mit)
+    and rety = D.get_ty_str dx (D.get_rety dx mit) in
+    mname^"("^(L.fold_left (^) "" argv)^")"^rety
   in
   let per_explicit mids =
     let join acc mid =
