@@ -132,6 +132,7 @@ let skips = ref ([]: string list)
 let set_skip_pkgs (pkgs: string list) : unit =
   skips := pkgs
 
+(* to_be_skipped : string -> bool *)
 let to_be_skipped (cname: string) : bool =
   let cname = J.of_java_ty cname in
   L.exists (fun pkg -> U.begins_with cname pkg) !skips

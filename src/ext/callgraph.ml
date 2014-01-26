@@ -266,7 +266,12 @@ let make_partial_cg (dx: D.dex) depth (cids: D.link list) : cg =
     let v_ins (ins: D.link) =
       let callees = interpret_ins dx mid ins
       and add_callee callee =
-        worklist := IS.add callee !worklist
+        let cid = D.get_cid_from_mid dx callee in
+        let cname = D.get_ty_str dx cid in
+        let skip_cls = V.to_be_skipped cname
+          || Adr.is_static_library cname || Ads.is_ads_pkg cname
+        in
+        if not skip_cls then worklist := IS.add callee !worklist
       in
       L.iter add_callee callees
     in
@@ -280,7 +285,7 @@ let make_partial_cg (dx: D.dex) depth (cids: D.link list) : cg =
     try
       let _, citm = D.get_citm dx cid mid in
       DA.iter v_ins citm.D.insns
-    with D.Wrong_dex _ -> ()
+    with D.Wrong_dex _ -> () (* no method body, i.e., library *)
   in
   let init_worklist acc (cid: D.link) =
     let mids, _ = L.split (D.get_mtds dx cid) in
