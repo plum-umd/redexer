@@ -211,7 +211,7 @@ let make_cg (dx: D.dex) (acts: string list) : Cg.cg =
     let cid = cdef.D.c_class_id in
     if not (is_act dx cid) then acc else
       let inners = D.get_innerclasses dx cid in
-      L.fold_left id_folder (id_folder acc cid) inners
+      L.fold_right IS.add inners (id_folder acc cid)
   (* *Listener that reacts to user interactions *)
   and add_listener acc cdef =
     let cid = cdef.D.c_class_id in
@@ -368,7 +368,7 @@ let has_cycle (visited: IS.t) (p: path) : bool =
   with PATH_W_CYCLE -> true
 
 let induce_cycle (cc: Cg.cc) (p: path) : bool =
-  let visited = L.fold_left id_folder IS.empty cc in
+  let visited = L.fold_right IS.add cc IS.empty in
   has_cycle visited p
 
 (**
@@ -386,6 +386,18 @@ let rec sanitize_cc (tgt_mids: IS.t) cc acc : Cg.cc =
   | [] -> L.rev acc
   | hd :: tl when reach_top tgt_mids hd -> L.rev (hd :: acc)
   | hd :: tl -> sanitize_cc tgt_mids tl (hd :: acc)
+
+(** memoization for call chains *)
+let cached_ccs = ref IM.empty
+
+let calc_ccs (dx: D.dex) cg (mid: D.link) : Cg.cc list =
+  try St.time "memoized" (IM.find mid) !cached_ccs
+  with Not_found ->
+  (
+    let ccs = St.time "callers" (Cg.callers dx 9 cg) mid in
+    cached_ccs := IM.add mid ccs !cached_ccs;
+    ccs
+  )
 
 (* a length of paths *)
 let path_len = ref 5
@@ -431,7 +443,7 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
     in
     L.flatten (L.rev_map per_path ps)
   and add_implicit_call p mid =
-    let ccs = Cg.callers dx 9 cg mid in
+    let ccs = calc_ccs dx cg mid in
     (* if |callers| == 1 then no more interesting call chains *)
     if 1 = L.length ccs && 1 = L.length (L.hd ccs) then [[mid]::p] else
       let add_unless_cycle cc =
@@ -440,14 +452,16 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
       in
     gen_path (L.rev_map add_unless_cycle ccs)
   in
-  let to_path (_, mid) = L.rev_map (fun p -> [p]) (Cg.callers dx 9 cg mid) in
+  let to_path (_, mid) = L.rev_map (fun p -> [p]) (calc_ccs dx cg mid) in
   let init_ps = L.flatten (L.rev_map to_path (IPS.elements !call_sites))
   in
-  let explored_ps = gen_path init_ps
+  let explored_ps = gen_path init_ps in
+  let unique_ps = L.fold_right PS.add explored_ps PS.empty
   in
-  let v_p acc p = PS.add p acc in
-  let unique_ps = L.fold_left v_p PS.empty explored_ps in
-  PS.elements unique_ps
+  let sanitize_path (p: path) : bool =
+    [] <> p && reach_top tgt_mids (U.get_last (L.hd p))
+  in
+  L.filter sanitize_path (PS.elements unique_ps)
 
 (***********************************************************************)
 (* Step 5. instrument necessary user interactions                      *)
