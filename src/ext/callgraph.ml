@@ -309,18 +309,68 @@ let make_partial_cg (dx: D.dex) depth (cids: D.link list) : cg =
        m4 -> m6;      m5 -> m6;
 
   callers... m6 = [ [m6; m4; m1]; [m6; m4; m2]; [m6; m5; m3] ]
+  callers... m4 = [ [m4; m1]; [m4; m2] ]
+  callers... m1 = [ [m1] ]
 *)
 
 type cc = D.link list
 
-(* callers : D.dex -> int -> cg -> D.link -> cc list *)
-let rec callers (dx: D.dex) depth cg (mid: D.link) : cc list =
+(* compare_cc : cc -> cc -> int *)
+let rec compare_cc cc1 cc2 : int =
+  let c = compare (L.length cc1) (L.length cc2) in
+  if 0 <> c then c else (* same length *)
+  match cc1, cc2 with
+  | [], [] -> 0
+  | id1 :: tl1, id2 :: tl2 ->
+    let c' = compare (D.of_idx id1) (D.of_idx id2) in
+    if 0 <> c' then c' else compare_cc tl1 tl2
+
+module CCKey =
+struct
+  type t = cc
+  let compare = compare_cc
+end
+
+module CS = Set.Make(CCKey)
+
+let induce_cycle (mid: D.link) (cc: cc) : bool =
+  L.mem mid cc
+
+(** depth-first search-based call chain generation *)
+let rec callers_dfs (dx: D.dex) depth cg (mid: D.link) : cc list =
   if depth <= 0 then [[]] else
   let node, _ = find_or_new_method dx cg mid in
-  let pred = IS.elements node.m_preds in
-  if pred = [] then [[mid]] else
-    let call_chains = L.rev_map (callers dx (depth-1) cg) pred in
-    L.rev_map (fun cc -> mid :: cc) (L.flatten call_chains)
+  let preds = IS.elements node.m_preds in
+  if [] = preds then [[mid]] else
+    let call_chains = L.rev_map (callers_dfs dx (depth-1) cg) preds in
+    let sanitize_cc cc acc =
+      if induce_cycle mid cc then acc else (mid :: cc) :: acc
+    in
+    L.fold_right sanitize_cc (L.flatten call_chains) []
+
+(** tail-recursive, breadth-first search-based call chain generation *)
+let rec callers_tail (dx: D.dex) depth cg ccs : CS.t =
+  if depth <= 0 then ccs else
+  let per_cc cc acc =
+    if [] = cc then acc else
+    let last_mid = U.get_last cc in
+    let node, _ = find_or_new_method dx cg last_mid in
+    let preds = IS.elements node.m_preds in
+    if [] = preds then CS.add cc acc else
+      let per_pred pred acc' =
+        let next_cc = if induce_cycle pred cc then cc else cc @ [pred] in
+        CS.add next_cc acc'
+      in
+      L.fold_right per_pred preds acc
+  in
+  let next_ccs = L.fold_right per_cc (CS.elements ccs) CS.empty in
+  if 0 = CS.compare ccs next_ccs then ccs else
+  callers_tail dx (depth-1) cg next_ccs
+
+(* callers : D.dex -> int -> cg -> D.link -> cc list *)
+let callers (dx: D.dex) depth cg (mid: D.link) : cc list =
+  (* DFS *) (* callers_dfs dx depth cg mid *)
+  (* BFS *) CS.elements (callers_tail dx depth cg (CS.singleton [mid]))
 
 (* dependants : D.dex -> cg -> D.link -> D.link list *)
 let dependants (dx: D.dex) cg (cid: D.link) : D.link list =

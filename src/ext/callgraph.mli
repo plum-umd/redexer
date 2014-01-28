@@ -55,6 +55,9 @@ val make_partial_cg : Dex.dex -> int -> Dex.link list -> cg
 (** Call Chain in a reversed order *)
 type cc = Dex.link list
 
+(** call chain comparison *)
+val compare_cc : cc -> cc -> int
+
 (** find callers for the given method, with a certain depth *)
 val callers : Dex.dex -> int -> cg -> Dex.link -> cc list
 

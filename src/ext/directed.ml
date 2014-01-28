@@ -88,17 +88,8 @@ let rec compare_path (p1: path) (p2: path) : int =
   match p1, p2 with
   | [], [] -> 0
   | cc1 :: tl1, cc2 :: tl2 ->
-    let c' = compare_cc cc1 cc2 in
+    let c' = Cg.compare_cc cc1 cc2 in
     if 0 <> c' then c' else compare_path tl1 tl2
-
-and compare_cc (cc1: Cg.cc) (cc2: Cg.cc) : int =
-  let c = compare (L.length cc1) (L.length cc2) in
-  if 0 <> c then c else (* same length *)
-  match cc1, cc2 with
-  | [], [] -> 0
-  | id1 :: tl1, id2 :: tl2 ->
-    let c' = compare (D.of_idx id1) (D.of_idx id2) in
-    if 0 <> c' then c' else compare_cc tl1 tl2
 
 module PathKey =
 struct
@@ -394,7 +385,8 @@ let calc_ccs (dx: D.dex) cg (mid: D.link) : Cg.cc list =
   try St.time "memoized" (IM.find mid) !cached_ccs
   with Not_found ->
   (
-    let ccs = St.time "callers" (Cg.callers dx 9 cg) mid in
+    let depth = !cg_depth * 2 in
+    let ccs = St.time "callers" (Cg.callers dx depth cg) mid in
     cached_ccs := IM.add mid ccs !cached_ccs;
     ccs
   )
@@ -487,5 +479,6 @@ let directed_explore (dx: D.dex) (data: string) (acts: string list) : unit =
     Log.i "\n====== path ======";
     Log.i (path_to_str dx p)
   in
+  Log.i (Pf.sprintf "# of path(s): %d" (L.length ps));
   L.iter per_path ps
 
