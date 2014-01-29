@@ -114,7 +114,7 @@ of the given dex file in a YAML format.
 
 * dump method
 
-This option dumps instructions for a specified method
+This option dumps instructions for a specified method.
 
     $ ruby scripts/cmd.rb target.(apk|dex) --cmd dump_method --mtd cls.mtd
 
@@ -208,19 +208,38 @@ This option finds class dependancy.
 
 * launcher activity
 
-This option prints out the launching activity name of the given apk
+This option prints out the launching activity name of the given apk.
 
     $ ruby scripts/cmd.rb target.apk --cmd launcher
 
+* activity, service, provider, receiver
+
+These options print out Android basic components declared in the manifest.
+
+    $ ruby scripts/cmd.rb target.apk --cmd [activity | service | provider | receiver]
+
+* fragments
+
+This option explores layout definitions in resource and prints out Fragment elements.
+
+    $ ruby scripts/cmd.rb target.apk --cmd fragments
+
+* buttons
+
+This option explores layout definitions in resource and prints out Buttons,
+along with their id (or text) as well as callback method (if exists).
+
+    $ ruby scripts/cmd.rb target.apk --cmd buttons
+
 * permissions declared in the app's manifest
 
-This option prints out permissions the apk uses
+This option prints out permissions the apk uses.
 
     $ ruby scripts/cmd.rb target.apk --cmd permissions
 
 * target SDK version
 
-This option prints out what SDK version the apk requires
+This option prints out what SDK version the apk requires.
 
     $ ruby scripts/cmd.rb target.apk --cmd sdk
 

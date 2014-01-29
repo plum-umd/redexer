@@ -146,6 +146,14 @@ class Apk
     @manifest.find_comps(tag)
   end
 
+  def fragments
+    @res.fragments
+  end
+
+  def buttons
+    @res.buttons
+  end
+
   def permissions
     @manifest.permissions
   end

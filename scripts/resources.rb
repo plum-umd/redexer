@@ -58,6 +58,53 @@ class Resources
     strs
   end
 
+  NS = "android"
+
+  def lookup(a, k)
+    a[k] || a[NS+':'+k]
+  end
+
+  NAME = "name"
+
+  def fragments
+    frags = {}
+    Dir.glob(@dir + "/layout*/*.xml").each do |res|
+      f = File.open(res, 'r')
+      doc = Nokogiri::XML(f)
+      f.close
+      san_res = sanitize_path(res)
+      doc.xpath("//fragment").each do |e|
+        cls = lookup(e, NAME)
+        cls = e["class"] unless cls
+        frags[san_res] = [] unless frags[san_res]
+        frags[san_res] << cls
+      end
+    end
+    frags
+  end
+
+  ID = "id"
+  TXT = "text"
+  ONCLK = "onClick"
+
+  def buttons
+    bs = {}
+    Dir.glob(@dir + "/layout*/*.xml").each do |res|
+      f = File.open(res, 'r')
+      doc = Nokogiri::XML(f)
+      f.close
+      san_res = sanitize_path(res)
+      doc.xpath("//Button").each do |e|
+        id = lookup(e, ID)
+        id = lookup(e, TXT) unless id
+        onclk = lookup(e, ONCLK)
+        bs[san_res] = {} unless bs[san_res]
+        bs[san_res][id] = onclk
+      end
+    end
+    bs
+  end
+
 private
 
   def extract_str(elt)
@@ -72,6 +119,11 @@ private
     elt.namespaces.keys.map do |ns|
       ns.split(':')[1]
     end
+  end
+
+  # tmp_blahblah/res/layout*/*.xml => layout*/*.xml
+  def sanitize_path(res)
+    res.split('/').last(2).join('/')
   end
 
 end

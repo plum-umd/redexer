@@ -51,7 +51,7 @@ cmds = [
   "cg", "cfg", "dom", "pdom",
   "dump_method", "dependants", "live", "const", "reach",
   "permissions", "sdk", "launcher",
-  "activity", "service", "provider", "receiver",
+  "activity", "service", "provider", "receiver", "fragments", "buttons",
   "hello", "logging", "directed"
 ]
 
@@ -234,6 +234,14 @@ when "activity", "service", "provider", "receiver"
   if not unprotected.empty?
     puts "Unprotected:"
     puts unprotected
+  end
+when "fragments", "buttons"
+  apk? apk
+  res = apk.send(cmd.to_sym)
+  if res != {}
+    puts ARGV[0]
+    require 'pp'
+    PP.pp res
   end
 when "logging", "directed"
   apk.send(cmd.to_sym)
