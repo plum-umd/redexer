@@ -38,6 +38,8 @@ class Apk
 
   require "#{HOME}/dex"
   require "#{HOME}/manifest"
+  require "#{HOME}/resources"
+
   attr_reader :out, :succ
 
   def org_in_manifest
@@ -66,6 +68,7 @@ class Apk
         @dir = to_dir_or_file[0]
       end
     end
+    @res = Resources.new(@dir)
     @out = ""
     @succ = true
   end
