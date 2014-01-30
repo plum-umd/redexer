@@ -314,13 +314,6 @@ let main () =
       let chan = open_in_bin !infile in
       chan,  fun () -> close_in chan
   in
-  if (!infile <> "-") then
-  (
-    let f_sz = 100 * in_channel_length ch
-    and ctrl = Gc.get () in
-    ctrl.Gc.minor_heap_size <- max f_sz ctrl.Gc.minor_heap_size;
-    Gc.set ctrl
-  );
   try (
     match !task with
     | Some f ->
