@@ -227,7 +227,7 @@ let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link list =
       let out = calc_const dx caller ins
       and reg = L.hd opr in
       match IM.find (I.of_reg reg) out with
-      | Object o when D.no_idx <> D.get_cid dx o ->
+      | P.Object o when D.no_idx <> D.get_cid dx o ->
       (
         let cid = D.get_cid dx o in
         try
