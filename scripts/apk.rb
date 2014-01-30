@@ -151,6 +151,8 @@ class Apk
   end
 
   def buttons
+    Dex.listener(dex)
+    puts Dex.out
     @res.buttons
   end
 

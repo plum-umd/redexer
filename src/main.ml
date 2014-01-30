@@ -170,6 +170,9 @@ and do_reach (tag: string) (tx: D.dex) (citm: D.code_item) : unit =
   in
   St.time tag DFA.fixed_pt ()
 
+let dolistener (tx: D.dex) : unit =
+  St.time "listener" Dre.find_listener tx
+
 let dat = ref "data"
 
 (***********************************************************************)
@@ -241,6 +244,7 @@ let do_dependants    () = task := Some dependants
 let do_live          () = task := Some (do_dfa "live")
 let do_const         () = task := Some (do_dfa "const")
 let do_reach         () = task := Some (do_dfa "reach")
+let do_listener      () = task := Some dolistener
 
 let do_logging       () = task := Some instrument_logging
 let do_directed      () = task := Some rewrite_directed
@@ -281,6 +285,7 @@ let arg_specs = A.align
     ("-live",       A.Unit do_live,       " liveness analysis");
     ("-const",      A.Unit do_const,      " constant propagation");
     ("-reach",      A.Unit do_reach,      " reaching definition");
+    ("-listener",   A.Unit do_listener,   " find listener relations");
 
     ("-logging",  A.Unit do_logging,
      " instrument logging feature into the given dex");

@@ -201,6 +201,10 @@ class Dex
     self.runcmd("#{REDEXER} -cls #{cls} -mtd #{mtd} -reach #{dex_name}")
   end
 
+  def self.listener(dex_name)
+    self.runcmd("#{REDEXER} -listener #{dex_name} #{QUIET}")
+  end
+
   def self.hello
     self.runcmd("#{REDEXER} -hello")
   end

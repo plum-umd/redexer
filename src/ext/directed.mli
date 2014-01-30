@@ -42,6 +42,10 @@ val cg_depth : int ref
 (** a length of paths *)
 val path_len : int ref
 
+(** find relations between Activity and Listener
+  also find mappings from layout XML to Activity *)
+val find_listener : Dex.dex -> unit
+
 (** given APIs of interest and the main Activity,
   instrument the target dex file such that the rewritten dex is directed to
   the pages that have target API usages *)

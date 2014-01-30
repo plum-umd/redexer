@@ -235,9 +235,10 @@ object
   inherit V.iterator dx
 
   val mutable cur_cid = D.no_idx
+  val mutable cname = ""
   method v_cdef (cdef: D.class_def_item) : unit =
     cur_cid <- cdef.D.c_class_id;
-    let cname = J.of_java_ty (D.get_ty_str dx cur_cid) in
+    cname <- J.of_java_ty (D.get_ty_str dx cur_cid);
     skip_cls <- Adr.is_static_library cname || Ads.is_ads_pkg cname
 
   val mutable cur_mid = D.no_idx
@@ -249,16 +250,30 @@ object
       let op, opr = D.get_ins dx ins in
       match I.access_link op with
       | I.METHOD_IDS ->
+      (
         let callee = D.opr2idx (U.get_last opr) in
         (* android...set...Listener() *)
         if Adr.is_set_listener dx callee then
         (
           let inn = calc_const dx cur_mid ins
+          and reg_v, reg_l = L.hd opr, U.get_last (U.rm_last opr) in
+          let v = U.IM.find (I.of_reg reg_v) inn
+          and l = U.IM.find (I.of_reg reg_l) inn in
+          match v, l with
+          | _, P.Object o -> add_listener_rel dx (D.get_cid dx o) cur_mid
+          | _, _ -> ()
+        )
+        (* setContentView *)
+        else if 0 = S.compare (D.get_mtd_name dx callee) App.set_view then
+        (
+          let inn = calc_const dx cur_mid ins
           and reg = U.get_last (U.rm_last opr) in
           match U.IM.find (I.of_reg reg) inn with
-          | P.Object o -> add_listener_rel dx (D.get_cid dx o) cur_mid
+          | P.Field (cls, fld) ->
+            Log.i (Pf.sprintf "  %s.%s\n~ %s\n" cls fld cname)
           | _ -> ()
         )
+      )
       (* iput-object v_obj, v_this, @fid *)
       | I.FIELD_IDS when op = I.OP_IPUT_OBJECT ->
       (
@@ -272,6 +287,7 @@ object
 
 end
 
+(* find_listener : D.dex -> unit *)
 let find_listener (dx: D.dex) =
   listeners := IM.empty;
   V.iter (new listener_finder dx);

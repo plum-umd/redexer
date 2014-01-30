@@ -95,6 +95,9 @@ sig
   (** [onOptionsItemSelected] *)
   val onOptionsItemSelected : string
 
+  (** [setContentView] *)
+  val set_view : string
+
   (** [findViewById] *)
   val find_view : string
 
