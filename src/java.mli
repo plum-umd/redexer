@@ -143,6 +143,9 @@ sig
   (** [java.lang.StringBuilder] *)
   val sbd : string
 
+  (** [java.lang.Thread] *)
+  val thd : string
+
   (** [java.lang.Throwable] *)
   val thr : string
 
@@ -190,6 +193,12 @@ sig
 
   (** [append] *)
   val append : string
+
+  (** [start] *)
+  val start : string
+
+  (** [run] *)
+  val run : string
 
   (** [concat] *)
   val concat : string

@@ -196,6 +196,7 @@ struct
   let sys = pk^"System"
   let str = pk^"String"
   let sbd = str^"Builder"
+  let thd = pk^"Thread"
   let thr = pk^"Throwable"
   let stk = pk^"StackTraceElement"
 
@@ -216,13 +217,16 @@ struct
   let to_s   = "toString"
   let append = "append"
 
+  let start = "start"
+  let run = "run"
+
   let concat  = "concat"
   let lower   = "toLowerCase"
   let upper   = "toUpperCase"
   let _format = "format"
   let v_of    = "valueOf"
 
-  let clazz () = L.map to_java_ty [obj; cls; pkg; sys; str; sbd; thr; stk]
+  let clazz () = L.map to_java_ty [obj; cls; pkg; sys; str; sbd; thd; thr; stk]
   let wrappers () = L.map to_java_ty
     [c_void; c_bool; c_byte; c_short; c_char; c_int; c_long; c_float; c_doubl]
 end

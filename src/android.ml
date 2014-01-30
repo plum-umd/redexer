@@ -109,6 +109,7 @@ struct
   let appended = "withAppendedId"
   let query = "query"
 
+  let set_class = "setClass"
   let start_act = "startActivity"
   let start_srv = "startService"
 
@@ -221,6 +222,10 @@ struct
     L.mem mname (view_abstract ())
 end
 
+(***********************************************************************)
+(* Utilities                                                           *)
+(***********************************************************************)
+
 (* is_library : string -> bool *)
 let is_library (cname: string) : bool =
      L.mem cname (Content.clazz ())
@@ -242,6 +247,30 @@ let is_abstract (mname: string) : bool =
   || L.mem mname (View.KeyEvent.key_abstract ())
   || L.mem mname (View.MenuItem.menu_abstract ())
 
+(* ... extends ...Activity { ... } *)
+(* is_activity : D.dex -> D.link -> bool *)
+let is_activity (dx: D.dex) (cid: D.link) : bool =
+  let ends_w_act cid' =
+    U.ends_with (D.get_ty_str dx cid') "Activity;"
+  in
+  cid <> D.no_idx && D.in_hierarchy dx ends_w_act cid
+
+(* ... extends ...Fragment { ... } *)
+(* is_fragment : D.dex -> D.link -> bool *)
+let is_fragment (dx: D.dex) (cid: D.link) : bool =
+  let ends_w_frag cid' =
+    U.ends_with (D.get_ty_str dx cid') "Fragment;"
+  in
+  cid <> D.no_idx && D.in_hierarchy dx ends_w_frag cid
+
+(* ... implements ...Listener { ... } *)
+(* is_listener : D.dex -> D.link -> bool *)
+let is_listener (dx: D.dex) (cid: D.link) : bool =
+  let ends_w_listener cid' =
+    U.ends_with (D.get_ty_str dx cid') "Listener;"
+  in
+  L.exists ends_w_listener (D.get_interfaces dx cid)
+
 (* find_lifecycle_act : D.dex -> D.link -> D.link list *)
 let find_lifecycle_act (dx: D.dex) (cid: D.link) : D.link list =
   let mid_folder mname acc =
@@ -252,6 +281,16 @@ let find_lifecycle_act (dx: D.dex) (cid: D.link) : D.link list =
     with D.Wrong_dex _ -> acc
   in
   L.fold_right mid_folder App.lifecycle_act []
+
+(* android...set...Listener() *)
+(* is_set_listener : D.dex -> D.link -> bool *)
+let is_set_listener (dx: D.dex) (mid: D.link) : bool =
+  let cid = D.get_cid_from_mid dx mid in
+  let cname = D.get_ty_str dx cid
+  and mname = D.get_mtd_name dx mid in
+  U.begins_with cname "Landroid" &&
+  U.begins_with mname "set" &&
+  L.exists (U.ends_with mname) ["Listener"; "Items"; "Button"]
 
 (***********************************************************************)
 (* Permissions                                                         *)

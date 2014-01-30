@@ -113,6 +113,15 @@ let val_to_str = function
   | BOT -> "non-const"
   | TOP -> "undefined"
 
+let map_to_str l =
+  let buf = B.create (IM.cardinal l) in
+  let per_kv k v =
+    B.add_string buf ("v"^(string_of_int k)^": ");
+    B.add_string buf ((val_to_str v)^"\n")
+  in
+  IM.iter per_kv l;
+  B.contents buf
+
 let all (n: int) v : value IM.t =
   L.fold_left (fun acc i -> IM.add i v acc) IM.empty (U.range (-1) (n - 1) [])
 
@@ -272,9 +281,22 @@ let rec transfer (dx: D.dex) (inn: value IM.t) (ins: D.link) : value IM.t =
         IM.add (-1) xy inn
       )
       (* TODO: String.format *)
-      (* Intent.<init>(...,Class) or Intent.<init>(...,Uri) *)
+      (* Thread.<init>(Runnable) *)
+      | Object o when 0 = S.compare mname J.init && 3 = L.length opr
+        && 0 = S.compare o (J.to_java_ty J.Lang.thd) ->
+      (
+        let reg_y = get_1st opr in
+        let y =
+          match IM.find reg_y inn with
+          | Object o' -> Object o'
+          | _ -> this
+        in
+        IM.add reg_x y inn
+      )
+      (* Intent.(<init> | setClass)(..., Class | Uri) *)
       | Intent _
-      when 0 = S.compare mname J.init && 4 = L.length opr ->
+      when (0 = S.compare mname J.init && 4 = L.length opr)
+        || 0 = S.compare mname AC.set_class ->
       (
         let reg_z = get_nth 2 opr in
         let z =
@@ -282,8 +304,9 @@ let rec transfer (dx: D.dex) (inn: value IM.t) (ins: D.link) : value IM.t =
           | String s | Clazz s -> Intent s
           | _ -> this
         in
-        IM.add reg_x z inn
+        IM.add (-1) z (IM.add reg_x z inn)
       )
+      (* findViewById(I) *)
       | _ when 0 = S.compare mname AA.find_view ->
       (
         let view = J.to_java_ty AV.view in
@@ -345,14 +368,8 @@ let make_dfa (dx: D.dex) (citm: D.code_item) : propagation =
     let compare l1 l2 =
       IM.compare compare_val l1 l2
 
-    let to_s l =
-      let buf = B.create (IM.cardinal l) in
-      let per_kv k v =
-        B.add_string buf ("v"^(string_of_int k)^": ");
-        B.add_string buf ((val_to_str v)^"\n")
-      in
-      IM.iter per_kv l;
-      B.contents buf
+    let to_s = map_to_str
+
   end
   in
   let module PFlow : Df.DATAFLOW with type l = RegVal.l and type st = CF.st =

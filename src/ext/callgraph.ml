@@ -153,6 +153,16 @@ let cg = {
   meth_h = H.create 153;
 }
 
+let calc_const (dx: D.dex) (mid: D.link) (ins: D.link) =
+  let cid = D.get_cid_from_mid dx mid in
+  let _, citm = D.get_citm dx cid mid in
+  let dfa = St.time "const" (P.make_dfa dx) citm in
+  let module DFA = (val dfa: Dataflow.ANALYSIS
+    with type st = D.link and type l = (P.value U.IM.t))
+  in
+  St.time "const" DFA.fixed_pt ();
+  St.time "const" DFA.out ins
+
 (**
   given instruction, add an edge from caller to callee, if exists,
   and return the callee ids so as to visit them incrementally
@@ -185,29 +195,20 @@ let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link list =
     let cid = D.get_cid_from_mid dx callee in
     let cname = D.get_ty_str dx cid
     and mname = D.get_mtd_name dx callee in
-(*
     (* Component transition *)
     if 0 = S.compare mname Con.start_act
-    || 0 = S.compare mname Con.start_srv then
-*)
+    || 0 = S.compare mname Con.start_srv
     (* Intent creation *)
-    if 0 = S.compare mname J.init
-    && 0 = S.compare cname (J.to_java_ty Con.intent) then
+    || ((0 = S.compare mname J.init || 0 = S.compare mname Con.set_class)
+      && 0 = S.compare cname (J.to_java_ty Con.intent) ) then
     (
-      let cid = D.get_cid_from_mid dx caller in
-      let _, citm = D.get_citm dx cid caller in
-      let dfa = St.time "const" (P.make_dfa dx) citm in
-      let module DFA = (val dfa: Dataflow.ANALYSIS
-        with type st = D.link and type l = (P.value IM.t))
+      let out = calc_const dx caller ins
+      and reg =
+        (* invoke-* v_intent, ... *)
+        if 0 = S.compare cname (J.to_java_ty Con.intent) then L.hd opr
+        (* invoke-virtual v_this, v_intent, @mid *)
+        else U.get_last (U.rm_last opr)
       in
-      St.time "const" DFA.fixed_pt ();
-      let out = St.time "const" DFA.out ins
-(*
-      (* invoke-virtual v_this, v_intent, @mid *)
-      and reg = U.get_last (U.rm_last opr) in
-*)
-      (* invoke-direct v_intent, ... *)
-      and reg = L.hd opr in
       match IM.find (I.of_reg reg) out with
       | P.Intent i when D.no_idx <> D.get_cid dx i ->
       (
@@ -219,8 +220,34 @@ let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link list =
       )
       | _ -> []
     )
+    (* Thread.start() *)
+    else if 0 = S.compare mname J.Lang.start
+      && 0 = S.compare cname (J.to_java_ty J.Lang.thd) then
+    (
+      let out = calc_const dx caller ins
+      and reg = L.hd opr in
+      match IM.find (I.of_reg reg) out with
+      | Object o when D.no_idx <> D.get_cid dx o ->
+      (
+        let cid = D.get_cid dx o in
+        try
+          let callee, _ = D.get_the_mtd dx cid J.Lang.run in
+          if add_call dx cg caller callee then [callee] else []
+        with D.Wrong_dex _ -> []
+      )
+      | _ -> []
+    )
     else (* explicit call relations *)
       if add_call dx cg caller callee then [callee] else []
+  )
+  | I.TYPE_IDS when op = I.OP_CONST_CLASS ->
+  (
+    let cid = D.opr2idx (U.get_last opr) in
+    if not (Adr.is_fragment dx cid) then [] else
+      let mids = Adr.find_lifecycle_act dx cid in
+      if [] = mids then [] else
+        let callee = L.hd mids in
+        if add_call dx cg caller callee then [callee] else []
   )
   | _ -> []
 
@@ -289,7 +316,7 @@ let make_partial_cg (dx: D.dex) depth (cids: D.link list) : cg =
   in
   let init_worklist acc (cid: D.link) =
     let mids, _ = L.split (D.get_mtds dx cid) in
-    L.fold_left (fun acc' mid -> IS.add mid acc') acc mids
+    L.fold_right IS.add mids acc
   in
   worklist := L.fold_left init_worklist IS.empty cids;
   while !iter_cnt < depth && not (IS.is_empty !worklist) do

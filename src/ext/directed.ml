@@ -179,20 +179,6 @@ let find_api_usage (dx: D.dex) (data: string) =
 (* a level of partial call graph *)
 let cg_depth = ref 5
 
-(* ...Activity; *)
-let is_act (dx: D.dex) (cid: D.link) : bool =
-  let ends_w_act cid' =
-    U.ends_with (D.get_ty_str dx cid') "Activity;"
-  in
-  cid <> D.no_idx && D.in_hierarchy dx ends_w_act cid
-
-(* ... implements ...Listener { ... } *)
-let is_listener (dx: D.dex) (cid: D.link) : bool =
-  let ends_w_listener cid' =
-    U.ends_with (D.get_ty_str dx cid') "Listener;"
-  in
-  L.exists ends_w_listener (D.get_interfaces dx cid)
-
 let make_cg (dx: D.dex) (acts: string list) : Cg.cg =
 (*
   St.time "cg" Cg.make_cg dx
@@ -200,13 +186,13 @@ let make_cg (dx: D.dex) (acts: string list) : Cg.cg =
   (* Activity(s) defined in the dex file, along with their inner classes *)
   let add_act acc cdef =
     let cid = cdef.D.c_class_id in
-    if not (is_act dx cid) then acc else
+    if not (Adr.is_activity dx cid) then acc else
       let inners = D.get_innerclasses dx cid in
       L.fold_right IS.add inners (id_folder acc cid)
   (* *Listener that reacts to user interactions *)
   and add_listener acc cdef =
     let cid = cdef.D.c_class_id in
-    if is_listener dx cid then id_folder acc cid else acc
+    if Adr.is_listener dx cid then id_folder acc cid else acc
   in
 (*
   let act_cids = L.fold_left add_act IS.empty acts in
@@ -225,15 +211,6 @@ let lkup_listener cid : D.link =
   try IM.find cid !listeners
   with Not_found -> D.no_idx
 
-(* android...set...Listener() *)
-let is_set_listener (dx: D.dex) (mid: D.link) : bool =
-  let cid = D.get_cid_from_mid dx mid in
-  let cname = D.get_ty_str dx cid
-  and mname = D.get_mtd_name dx mid in
-  U.begins_with cname "Landroid" &&
-  U.begins_with mname "set" &&
-  L.exists (U.ends_with mname) ["Listener"; "Items"; "Button"]
-
 let calc_const (dx: D.dex) (mid: D.link) (ins: D.link) =
   let cid = D.get_cid_from_mid dx mid in
   let _, citm = D.get_citm dx cid mid in
@@ -245,9 +222,9 @@ let calc_const (dx: D.dex) (mid: D.link) (ins: D.link) =
   St.time "const" DFA.inn ins
 
 let add_listener_rel (dx: D.dex) (listener_cid: D.link) (mid: D.link) : unit =
-  if not (is_listener dx listener_cid) then () else
+  if not (Adr.is_listener dx listener_cid) then () else
   let cid = D.get_cid_from_mid dx mid in
-  if is_act dx cid then
+  if Adr.is_activity dx cid then
     let mids = Adr.find_lifecycle_act dx cid in
     listeners := IM.add listener_cid (L.hd mids) !listeners
   else
@@ -274,7 +251,7 @@ object
       | I.METHOD_IDS ->
         let callee = D.opr2idx (U.get_last opr) in
         (* android...set...Listener() *)
-        if is_set_listener dx callee then
+        if Adr.is_set_listener dx callee then
         (
           let inn = calc_const dx cur_mid ins
           and reg = U.get_last (U.rm_last opr) in
@@ -409,7 +386,7 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
       (* reach one of the target classes *)
       if reach_top tgt_mids last_mid then [p]
       (* go to the current Activity's onCreate(), assuming user interaction *)
-      else if is_act dx cid then
+      else if Adr.is_activity dx cid then
       (
         let mids = Adr.find_lifecycle_act dx cid in
         if [] = mids then [] else add_implicit_call p (L.hd mids)
@@ -420,7 +397,7 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
         add_implicit_call p (lkup_listener cid)
       )
       (* go to the owning Activity if this is its inner class *)
-      else if is_act dx (D.get_owning_class dx cid) then
+      else if Adr.is_activity dx (D.get_owning_class dx cid) then
       (
         let act_cid = D.get_owning_class dx cid in
         let mids = Adr.find_lifecycle_act dx act_cid in

@@ -145,6 +145,9 @@ sig
   (** [query] *)
   val query : string
 
+  (** [setClass] *)
+  val set_class : string
+
   (** [startActivity] *)
   val start_act : string
 
@@ -293,6 +296,8 @@ sig
 
 end
 
+(** {2 Utilities} *)
+
 (** [true] if given class is [Android] library *)
 val is_library : string -> bool
 
@@ -302,8 +307,20 @@ val is_static_library : string -> bool
 (** [true] if given method is abstract *)
 val is_abstract : string -> bool
 
+(** [true] if given class is subclass of [Activity] *)
+val is_activity : Dex.dex -> Dex.link -> bool
+
+(** [true] if given class is subclass of [Fragment] *)
+val is_fragment : Dex.dex -> Dex.link -> bool
+
+(** [true] if given class implements any sorts of [Listener] *)
+val is_listener : Dex.dex -> Dex.link -> bool
+
 (** find [Activity] lifecycle methods *)
 val find_lifecycle_act : Dex.dex -> Dex.link -> Dex.link list
+
+(** [true] if given method is a setter for [Listener] *)
+val is_set_listener : Dex.dex -> Dex.link -> bool
 
 (** {2 Permissions} *)
 
