@@ -152,7 +152,11 @@ class Apk
 
   def buttons
     Dex.listener(dex)
-    puts Dex.out
+    out = Dex.out
+    @res.ids.each do |id, name|
+      out.gsub!(id, name)
+    end
+    puts out
     @res.buttons
   end
 

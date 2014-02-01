@@ -269,6 +269,8 @@ object
           let inn = calc_const dx cur_mid ins
           and reg = U.get_last (U.rm_last opr) in
           match U.IM.find (I.of_reg reg) inn with
+          | P.Const c ->
+            Log.i (Pf.sprintf "  0x%08x\n~ %s\n" (Int64.to_int c) cname)
           | P.Field (cls, fld) ->
             Log.i (Pf.sprintf "  %s.%s\n~ %s\n" cls fld cname)
           | _ -> ()

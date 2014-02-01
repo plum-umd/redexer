@@ -105,6 +105,21 @@ class Resources
     bs
   end
 
+  def ids
+    ids = {}
+    Dir.glob(@dir + "/values*/*.xml").each do |res|
+      f = File.open(res, 'r')
+      doc = Nokogiri::XML(f)
+      f.close
+      doc.xpath("//public").each do |e|
+        id = lookup(e, ID)
+        name = lookup(e, NAME)
+        ids[id] = name if id and name
+      end
+    end
+    ids
+  end
+
 private
 
   def extract_str(elt)
