@@ -142,6 +142,10 @@ class Apk
     @manifest.launcher
   end
 
+  def exported
+    @manifest.exported
+  end
+
   def find_comps(tag)
     @manifest.find_comps(tag)
   end

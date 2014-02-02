@@ -50,7 +50,7 @@ cmds = [
   "info", "classes", "api", "opstat",
   "cg", "cfg", "dom", "pdom",
   "dump_method", "dependants", "live", "const", "reach",
-  "permissions", "sdk", "launcher",
+  "exported", "permissions", "sdk", "launcher",
   "activity", "service", "provider", "receiver", "fragments", "buttons",
   "hello", "logging", "directed"
 ]
@@ -104,17 +104,19 @@ if not cmds.include?(cmd)
   raise "wrong command"
 end
 
+fn = ARGV[0]
+
 def close(apk)
   apk.clean if apk
 end
 
 apk = nil
 dex = nil
-case File.extname(ARGV[0])
+case File.extname(fn)
 when ".dex"
-  dex = ARGV[0]
+  dex = fn
 when ".apk"
-  apk = Apk.new(ARGV[0], tmp_dir)
+  apk = Apk.new(fn, tmp_dir)
   if apk.unpack
     dex = apk.dex
   else
@@ -217,11 +219,11 @@ when "dump_method", "dependants", "live", "const", "reach"
   mtd = part[-1]
   Dex.send(cmd.to_sym, dex, cls, mtd)
   puts Dex.out if dex_succ?(apk, cmd)
-when "permissions", "sdk", "launcher"
+when "exported", "permissions", "sdk", "launcher"
   apk? apk
   res = apk.send(cmd.to_sym)
   if res != []
-    puts ARGV[0]
+    puts fn
     puts res
   end
 when "activity", "service", "provider", "receiver"
@@ -239,7 +241,7 @@ when "fragments", "buttons"
   apk? apk
   res = apk.send(cmd.to_sym)
   if res != {}
-    puts ARGV[0]
+    puts fn
     require 'pp'
     PP.pp res
   end
@@ -265,7 +267,7 @@ when "logging", "directed"
   system("cp -f #{tmp_dir}/AndroidManifest.xml #{RES}")
   # and move the rewritten apk
   if not to
-    rewritten = File.basename(ARGV[0])
+    rewritten = File.basename(fn)
     system("mv -f #{rewritten} #{RES}") if apk.succ
   end
   puts apk.out if apk.succ

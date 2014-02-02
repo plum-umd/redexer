@@ -212,6 +212,12 @@ This option prints out the launching activity name of the given apk.
 
     $ ruby scripts/cmd.rb target.apk --cmd launcher
 
+* exported
+
+This option lets you know what components are exposed to outside.
+
+    $ ruby scripts/cmd.rb target.apk --cmd exported
+
 * activity, service, provider, receiver
 
 These options print out Android basic components declared in the manifest.

@@ -38,6 +38,7 @@ class Manifest
 
   ROOT = "/manifest"
   APP  = ROOT + "/application"
+  PRV  = "provider"
   ACT  = "activity"
   ACTV = APP + "/" + ACT
   IFL  = "intent-filter"
@@ -60,6 +61,10 @@ class Manifest
     @doc = Nokogiri::XML(f)
     f.close
     @pkg = @doc.xpath(ROOT)[0][PKG]
+    # usually, namespace would be "android",
+    # but some apps, e.g., spotify, use different ones, e.g., "a"
+    href = @doc.xpath(ROOT)[0].namespaces.keys[0]
+    @ns = href.split(':')[-1]
     @out = ""
   end
 
@@ -92,6 +97,27 @@ class Manifest
 
     inter = main_acts & launchers
     @out = self.class.class_name(@pkg, inter.to_a[0]) unless inter.empty?
+  end
+
+  def exported
+    @out = ""
+    comps = Set.new
+    # 1) has intent filters
+    i_filters = @doc.xpath("//"+IFL)
+    i_filters.each do |i_filter|
+      comps << self.class.class_name(@pkg, lookup_name(i_filter.parent))
+    end
+    # 2) attribute "exported" is true
+    elts = @doc.xpath("//*[@#{@ns}:exported=\"true\"]")
+    elts.each do |elt|
+      comps << self.class.class_name(@pkg, lookup_name(elt))
+    end
+    # 3) "provider" is exported by default
+    providers = @doc.xpath(APP + "/" + PRV)
+    providers.each do |prv|
+      comps << self.class.class_name(@pkg, lookup_name(prv))
+    end
+    @out = comps.to_a
   end
 
   def find_comps(tag)
