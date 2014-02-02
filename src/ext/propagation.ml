@@ -337,7 +337,10 @@ and read_const (dx: D.dex) (op: I.opcode) (opr: I.operand) : value =
     String (D.get_str dx (D.to_idx sid))
   | I.OP_CONST_CLASS,  I.OPR_INDEX cid ->
     Clazz (D.get_ty_str dx (D.to_idx cid))
-  (* TODO: should distinguish *_FROM_HIGH16 *)
+  | I.OP_CONST_HIGH16, I.OPR_CONST c ->
+    Const (I64.shift_left c (32 - 16))
+  | I.OP_CONST_WIDE_HIGH16, I.OPR_CONST c ->
+    Const (I64.shift_left c (64 - 16))
   | _, I.OPR_CONST c -> Const c
   | _, _ -> BOT
 
