@@ -212,7 +212,9 @@ try (
   let acts = U.read_lines ch in
   close_in ch;
   St.time "directed" (Dre.directed_explore tx apis) acts;
+(*
   St.time "dump" (Dp.dump !dex) tx
+*)
 )
 with End_of_file -> prerr_endline "EOF"
 

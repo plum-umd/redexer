@@ -624,6 +624,7 @@ let implements (dx: D.dex) (cid: D.link) (itf: D.link) (mname: string) : bool =
   let mid = mtd_body_exists dx cid mname in
   if mid <> D.no_idx then true else
   ( (* absence of the target method *)
+    (* TODO: use shorty to specify the method in case of overloading *)
     let _, mit = D.get_the_mtd dx itf mname in
     let rety = get_ty_str dx (D.get_rety dx mit)
     and argv = L.map (get_ty_str dx) (D.get_argv dx mit) in
@@ -636,6 +637,7 @@ let override (dx: D.dex) (cid: D.link) (mname: string) : bool =
   let mid = mtd_body_exists dx cid mname in
   if mid <> D.no_idx then true else
   ( (* absence of the target method *)
+    (* TODO: use shorty to specify the method in case of overloading *)
     let _, mit = D.get_the_mtd dx cid mname in
     (* TODO: even superclass may not have the method *)
     let rety = get_ty_str dx (D.get_rety dx mit)

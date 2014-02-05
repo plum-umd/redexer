@@ -141,9 +141,13 @@ object
     and sid = cdef.D.superclass in
     (* override all the overridable methods for target components *)
     let per_on mname =
-      if not (L.mem mname [App.onBind; App.onUnbind])
-      && not (M.override dx cid mname) then
-      ( M.insrt_return_void dx cid mname; incr override_cnt )
+      try
+        if not (L.mem mname [App.onBind; App.onUnbind])
+        && not (M.override dx cid mname) then
+        ( M.insrt_return_void dx cid mname; incr override_cnt )
+      (* if apps overload lifecycle methods, M.override may fail *)
+      (* TODO: use shorty to indicate the exact method signature *)
+      with D.Wrong_dex _ -> ()
     in
     (* to avoid the Logger *)
     let cname = D.get_ty_str dx cid in
