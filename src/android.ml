@@ -248,29 +248,39 @@ let is_abstract (mname: string) : bool =
   || L.mem mname (View.KeyEvent.key_abstract ())
   || L.mem mname (View.MenuItem.menu_abstract ())
 
+(** check whether the given class extends the given sort *)
+let ext_sort (dx: D.dex) (sort: string) (cid: D.link) : bool =
+  let ends_w_sort cid' =
+    U.ends_with (D.get_ty_str dx cid') (sort^";")
+  in
+  cid <> D.no_idx && D.in_hierarchy dx ends_w_sort cid
+
+(** check whether the given class implements the given sort *)
+let impl_sort (dx: D.dex) (sort: string) (cid: D.link) : bool =
+  let ends_w_sort cid' =
+    U.ends_with (D.get_ty_str dx cid') (sort^";")
+  in
+  L.exists ends_w_sort (D.get_interfaces dx cid)
+
+(* ... extends ...Context { ... } *)
+(* is_context : D.dex -> D.link -> bool *)
+let is_context (dx: D.dex) (cid: D.link) : bool =
+  ext_sort dx "Context" cid
+
 (* ... extends ...Activity { ... } *)
 (* is_activity : D.dex -> D.link -> bool *)
 let is_activity (dx: D.dex) (cid: D.link) : bool =
-  let ends_w_act cid' =
-    U.ends_with (D.get_ty_str dx cid') "Activity;"
-  in
-  cid <> D.no_idx && D.in_hierarchy dx ends_w_act cid
+  ext_sort dx "Activity" cid
 
 (* ... extends ...Fragment { ... } *)
 (* is_fragment : D.dex -> D.link -> bool *)
 let is_fragment (dx: D.dex) (cid: D.link) : bool =
-  let ends_w_frag cid' =
-    U.ends_with (D.get_ty_str dx cid') "Fragment;"
-  in
-  cid <> D.no_idx && D.in_hierarchy dx ends_w_frag cid
+  ext_sort dx "Fragment" cid
 
 (* ... implements ...Listener { ... } *)
 (* is_listener : D.dex -> D.link -> bool *)
 let is_listener (dx: D.dex) (cid: D.link) : bool =
-  let ends_w_listener cid' =
-    U.ends_with (D.get_ty_str dx cid') "Listener;"
-  in
-  L.exists ends_w_listener (D.get_interfaces dx cid)
+  impl_sort dx "Listener" cid
 
 (* find_lifecycle_act : D.dex -> D.link -> D.link list *)
 let find_lifecycle_act (dx: D.dex) (cid: D.link) : D.link list =

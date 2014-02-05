@@ -310,6 +310,9 @@ val is_static_library : string -> bool
 (** [true] if given method is abstract *)
 val is_abstract : string -> bool
 
+(** [true] if given class is subclass of [Context] *)
+val is_context : Dex.dex -> Dex.link -> bool
+
 (** [true] if given class is subclass of [Activity] *)
 val is_activity : Dex.dex -> Dex.link -> bool
 
@@ -366,7 +369,7 @@ sig
 
 end
 
-(** {2 Utilities} *)
+(** {2 Analyses} *)
 
 (** SDK name of interest *)
 val sdk : string ref

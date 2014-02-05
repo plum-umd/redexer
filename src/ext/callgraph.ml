@@ -196,11 +196,11 @@ let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link list =
     let cname = D.get_ty_str dx cid
     and mname = D.get_mtd_name dx callee in
     (* Component transition *)
-    if 0 = S.compare mname Con.start_act
-    || 0 = S.compare mname Con.start_srv
+    if ((L.mem mname [Con.start_act; Con.start_srv])
+      && Adr.is_context dx cid && 2 < L.length opr)
     (* Intent creation *)
-    || ((0 = S.compare mname J.init || 0 = S.compare mname Con.set_class)
-      && 0 = S.compare cname (J.to_java_ty Con.intent) ) then
+    || ((0 = S.compare cname (J.to_java_ty Con.intent))
+      && (L.mem mname [J.init; Con.set_class])) then
     (
       let out = calc_const dx caller ins
       and reg =
