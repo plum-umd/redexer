@@ -111,7 +111,11 @@ class Apk
     ensure
       f.unlink
     end
-    @out << Dex.out
+    out = Dex.out
+    @res.ids.each do |id, name|
+      out.gsub!(id, name)
+    end
+    @out << out
     @succ = Dex.succ
   end
   
