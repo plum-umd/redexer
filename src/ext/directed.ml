@@ -205,13 +205,12 @@ let make_cg (dx: D.dex) (acts: string list) : Cg.cg =
 (* Step 3. find which listeners are related to which activities        *)
 (***********************************************************************)
 
-let listeners = ref IM.empty
+let is_1st_party (pkg: string) (cname: string) : bool =
+  let cname' = J.of_java_ty cname in
+  let prefix = U.common_prefix pkg cname' in
+  1 < L.length (U.split_string prefix '.')
 
-let lkup_listener cid : D.link =
-  try IM.find cid !listeners
-  with Not_found -> D.no_idx
-
-let calc_const (dx: D.dex) (mid: D.link) (ins: D.link) =
+let calc_const (dx: D.dex) (mid: D.link) =
   let cid = D.get_cid_from_mid dx mid in
   let _, citm = D.get_citm dx cid mid in
   let dfa = St.time "const" (P.make_dfa dx) citm in
@@ -219,7 +218,13 @@ let calc_const (dx: D.dex) (mid: D.link) (ins: D.link) =
     with type st = D.link and type l = (P.value U.IM.t))
   in
   St.time "const" DFA.fixed_pt ();
-  St.time "const" DFA.inn ins
+  DFA.inn
+
+let listeners = ref IM.empty
+
+let lkup_listener cid : D.link =
+  try IM.find cid !listeners
+  with Not_found -> D.no_idx
 
 let add_listener_rel (dx: D.dex) (listener_cid: D.link) (mid: D.link) : unit =
   if not (Adr.is_listener dx listener_cid) then () else
@@ -230,7 +235,7 @@ let add_listener_rel (dx: D.dex) (listener_cid: D.link) (mid: D.link) : unit =
   else
     listeners := IM.add listener_cid mid !listeners
 
-class listener_finder (dx: D.dex) =
+class listener_finder (dx: D.dex) (pkg: string) =
 object
   inherit V.iterator dx
 
@@ -239,11 +244,15 @@ object
   method v_cdef (cdef: D.class_def_item) : unit =
     cur_cid <- cdef.D.c_class_id;
     cname <- J.of_java_ty (D.get_ty_str dx cur_cid);
-    skip_cls <- Adr.is_static_library cname || Ads.is_ads_pkg cname
+    skip_cls <- not (is_1st_party pkg cname)
 
   val mutable cur_mid = D.no_idx
+  val mutable inn_calced = false
+  val mutable cur_inn = fun l -> (U.IM.empty: P.value U.IM.t)
   method v_emtd (emtd: D.encoded_method) : unit =
-    cur_mid <- emtd.D.method_idx
+    cur_mid <- emtd.D.method_idx;
+    inn_calced <- false;
+    cur_inn <- fun l -> (U.IM.empty: P.value U.IM.t)
 
   method v_ins (ins: D.link) : unit =
     if not (D.is_ins dx ins) then () else
@@ -255,7 +264,10 @@ object
         (* android...set...Listener() *)
         if Adr.is_set_listener dx callee then
         (
-          let inn = calc_const dx cur_mid ins
+          (if not inn_calced then
+              (inn_calced <- true; cur_inn <- calc_const dx cur_mid)
+          );
+          let inn = cur_inn ins
           and reg_v, reg_l = L.hd opr, U.get_last (U.rm_last opr) in
           let v = U.IM.find (I.of_reg reg_v) inn
           and l = U.IM.find (I.of_reg reg_l) inn in
@@ -266,7 +278,10 @@ object
         (* setContentView *)
         else if 0 = S.compare (D.get_mtd_name dx callee) App.set_view then
         (
-          let inn = calc_const dx cur_mid ins
+          (if not inn_calced then
+              (inn_calced <- true; cur_inn <- calc_const dx cur_mid)
+          );
+          let inn = cur_inn ins
           and reg = U.get_last (U.rm_last opr) in
           match U.IM.find (I.of_reg reg) inn with
           | P.Const c ->
@@ -279,7 +294,10 @@ object
       (* iput-object v_obj, v_this, @fid *)
       | I.FIELD_IDS when op = I.OP_IPUT_OBJECT ->
       (
-        let inn = calc_const dx cur_mid ins
+        (if not inn_calced then
+            (inn_calced <- true; cur_inn <- calc_const dx cur_mid)
+        );
+        let inn = cur_inn ins
         and reg = L.hd opr in
         match U.IM.find (I.of_reg reg) inn with
         | P.Object o -> add_listener_rel dx (D.get_cid dx o) cur_mid
@@ -289,10 +307,10 @@ object
 
 end
 
-(* find_listener : D.dex -> unit *)
-let find_listener (dx: D.dex) =
+(* find_listener : D.dex -> string -> unit *)
+let find_listener (dx: D.dex) (pkg: string) : unit =
   listeners := IM.empty;
-  V.iter (new listener_finder dx);
+  V.iter (new listener_finder dx pkg);
   let p_map (listener_cid: D.link) (mid: D.link) =
     let listener_name = D.get_ty_str dx listener_cid
     and caller = D.get_mtd_sig dx mid in
@@ -380,9 +398,9 @@ let calc_ccs (dx: D.dex) cg (mid: D.link) : Cg.cc list =
   try St.time "memoized" (IM.find mid) !cached_ccs
   with Not_found ->
   (
-    let depth = !cg_depth * 2 in
+    let depth = !cg_depth in
     let ccs = St.time "callers" (Cg.callers dx depth cg) mid in
-    cached_ccs := IM.add mid ccs !cached_ccs;
+    cached_ccs := St.time "memoizing" (IM.add mid ccs) !cached_ccs;
     ccs
   )
 
@@ -396,18 +414,18 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
   in
   let tgt_mids = L.fold_left add_lifecycle_mtd IS.empty tgt_cids
   in
-  let rec gen_path ps : path list =
+  let rec gen_path ps : PS.t =
     let per_path p =
-      if [] = p || !path_len < L.length p then [] else
+      if [] = p || !path_len < L.length p then PS.empty else
       let last_mid = U.get_last (L.hd p) in
       let cid = D.get_cid_from_mid dx last_mid in
       (* reach one of the target classes *)
-      if reach_top tgt_mids last_mid then [p]
+      if reach_top tgt_mids last_mid then PS.singleton p
       (* go to the current Activity's onCreate(), assuming user interaction *)
       else if Adr.is_activity dx cid then
       (
         let mids = Adr.find_lifecycle_act dx cid in
-        if [] = mids then [] else add_implicit_call p (L.hd mids)
+        if [] = mids then PS.empty else add_implicit_call p (L.hd mids)
       )
       (* go to the Activity to which this listener belongs *)
       else if D.no_idx <> lkup_listener cid then
@@ -419,32 +437,31 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
       (
         let act_cid = D.get_owning_class dx cid in
         let mids = Adr.find_lifecycle_act dx act_cid in
-        if [] = mids then [] else add_implicit_call p (L.hd mids)
+        if [] = mids then PS.empty else add_implicit_call p (L.hd mids)
       )
       else (* unexplored boundary *)
       (
         let mname = D.get_mtd_full_name dx last_mid in
         Log.d (Pf.sprintf "can't explore further: %s" mname);
-        []
+        PS.empty
       )
     in
-    L.flatten (L.rev_map per_path ps)
+    PS.fold (fun p acc -> PS.union acc (per_path p))ps PS.empty
   and add_implicit_call p mid =
     let ccs = calc_ccs dx cg mid in
     (* if |callers| == 1 then no more interesting call chains *)
-    if 1 = L.length ccs && 1 = L.length (L.hd ccs) then [[mid]::p] else
-      let add_unless_cycle cc =
+    if 1 = L.length ccs && 1 = L.length (L.hd ccs) then
+      PS.singleton ([mid]::p)
+    else
+      let add_unless_cycle cc acc =
         let cc' = sanitize_cc tgt_mids cc [] in
-        if induce_cycle cc' p then [] else cc' :: p
+        if induce_cycle cc' p then acc else PS.add (cc' :: p) acc
       in
-    gen_path (L.rev_map add_unless_cycle ccs)
+      gen_path (L.fold_right add_unless_cycle ccs PS.empty)
   in
-  let to_path (_, mid) = L.rev_map (fun p -> [p]) (calc_ccs dx cg mid) in
-  let init_ps = L.flatten (L.rev_map to_path (IPS.elements !call_sites))
-  in
-  let explored_ps = gen_path init_ps in
-  let unique_ps = L.fold_right PS.add explored_ps PS.empty
-  in
+  let mids = snd (L.split (IPS.elements !call_sites)) in
+  let ps = L.rev_map (add_implicit_call []) mids in
+  let unique_ps = L.fold_right PS.union ps PS.empty in
   let sanitize_path (p: path) : bool =
     [] <> p && reach_top tgt_mids (U.get_last (L.hd p))
   in
@@ -460,12 +477,12 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
 (* Putting all together                                                *)
 (***********************************************************************)
 
-(* directed_explore : D.dex -> string -> string list -> unit *)
-let directed_explore (dx: D.dex) (data: string) (acts: string list) : unit =
+(* directed_explore : D.dex -> string -> string -> string list -> unit *)
+let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
   St.time "transition" Lg.add_transition dx;
   St.time "api" (find_api_usage dx) data;
   let cg = St.time "cg" (make_cg dx) acts in
-  St.time "listener" find_listener dx;
+  St.time "listener" (find_listener dx) pkg;
   (* assume the first element is the main Activity *)
   let main_act = J.to_java_ty (L.hd acts) in
   let main_cid = D.get_cid dx main_act in
@@ -474,6 +491,6 @@ let directed_explore (dx: D.dex) (data: string) (acts: string list) : unit =
     Log.i "\n====== path ======";
     Log.i (path_to_str dx p)
   in
-  Log.i (Pf.sprintf "# of path(s): %d" (L.length ps));
-  L.iter per_path ps
+  L.iter per_path ps;
+  Log.i (Pf.sprintf "\n# of path(s): %d\n" (L.length ps))
 

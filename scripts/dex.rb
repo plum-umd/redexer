@@ -83,9 +83,11 @@ class Dex
     self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging #{TOO}")
   end
 
-  def self.directed(dex_name, acts, *out_name)
+  def self.directed(dex_name, acts, pkg, *out_name)
     opt = self.out_opt(out_name)
-    self.runcmd("#{REDEXER} #{opt} #{dex_name} -act #{acts} -directed #{TOO}")
+    cmd = "#{REDEXER} #{opt} #{dex_name} -act #{acts} -pkg #{pkg}"
+    cmd += " -directed #{TOO}"
+    self.runcmd(cmd)
   end
   
   CSS = DAT + "/dex-format.css"
@@ -201,8 +203,8 @@ class Dex
     self.runcmd("#{REDEXER} -cls #{cls} -mtd #{mtd} -reach #{dex_name}")
   end
 
-  def self.listener(dex_name)
-    self.runcmd("#{REDEXER} -listener #{dex_name} #{QUIET}")
+  def self.listener(dex_name, pkg)
+    self.runcmd("#{REDEXER} -listener #{dex_name} -pkg #{pkg} #{QUIET}")
   end
 
   def self.hello

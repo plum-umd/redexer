@@ -87,3 +87,6 @@ val ends_with : string -> string -> bool
 (** [true] if the given [string] contains the other [string] *)
 val contains : string -> string -> bool
 
+(** find the common prefix of the given [string]s *)
+val common_prefix : string -> string -> string
+

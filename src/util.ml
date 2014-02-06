@@ -160,3 +160,12 @@ let contains (str: string) (sub: string) : bool =
   try ignore (RE.search_forward re str 0); true
   with Not_found -> false
 
+(* common_prefix : string -> string -> string *)
+let common_prefix (s1: string) (s2: string) : string =
+  let rec h pre a b =
+    match a, b with
+    | hd1 :: tl1, hd2 :: tl2 when hd1 = hd2 -> h (pre @ [hd1]) tl1 tl2
+    | _, _ -> pre
+  in
+  implode (h [] (explode s1) (explode s2))
+

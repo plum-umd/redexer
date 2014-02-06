@@ -107,7 +107,7 @@ class Apk
       f.puts @org_launcher # to place launcher first
       f.puts @org_acts - [@org_launcher]
       f.close
-      Dex.directed(dex, f.path, dex)
+      Dex.directed(dex, f.path, @manifest.pkg, dex)
     ensure
       f.unlink
     end
@@ -155,7 +155,7 @@ class Apk
   end
 
   def buttons
-    Dex.listener(dex)
+    Dex.listener(dex, @manifest.pkg)
     out = Dex.out
     @res.ids.each do |id, name|
       out.gsub!(id, name)

@@ -135,6 +135,8 @@ let pdom (tx: D.dex) : unit =
 (* Analyses                                                            *)
 (***********************************************************************)
 
+let pkg = ref ""
+
 let dependants (tx: D.dex) : unit =
   let g = St.time "callgraph" Cg.make_cg tx in
   let cid = D.get_cid tx (J.to_java_ty !cls) in
@@ -171,7 +173,7 @@ and do_reach (tag: string) (tx: D.dex) (citm: D.code_item) : unit =
   St.time tag DFA.fixed_pt ()
 
 let dolistener (tx: D.dex) : unit =
-  St.time "listener" Dre.find_listener tx
+  St.time "listener" (Dre.find_listener tx) !pkg
 
 let dat = ref "data"
 
@@ -211,7 +213,7 @@ try (
   let ch = open_in !act in
   let acts = U.read_lines ch in
   close_in ch;
-  St.time "directed" (Dre.directed_explore tx apis) acts;
+  St.time "directed" (Dre.directed_explore tx !pkg apis) acts;
 (*
   St.time "dump" (Dp.dump !dex) tx
 *)
@@ -296,8 +298,12 @@ let arg_specs = A.align
     ("-cg_depth", A.Set_int Dre.cg_depth, " a level of partial call graph");
     ("-path_len", A.Set_int Dre.path_len, " a length of paths");
 
+    ("-dat", A.Set_string dat,
+     " folder containing various text inputs (default: "^(!dat)^")");
     ("-act", A.Set_string act,
      " file containing activity names (default: "^(!act)^")");
+    ("-pkg", A.Set_string pkg,
+     " specify the package name of the app");
 
   ]
 
