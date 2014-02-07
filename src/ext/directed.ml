@@ -393,15 +393,44 @@ let rec sanitize_cc (tgt_mids: IS.t) cc acc : Cg.cc =
 
 (** memoization for call chains *)
 let cached_ccs = ref IM.empty
+let num_cc = ref 0
 
 let calc_ccs (dx: D.dex) cg (mid: D.link) : Cg.cc list =
-  try St.time "memoized" (IM.find mid) !cached_ccs
+  try IM.find mid !cached_ccs
   with Not_found ->
   (
-    let depth = !cg_depth in
+    let depth = !cg_depth * 2 in
     let ccs = St.time "callers" (Cg.callers dx depth cg) mid in
-    cached_ccs := St.time "memoizing" (IM.add mid ccs) !cached_ccs;
+    num_cc := !num_cc + (L.length ccs);
+    cached_ccs := IM.add mid ccs !cached_ccs;
     ccs
+  )
+
+(** memoization for method id *)
+let cached_onCr = ref IM.empty
+
+let find_onCreate (dx: D.dex) (cid: D.link) : D.link =
+  try IM.find cid !cached_onCr
+  with Not_found ->
+  (
+    let mid =
+      try fst (St.time "onCreate" (D.get_the_mtd dx cid) App.onCreate)
+      with D.Wrong_dex _ -> D.no_idx
+    in
+    cached_onCr := IM.add cid mid !cached_onCr;
+    mid
+  )
+
+(** memoization for Activity *)
+let cached_act = ref IM.empty
+
+let is_activity (dx: D.dex) (cid: D.link) : bool =
+  try IM.find cid !cached_act
+  with Not_found ->
+  (
+    let ans = St.time "is_act" (Adr.is_activity dx) cid in
+    cached_act := IM.add cid ans !cached_act;
+    ans
   )
 
 (* a length of paths *)
@@ -420,33 +449,29 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
       let last_mid = U.get_last (L.hd p) in
       let cid = D.get_cid_from_mid dx last_mid in
       (* reach one of the target classes *)
-      if reach_top tgt_mids last_mid then PS.singleton p
+      if reach_top tgt_mids last_mid then
+        PS.singleton p
       (* go to the current Activity's onCreate(), assuming user interaction *)
-      else if Adr.is_activity dx cid then
-      (
-        let mids = Adr.find_lifecycle_act dx cid in
-        if [] = mids then PS.empty else add_implicit_call p (L.hd mids)
-      )
+      else if is_activity dx cid then
+        add_implicit_call p (find_onCreate dx cid)
       (* go to the Activity to which this listener belongs *)
       else if D.no_idx <> lkup_listener cid then
-      (
         add_implicit_call p (lkup_listener cid)
-      )
-      (* go to the owning Activity if this is its inner class *)
-      else if Adr.is_activity dx (D.get_owning_class dx cid) then
+      else
       (
         let act_cid = D.get_owning_class dx cid in
-        let mids = Adr.find_lifecycle_act dx act_cid in
-        if [] = mids then PS.empty else add_implicit_call p (L.hd mids)
-      )
-      else (* unexplored boundary *)
-      (
-        let mname = D.get_mtd_full_name dx last_mid in
-        Log.d (Pf.sprintf "can't explore further: %s" mname);
-        PS.empty
+        (* go to the owning Activity if this is its inner class *)
+        if Adr.is_activity dx act_cid then
+          add_implicit_call p (find_onCreate dx act_cid)
+        else (* unexplored boundary *)
+        (
+          let mname = D.get_mtd_full_name dx last_mid in
+          Log.d (Pf.sprintf "can't explore further: %s" mname);
+          PS.empty
+        )
       )
     in
-    PS.fold (fun p acc -> PS.union acc (per_path p))ps PS.empty
+    PS.fold (fun p acc -> PS.union acc (per_path p)) ps PS.empty
   and add_implicit_call p mid =
     let ccs = calc_ccs dx cg mid in
     (* if |callers| == 1 then no more interesting call chains *)
@@ -454,8 +479,9 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
       PS.singleton ([mid]::p)
     else
       let add_unless_cycle cc acc =
-        let cc' = sanitize_cc tgt_mids cc [] in
-        if induce_cycle cc' p then acc else PS.add (cc' :: p) acc
+        let cc' = St.time "sanitize_cc" (sanitize_cc tgt_mids cc) [] in
+        if St.time "induce_cycle" (induce_cycle cc') p then acc
+        else PS.add (cc' :: p) acc
       in
       gen_path (L.fold_right add_unless_cycle ccs PS.empty)
   in
@@ -492,5 +518,6 @@ let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
     Log.i (path_to_str dx p)
   in
   L.iter per_path ps;
-  Log.i (Pf.sprintf "\n# of path(s): %d\n" (L.length ps))
+  Log.i (Pf.sprintf "\n# of cc(s): %d" !num_cc);
+  Log.i (Pf.sprintf "# of path(s): %d" (L.length ps))
 

@@ -396,6 +396,7 @@ let rec callers_tail (dx: D.dex) depth cg ccs : CS.t =
 
 (* callers : D.dex -> int -> cg -> D.link -> cc list *)
 let callers (dx: D.dex) depth cg (mid: D.link) : cc list =
+  if D.no_idx = mid then [] else
   (* DFS *) (* callers_dfs dx depth cg mid *)
   (* BFS *) CS.elements (callers_tail dx depth cg (CS.singleton [mid]))
 
