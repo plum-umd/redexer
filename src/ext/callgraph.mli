@@ -61,6 +61,9 @@ val compare_cc : cc -> cc -> int
 (** find callers for the given method, with a certain depth *)
 val callers : Dex.dex -> int -> cg -> Dex.link -> cc list
 
+(** [true] if the given method is invoked by other methods *)
+val has_caller : Dex.dex -> cg -> Dex.link -> bool
+
 (** find dependent classes for the given class *)
 val dependants : Dex.dex -> cg -> Dex.link -> Dex.link list
 

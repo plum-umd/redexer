@@ -337,6 +337,7 @@ let make_partial_cg (dx: D.dex) depth (cids: D.link list) : cg =
 
   callers... m6 = [ [m6; m4; m1]; [m6; m4; m2]; [m6; m5; m3] ]
   callers... m4 = [ [m4; m1]; [m4; m2] ]
+  callers... m5 = [ [m5; m3] ]
   callers... m1 = [ [m1] ]
 *)
 
@@ -378,27 +379,45 @@ let rec callers_dfs (dx: D.dex) depth cg (mid: D.link) : cc list =
 (** tail-recursive, breadth-first search-based call chain generation *)
 let rec callers_tail (dx: D.dex) depth cg ccs : CS.t =
   if depth <= 0 then ccs else
-  let per_cc cc acc =
-    if [] = cc then acc else
-    let last_mid = U.get_last cc in
-    let node, _ = find_or_new_method dx cg last_mid in
-    let preds = IS.elements node.m_preds in
-    if [] = preds then CS.add cc acc else
-      let per_pred pred acc' =
-        let next_cc = if induce_cycle pred cc then cc else cc @ [pred] in
-        CS.add next_cc acc'
-      in
-      L.fold_right per_pred preds acc
-  in
-  let next_ccs = L.fold_right per_cc (CS.elements ccs) CS.empty in
-  if 0 = CS.compare ccs next_ccs then ccs else
+  let next_ccs = CS.fold (per_cc dx cg) ccs CS.empty in
+  if CS.compare ccs next_ccs >= 0 then ccs else
   callers_tail dx (depth-1) cg next_ccs
+
+and per_cc dx cg cc acc =
+  if [] = cc then acc else
+  let last_mid = U.get_last cc in
+  let node, _ = find_or_new_method dx cg last_mid in
+  let preds = IS.elements node.m_preds in
+  if [] = preds then CS.add cc acc else
+    let per_pred pred acc' =
+      let next_cc = if induce_cycle pred cc then cc else cc @ [pred] in
+      CS.add next_cc acc'
+    in
+    L.fold_right per_pred preds acc
+
+(** iterative, breadth-first search-based call chain generation *)
+let callers_bfs (dx: D.dex) depth cg (mid: D.link) : cc list =
+  let iter_cnt = ref 0
+  and ccs = ref (CS.singleton [mid])
+  and prev_ccs = ref CS.empty in
+  while !iter_cnt < depth && CS.compare !prev_ccs !ccs < 0 do
+    incr iter_cnt;
+    prev_ccs := !ccs;
+    ccs := CS.fold (per_cc dx cg) !prev_ccs CS.empty
+  done;
+  CS.elements !ccs
 
 (* callers : D.dex -> int -> cg -> D.link -> cc list *)
 let callers (dx: D.dex) depth cg (mid: D.link) : cc list =
   if D.no_idx = mid then [] else
   (* DFS *) (* callers_dfs dx depth cg mid *)
-  (* BFS *) CS.elements (callers_tail dx depth cg (CS.singleton [mid]))
+  (* BFS *) (* CS.elements (callers_tail dx depth cg (CS.singleton [mid])) *)
+  (* BFS *) callers_bfs dx depth cg mid
+
+(* has_caller : D.dex -> cg -> D.link -> bool *)
+let has_caller (dx: D.dex) cg (mid: D.link) : bool =
+  let ccs = callers dx 1 cg mid in
+  1 < L.length ccs || ([] <> ccs && 1 < L.length (L.hd ccs))
 
 (* dependants : D.dex -> cg -> D.link -> D.link list *)
 let dependants (dx: D.dex) cg (cid: D.link) : D.link list =
