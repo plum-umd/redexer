@@ -295,8 +295,12 @@ let arg_specs = A.align
      " instrument logging feature into the given dex");
     ("-directed", A.Unit do_directed,
      " instrument the dex such that it is directed to certain call sites");
-    ("-cg_depth", A.Set_int Dre.cg_depth, " a level of partial call graph");
-    ("-path_len", A.Set_int Dre.path_len, " a length of paths");
+    ("-cg_depth", A.Set_int Dre.cg_depth,
+     " a level of call graph (default: "^(string_of_int !Dre.cg_depth)^")");
+    ("-cc_len",   A.Set_int Dre.cc_len,
+     " a length of call chains (default: "^(string_of_int !Dre.cc_len)^")");
+    ("-path_len", A.Set_int Dre.path_len,
+     " a length of paths (default: "^(string_of_int !Dre.path_len)^")");
 
     ("-dat", A.Set_string dat,
      " folder containing various text inputs (default: "^(!dat)^")");

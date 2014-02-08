@@ -143,8 +143,6 @@ class Dex
     @@out
   end
 
-  @@pdf = true
-
   def self.pdf
     @@pdf
   end
@@ -219,12 +217,19 @@ class Dex
     @@succ
   end
 
+  def self.opt= (v)
+    @@opt = v
+  end
+
 private
 
+  @@opt = ""
+  @@pdf = true
   @@online = true
 
   def self.runcmd(cmd)
     @@out = ""
+    cmd = "#{cmd} #{@@opt}" if @@opt
     @@out << cmd + "\n"
     @@out << `#{cmd}`
     @@succ = $?.exitstatus == 0

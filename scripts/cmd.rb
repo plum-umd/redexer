@@ -89,6 +89,9 @@ option_parser = OptionParser.new do |opts|
   opts.on("--no-pdf", "do not convert dot output to pdf") do
     Dex.pdf = false
   end
+  opts.on("--opt-dex options", "options for redexer binary") do |o|
+    Dex.opt = o
+  end
   opts.on_tail("-h", "--help", "show this message") do
     puts opts
     exit

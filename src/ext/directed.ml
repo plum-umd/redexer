@@ -56,6 +56,7 @@ module P  = Propagation
 module Lg = Logging
 
 module L = List
+module B = Buffer
 module S = String
 
 module Pf = Printf
@@ -98,6 +99,10 @@ struct
 end
 
 module PS = Set.Make(PathKey)
+
+(** to recommend something because of something *)
+let recommand (recomm: string) (reason: string) : unit =
+  Log.w (Pf.sprintf "/* REC: %s, for %s */" recomm reason)
 
 (***********************************************************************)
 (* Step 1. find the methods in which the target calls appear           *)
@@ -199,15 +204,17 @@ let make_cg (dx: D.dex) (acts: string list) : Cg.cg =
 *)
   let act_cids = DA.fold_left add_act IS.empty dx.D.d_class_defs in
   let cids = DA.fold_left add_listener act_cids dx.D.d_class_defs in
-  Cg.make_partial_cg dx !cg_depth (IS.elements cids)
+  if !cg_depth <= 0 then Cg.make_cg dx
+  else Cg.make_partial_cg dx !cg_depth (IS.elements cids)
 
 (***********************************************************************)
 (* Step 3. find which listeners are related to which activities        *)
 (***********************************************************************)
 
-let is_1st_party (pkg: string) (cname: string) : bool =
-  let cname' = J.of_java_ty cname in
-  let prefix = U.common_prefix pkg cname' in
+let is_1st_party (dx: D.dex) (pkg: string) (cid: D.link) : bool =
+  if D.no_idx = cid then false else
+  let cname = J.of_java_ty (D.get_ty_str dx cid) in
+  let prefix = U.common_prefix pkg cname in
   1 < L.length (U.split_string prefix '.')
 
 let calc_const (dx: D.dex) (mid: D.link) =
@@ -244,7 +251,7 @@ object
   method v_cdef (cdef: D.class_def_item) : unit =
     cur_cid <- cdef.D.c_class_id;
     cname <- J.of_java_ty (D.get_ty_str dx cur_cid);
-    skip_cls <- not (is_1st_party pkg cname)
+    skip_cls <- not (is_1st_party dx pkg cur_cid)
 
   val mutable cur_mid = D.no_idx
   val mutable inn_calced = false
@@ -273,7 +280,13 @@ object
           and l = U.IM.find (I.of_reg reg_l) inn in
           match v, l with
           | _, P.Object o -> add_listener_rel dx (D.get_cid dx o) cur_mid
-          | _, _ -> ()
+          | _, _ ->
+          (
+            let caller_name = D.get_mtd_sig dx cur_mid
+            and callee_name = D.get_mtd_sig dx callee in
+            Log.w (Pf.sprintf "lack of listener @ %s" caller_name);
+            Log.w (Pf.sprintf "which calls %s\n" callee_name);
+          )
         )
         (* setContentView *)
         else if 0 = S.compare (D.get_mtd_name dx callee) App.set_view then
@@ -323,7 +336,7 @@ let find_listener (dx: D.dex) (pkg: string) : unit =
 (***********************************************************************)
 
 (**
-  ma -> mb ---> m2 (* user interaction *)
+  ma -> mb -#-> m2 (* user interaction *)
 
   m1 -> m4; m2 -> m4; m3 -> m5;
        m4 -> m6;      m5 -> m6;
@@ -340,40 +353,37 @@ let find_listener (dx: D.dex) (pkg: string) : unit =
 *)
 
 let path_to_str (dx: D.dex) (p: path) : string =
-  let per_explicit mids =
-    let join acc mid =
-      let next = D.get_mtd_sig dx mid in
-      if acc = "" then next else next^"\n----> "^acc
+  let buf = B.create (L.length p) in
+  let per_explicit cc =
+    let iter i mid =
+      if 0 <> i then B.add_string buf "\n----> ";
+      B.add_string buf (D.get_mtd_sig dx mid);
     in
-    L.fold_left join "" mids
+    L.iteri iter (L.rev cc)
   in
-  let per_implicit acc mids =
-    let next = per_explicit mids in
-    if acc = "" then "      "^next else acc^"\n-##-> "^next
+  let per_implicit i cc =
+    B.add_string buf (if 0 = i then "      " else "\n-##-> ");
+    per_explicit cc
   in
-  L.fold_left per_implicit "" p
+  L.iteri per_implicit p;
+  B.contents buf
 
 (**
-  has_cycle visited path :=
-    true only if \E m s.t. m \in visited && m \in path
+  has_cycle visited cc :=
+    true only if \E m s.t. m \in visited && m \in cc
 
-  induce_cycle cc path :=
-    visited = { m \in cc };
-    true only if has_cycle visited path
+  induce_cycle path cc :=
+    visited = { m \in path };
+    true only if has_cycle visited cc
 *)
 
-exception PATH_W_CYCLE
+let has_cycle (visited: IS.t) (cc: Cg.cc) : bool =
+  (* assume cc is acyclic, i.e., no need to update 'visited' *)
+  L.exists (fun mid -> IS.mem mid visited) cc
 
-let has_cycle (visited: IS.t) (p: path) : bool =
-  let v_mid acc mid =
-    if IS.mem mid acc then raise PATH_W_CYCLE else id_folder acc mid
-  in
-  try ignore (L.fold_left v_mid visited (L.flatten p)); false
-  with PATH_W_CYCLE -> true
-
-let induce_cycle (cc: Cg.cc) (p: path) : bool =
-  let visited = L.fold_right IS.add cc IS.empty in
-  has_cycle visited p
+let induce_cycle (p: path) (cc: Cg.cc) : bool =
+  let visited = L.fold_right IS.add (L.flatten p) IS.empty in
+  has_cycle visited cc
 
 (**
   Some apps' main Activity has incoming edges from apps other parts
@@ -385,23 +395,28 @@ let induce_cycle (cc: Cg.cc) (p: path) : bool =
 let reach_top (tgt_mids: IS.t) (mid: D.link) : bool =
   IS.mem mid tgt_mids
 
-let rec sanitize_cc (tgt_mids: IS.t) cc acc : Cg.cc =
+let rec sanitize_cc (tgt_mids: IS.t) cc : Cg.cc =
   match cc with
-  | [] -> L.rev acc
-  | hd :: tl when reach_top tgt_mids hd -> L.rev (hd :: acc)
-  | hd :: tl -> sanitize_cc tgt_mids tl (hd :: acc)
+  | [] -> []
+  | hd :: _ when reach_top tgt_mids hd -> [hd]
+  | hd :: tl -> hd :: (sanitize_cc tgt_mids tl)
+
+(* a length of call chains *)
+let cc_len = ref 5
 
 (** memoization for call chains *)
 let cached_ccs = ref IM.empty
+let max_cc = ref 0
 let num_cc = ref 0
 
 let calc_ccs (dx: D.dex) cg (mid: D.link) : Cg.cc list =
   try IM.find mid !cached_ccs
   with Not_found ->
   (
-    let depth = !cg_depth * 2 in
-    let ccs = St.time "callers" (Cg.callers dx depth cg) mid in
-    num_cc := !num_cc + (L.length ccs);
+    let ccs = St.time "callers" (Cg.callers dx !cc_len cg) mid in
+    let len_cc = L.length ccs in
+    max_cc := max !max_cc len_cc;
+    num_cc := !num_cc + len_cc;
     cached_ccs := IM.add mid ccs !cached_ccs;
     ccs
   )
@@ -436,13 +451,17 @@ let is_activity (dx: D.dex) (cid: D.link) : bool =
 (* a length of paths *)
 let path_len = ref 5
 
-let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
-  let add_lifecycle_mtd acc (cid: D.link) =
-    let mids = Adr.find_lifecycle_act dx cid in
-    if [] = mids then acc else IS.add (L.hd mids) acc
-  in
-  let tgt_mids = L.fold_left add_lifecycle_mtd IS.empty tgt_cids
-  in
+(* flags for auto-tuning *)
+let cc_flag = ref false
+let cc_mid = ref D.no_idx
+let p_flag = ref false
+
+let backtrack (dx: D.dex) cg pkg (tgt_cids: D.link list) : path list =
+  cached_ccs := IM.empty;
+  max_cc := 0;
+  num_cc := 0;
+  let onCrs = L.map (find_onCreate dx) tgt_cids in
+  let tgt_mids = L.fold_right IS.add onCrs IS.empty in
   let rec gen_path ps : PS.t =
     let per_path p =
       if [] = p || !path_len < L.length p then PS.empty else
@@ -466,7 +485,18 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
         else (* unexplored boundary *)
         (
           let mname = D.get_mtd_full_name dx last_mid in
-          Log.d (Pf.sprintf "can't explore further: %s" mname);
+          if Cg.has_caller dx cg last_mid then
+          (
+            cc_flag := true;
+            cc_mid := last_mid
+          )
+          else if is_1st_party dx pkg cid then
+          (
+            Log.w (Pf.sprintf "dead end: %s" mname);
+(*
+            Log.w (path_to_str dx p)
+*)
+          );
           PS.empty
         )
       )
@@ -474,24 +504,24 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
     PS.fold (fun p acc -> PS.union acc (per_path p)) ps PS.empty
   and add_implicit_call p mid =
     let ccs = calc_ccs dx cg mid in
-    (* if |callers| == 1 then no more interesting call chains *)
-    if 1 = L.length ccs && 1 = L.length (L.hd ccs) then
-      PS.singleton ([mid]::p)
-    else
-      let add_unless_cycle cc acc =
-        let cc' = St.time "sanitize_cc" (sanitize_cc tgt_mids cc) [] in
-        if St.time "induce_cycle" (induce_cycle cc') p then acc
-        else PS.add (cc' :: p) acc
-      in
-      gen_path (L.fold_right add_unless_cycle ccs PS.empty)
+    let add_unless_cycle cc acc =
+      let cc' = St.time "sanitize_cc" (sanitize_cc tgt_mids) cc in
+      if St.time "induce_cycle" (induce_cycle p) cc' then acc
+      else PS.add (cc' :: p) acc
+    in
+    gen_path (L.fold_right add_unless_cycle ccs PS.empty)
   in
   let mids = snd (L.split (IPS.elements !call_sites)) in
   let ps = L.rev_map (add_implicit_call []) mids in
-  let unique_ps = L.fold_right PS.union ps PS.empty in
+  let unique_ps = PS.elements (L.fold_right PS.union ps PS.empty) in
   let sanitize_path (p: path) : bool =
     [] <> p && reach_top tgt_mids (U.get_last (L.hd p))
   in
-  L.filter sanitize_path (PS.elements unique_ps)
+  let sanitized_ps = L.filter sanitize_path unique_ps in
+  let len_san = L.length sanitized_ps in
+  (* if paths disappear due to sanitizing, increase path_len *)
+  if 0 = len_san && len_san < L.length unique_ps then p_flag := true;
+  sanitized_ps
 
 (***********************************************************************)
 (* Step 5. instrument necessary user interactions                      *)
@@ -503,6 +533,8 @@ let backtrack (dx: D.dex) cg (tgt_cids: D.link list) : path list =
 (* Putting all together                                                *)
 (***********************************************************************)
 
+let num_try = ref 5
+
 (* directed_explore : D.dex -> string -> string -> string list -> unit *)
 let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
   St.time "transition" Lg.add_transition dx;
@@ -512,12 +544,37 @@ let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
   (* assume the first element is the main Activity *)
   let main_act = J.to_java_ty (L.hd acts) in
   let main_cid = D.get_cid dx main_act in
-  let ps = St.time "backtrack" (backtrack dx cg) [main_cid]
-  and per_path p =
+  let ps = ref ([]: path list)
+  and iter_cnt = ref 0 in
+  while !iter_cnt < !num_try && [] = !ps do
+    incr iter_cnt;
+    cc_flag := false; p_flag := false;
+    let msg = Pf.sprintf "backtrack (cc: %d, p: %d)" !cc_len !path_len in
+    ps := St.time msg (backtrack dx cg pkg) [main_cid];
+    if !cc_flag then incr cc_len;
+    if !p_flag then incr path_len;
+  done;
+  if [] = !ps then
+  (
+    if !p_flag then
+    (
+      let recomm = Pf.sprintf "incr path_len(%d)" !path_len
+      and reason = "paths decr to 0 after sanitizing" in
+      recommand recomm reason
+    );
+    if !cc_flag then
+    (
+      let mname = D.get_mtd_full_name dx !cc_mid in
+      let recomm = Pf.sprintf "incr cc_len(%d)" !cc_len
+      and reason = Pf.sprintf "there are callers for %s" mname in
+      recommand recomm reason
+    );
+  );
+  let per_path p =
     Log.i "\n====== path ======";
     Log.i (path_to_str dx p)
   in
-  L.iter per_path ps;
-  Log.i (Pf.sprintf "\n# of cc(s): %d" !num_cc);
-  Log.i (Pf.sprintf "# of path(s): %d" (L.length ps))
+  L.iter per_path !ps;
+  Log.i (Pf.sprintf "\nmax / # of cc(s): %d / %d" !max_cc !num_cc);
+  Log.i (Pf.sprintf "# of path(s): %d" (L.length !ps))
 

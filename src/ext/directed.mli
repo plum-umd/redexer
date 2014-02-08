@@ -39,6 +39,9 @@
 (** a level of partial call graph *)
 val cg_depth : int ref
 
+(** a length of call chains *)
+val cc_len : int ref
+
 (** a length of paths *)
 val path_len : int ref
 
