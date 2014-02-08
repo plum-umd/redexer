@@ -181,8 +181,10 @@ let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link list =
     and impls = D.get_implementers dx iid
     in
     let per_impl acc cid =
-      let callee, _ = D.get_the_mtd dx cid mname in
-      if add_call dx cg caller callee then callee :: acc else acc
+      try
+        let callee, _ = D.get_the_mtd dx cid mname in
+        if add_call dx cg caller callee then callee :: acc else acc
+      with D.Wrong_dex _ -> acc
     in
     (* not to add edges that correspond to user interactions *)
     if U.begins_with cname "Landroid" then [] else
@@ -287,32 +289,38 @@ let make_cg (dx: D.dex) : cg =
 (* make_partial_cg : D.dex -> int -> D.link list -> cg *)
 let make_partial_cg (dx: D.dex) depth (cids: D.link list) : cg =
   H.clear cg.clzz_h; H.clear cg.meth_h;
-  let worklist = ref IS.empty
+  let visited = ref IS.empty
+  and worklist = ref IS.empty
   and iter_cnt = ref 0 in
   let v_method (mid: D.link) : unit =
-    let v_ins (ins: D.link) =
-      let callees = interpret_ins dx mid ins
-      and add_callee callee =
-        let cid = D.get_cid_from_mid dx callee in
-        let cname = D.get_ty_str dx cid in
-        let skip_cls = V.to_be_skipped cname
-          || Adr.is_static_library cname || Ads.is_ads_pkg cname
-        in
-        if not skip_cls then worklist := IS.add callee !worklist
-      in
-      L.iter add_callee callees
-    in
-    let cid = D.get_cid_from_mid dx mid in
-    let sid = D.get_supermethod dx cid mid in
+    if IS.mem mid !visited then () else
     (
-      (* implicit super() call relations *)
-      if sid <> D.no_idx && add_call dx cg mid sid then
-        worklist := IS.add sid !worklist
-    );
-    try
-      let _, citm = D.get_citm dx cid mid in
-      DA.iter v_ins citm.D.insns
-    with D.Wrong_dex _ -> () (* no method body, i.e., library *)
+      visited := IS.add mid !visited;
+      let v_ins (ins: D.link) =
+        let callees = St.time "interpret_ins" (interpret_ins dx mid) ins
+        and add_callee callee =
+          let cid = D.get_cid_from_mid dx callee in
+          let cname = D.get_ty_str dx cid in
+          let skip_cls = V.to_be_skipped cname
+            || Adr.is_static_library cname || Ads.is_ads_pkg cname
+          in
+          if not skip_cls then worklist := IS.add callee !worklist
+        in
+        L.iter add_callee callees
+      in
+      let cid = D.get_cid_from_mid dx mid in
+      let sid = D.get_supermethod dx cid mid in
+      (
+        (* implicit super() call relations *)
+        if sid <> D.no_idx && add_call dx cg mid sid then
+          worklist := IS.add sid !worklist
+      );
+      let insns =
+        try let _, citm = D.get_citm dx cid mid in citm.D.insns
+        with D.Wrong_dex _ -> DA.create () (* no method body, i.e., library *)
+      in
+      DA.iter v_ins insns
+    )
   in
   let init_worklist acc (cid: D.link) =
     let mids, _ = L.split (D.get_mtds dx cid) in
