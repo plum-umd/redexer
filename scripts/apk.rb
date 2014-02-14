@@ -154,6 +154,10 @@ class Apk
     @manifest.find_comps(tag)
   end
 
+  def custom_views
+    @res.custom_views
+  end
+
   def fragments
     @res.fragments
   end

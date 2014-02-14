@@ -51,7 +51,8 @@ cmds = [
   "cg", "cfg", "dom", "pdom",
   "dump_method", "dependants", "live", "const", "reach",
   "exported", "permissions", "sdk", "launcher",
-  "activity", "service", "provider", "receiver", "fragments", "buttons",
+  "activity", "service", "provider", "receiver",
+  "custom_views", "fragments", "buttons",
   "hello", "logging", "directed"
 ]
 
@@ -240,7 +241,7 @@ when "activity", "service", "provider", "receiver"
     puts "Unprotected:"
     puts unprotected
   end
-when "fragments", "buttons"
+when "custom_views", "fragments", "buttons"
   apk? apk
   res = apk.send(cmd.to_sym)
   if res != {}

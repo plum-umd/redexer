@@ -224,6 +224,12 @@ These options print out Android basic components declared in the manifest.
 
     $ ruby scripts/cmd.rb target.apk --cmd [activity | service | provider | receiver]
 
+* custom_views
+
+This option explores layout definitions in resource and prints out custom views.
+
+    $ ruby scripts/cmd.rb target.apk --cmd custom_views
+
 * fragments
 
 This option explores layout definitions in resource and prints out Fragment elements.

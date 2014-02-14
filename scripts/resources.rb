@@ -58,6 +58,23 @@ class Resources
     strs
   end
 
+  def custom_views
+    customs = {}
+    Dir.glob(@dir + "/layout*/*.xml").each do |res|
+      f = File.open(res, 'r')
+      doc = Nokogiri::XML(f)
+      f.close
+      san_res = sanitize_path(res)
+      doc.root.traverse do |node|
+        custom = node.name if node.name.split('.').length > 1
+        next unless custom
+        customs[san_res] = [] unless customs[san_res]
+        customs[san_res] << custom
+      end
+    end
+    customs
+  end
+
   NS = "android"
 
   def lookup(a, k)
