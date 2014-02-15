@@ -401,6 +401,9 @@ let rec sanitize_cc (tgt_mids: IS.t) cc : Cg.cc =
   | hd :: _ when reach_top tgt_mids hd -> [hd]
   | hd :: tl -> hd :: (sanitize_cc tgt_mids tl)
 
+let sanitize_path (tgt_mids: IS.t) (p: path) : bool =
+  [] <> p && reach_top tgt_mids (U.get_last (L.hd p))
+
 (* a length of call chains *)
 let cc_len = ref 5
 
@@ -456,15 +459,14 @@ let cc_flag = ref false
 let cc_mid = ref D.no_idx
 let p_flag = ref false
 
-let backtrack (dx: D.dex) cg pkg (tgt_cids: D.link list) : path list =
+let backtrack (dx: D.dex) cg pkg (tgt_mids: IS.t) : path list =
   cached_ccs := IM.empty;
   max_cc := 0;
   num_cc := 0;
-  let onCrs = L.map (find_onCreate dx) tgt_cids in
-  let tgt_mids = L.fold_right IS.add onCrs IS.empty in
   let rec gen_path ps : PS.t =
     let per_path p =
-      if [] = p || !path_len < L.length p then PS.empty else
+      if [] = p then PS.empty else
+      if !path_len < L.length p then PS.singleton p else
       let last_mid = U.get_last (L.hd p) in
       let cid = D.get_cid_from_mid dx last_mid in
       (* reach one of the target classes *)
@@ -513,15 +515,7 @@ let backtrack (dx: D.dex) cg pkg (tgt_cids: D.link list) : path list =
   in
   let mids = snd (L.split (IPS.elements !call_sites)) in
   let ps = L.rev_map (add_implicit_call []) mids in
-  let unique_ps = PS.elements (L.fold_right PS.union ps PS.empty) in
-  let sanitize_path (p: path) : bool =
-    [] <> p && reach_top tgt_mids (U.get_last (L.hd p))
-  in
-  let sanitized_ps = L.filter sanitize_path unique_ps in
-  let len_san = L.length sanitized_ps in
-  (* if paths disappear due to sanitizing, increase path_len *)
-  if 0 = len_san && len_san < L.length unique_ps then p_flag := true;
-  sanitized_ps
+  PS.elements (L.fold_right PS.union ps PS.empty)
 
 (***********************************************************************)
 (* Step 5. instrument necessary user interactions                      *)
@@ -544,13 +538,22 @@ let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
   (* assume the first element is the main Activity *)
   let main_act = J.to_java_ty (L.hd acts) in
   let main_cid = D.get_cid dx main_act in
+  let onCrs = L.map (find_onCreate dx) [main_cid] in
+  let tgt_mids = L.fold_right IS.add onCrs IS.empty in
+  (* (partial) paths per iteration *)
   let ps = ref ([]: path list)
+  and pps = ref ([]: path list)
   and iter_cnt = ref 0 in
   while !iter_cnt < !num_try && [] = !ps do
     incr iter_cnt;
     cc_flag := false; p_flag := false;
     let msg = Pf.sprintf "backtrack (cc: %d, p: %d)" !cc_len !path_len in
-    ps := St.time msg (backtrack dx cg pkg) [main_cid];
+    let unique_ps = St.time msg (backtrack dx cg pkg) tgt_mids in
+    let u_ps, u_pps = L.partition (sanitize_path tgt_mids) unique_ps in
+    ps := u_ps; pps := u_pps;
+    let len_san = L.length u_ps in
+    (* if paths disappear due to sanitizing, increase path_len *)
+    if 0 = len_san && len_san < L.length unique_ps then p_flag := true;
     if !cc_flag then incr cc_len;
     if !p_flag then incr path_len;
   done;
@@ -571,10 +574,16 @@ let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
     );
   );
   let per_path p =
-    Log.i "\n====== path ======";
+    let msg =
+      if sanitize_path tgt_mids p
+      then "\n====== path ======"
+      else "\n====== partial path ======"
+    in
+    Log.i msg;
     Log.i (path_to_str dx p)
   in
-  L.iter per_path !ps;
+  L.iter per_path (!ps @ !pps);
   Log.i (Pf.sprintf "\nmax / # of cc(s): %d / %d" !max_cc !num_cc);
-  Log.i (Pf.sprintf "# of path(s): %d" (L.length !ps))
+  Log.i (Pf.sprintf "# of path(s): %d" (L.length !ps));
+  Log.i (Pf.sprintf "# of partial path(s): %d" (L.length !pps));
 
