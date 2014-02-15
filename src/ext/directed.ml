@@ -149,15 +149,32 @@ let find_api_usage (dx: D.dex) (data: string) =
   let ch = open_in data in
   let lst = U.read_lines ch in
   close_in ch;
-  let re = RE.regexp "\\(.+\\)->\\(.+\\)" in
+  let re = RE.regexp "\\(.+\\)->\\(.+\\)"
+  and fb_flag = ref false
+  in
   let each_line acc (str: string) =
     let _ = RE.search_forward re str 0 in
     let cname = RE.matched_group 1 str
     and mname = RE.matched_group 2 str in
+    if U.contains cname "facebook" then fb_flag := true;
     (cname, mname) :: acc
   in
   let s_apis = L.fold_left each_line [] lst
   in
+  if !fb_flag then
+  (
+    let cid = D.get_cid dx (J.to_java_ty "com.facebook.FacebookSdkVersion") in
+    let v =
+      if D.no_idx = cid then "<= 2.9.9" else
+      try
+        let fid, _ = D.get_the_fld dx cid "BUILD"
+        and stt_flds = D.get_stt_flds dx cid in
+        match L.assoc fid stt_flds with
+        | Some (D.VALUE_STRING sid) -> "== "^(D.get_str dx (D.to_idx sid))
+      with _ -> "...?"
+    in
+    Log.i (Pf.sprintf "Facebook SDK version %s\n" v)
+  );
   let find_ids acc (cname, mname) =
     let cid = D.get_cid dx cname in
     if D.no_idx = cid then

@@ -606,6 +606,9 @@ val own_the_mtd : dex -> link -> link -> bool
  raise {!Wrong_match} unless [CLASS_DATA] *)
 val get_cdata : dex -> link -> link * class_data_item
 
+(** get static fields for given class, along with initial values if exists *)
+val get_stt_flds : dex -> link -> (link * encoded_value option) list
+
 (** get {!encoded_method} for given class and method,
  raise {!Wrong_dex} if such method is not defined *)
 val get_emtd : dex -> link -> link -> encoded_method

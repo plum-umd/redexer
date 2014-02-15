@@ -915,6 +915,24 @@ let get_cdata dx (cid: link) : link * class_data_item =
   | CLASS_DATA cdat -> off, cdat
   | _ -> raise (Wrong_match "get_cdata: not CLASS_DATA")
 
+(* get_stt_flds : dex -> link -> (link * encoded_value option) list *)
+let get_stt_flds dx (cid: link) : (link * encoded_value option) list =
+  let cdef = get_cdef dx cid in
+  let _, cdat = get_cdata dx cid in
+  let evs =
+    if no_off = cdef.static_values then [] else
+    match get_data_item dx cdef.static_values with
+    | STATIC_VALUE evs -> evs
+    | _ -> raise (Wrong_match "get_stt_flds: not STATIC_VALUE")
+  in
+  let rec iter fids evs =
+    match fids, evs with
+    | fid::tl1, ev::tl2 -> (fid, Some ev) :: (iter tl1 tl2)
+    | fid::tl1, [] -> (fid, None) :: (iter tl1 [])
+    | [], [] -> []
+  in
+  iter (L.map (fun efld -> efld.field_idx) cdat.static_fields) evs
+
 (* get_emtd : dex -> link -> link -> encoded_method *)
 let get_emtd dx (cid: link) (mid: link) : encoded_method =
   try
