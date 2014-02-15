@@ -548,6 +548,7 @@ let num_try = ref 5
 
 (* directed_explore : D.dex -> string -> string -> string list -> unit *)
 let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
+  if [] = acts then raise (D.Wrong_dex "directed: no activities");
   St.time "transition" Lg.add_transition dx;
   St.time "api" (find_api_usage dx) data;
   let cg = St.time "cg" (make_cg dx) acts in
@@ -555,6 +556,7 @@ let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
   (* assume the first element is the main Activity *)
   let main_act = J.to_java_ty (L.hd acts) in
   let main_cid = D.get_cid dx main_act in
+  if D.no_idx = main_cid then raise (D.Wrong_dex "directed: no launcher");
   let onCrs = L.map (find_onCreate dx) [main_cid] in
   let tgt_mids = L.fold_right IS.add onCrs IS.empty in
   (* (partial) paths per iteration *)

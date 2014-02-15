@@ -219,6 +219,7 @@ try (
 *)
 )
 with End_of_file -> prerr_endline "EOF"
+| D.Wrong_dex msg -> prerr_endline msg
 
 (***********************************************************************)
 (* Arguments                                                           *)
