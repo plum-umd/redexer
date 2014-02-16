@@ -535,7 +535,7 @@ let backtrack (dx: D.dex) cg pkg (tgt_mids: IS.t) : path list =
       if St.time "induce_cycle" (induce_cycle p) cc' then acc
       else PS.add (cc' :: p) acc
     in
-    gen_path (L.fold_right add_unless_cycle ccs PS.empty)
+    PS.add p (gen_path (L.fold_right add_unless_cycle ccs PS.empty))
   in
   let mids = snd (L.split (IPS.elements !call_sites)) in
   let ps = L.rev_map (add_implicit_call []) mids in
