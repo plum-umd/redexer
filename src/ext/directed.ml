@@ -299,10 +299,17 @@ object
           | _, P.Object o -> add_listener_rel dx (D.get_cid dx o) cur_mid
           | _, _ ->
           (
-            let caller_name = D.get_mtd_sig dx cur_mid
-            and callee_name = D.get_mtd_sig dx callee in
-            Log.w (Pf.sprintf "lack of listener @ %s" caller_name);
-            Log.w (Pf.sprintf "which calls %s\n" callee_name);
+            let cid = D.get_cid_from_mid dx cur_mid in
+            let _, citm = D.get_citm dx cid cur_mid in
+            if I.of_reg reg_l = D.calc_this citm then (* this *)
+              add_listener_rel dx cid cur_mid
+            else
+            (
+              let caller_name = D.get_mtd_sig dx cur_mid
+              and callee_name = D.get_mtd_sig dx callee in
+              Log.w (Pf.sprintf "lack of listener @ %s" caller_name);
+              Log.w (Pf.sprintf "which calls %s\n" callee_name);
+            )
           )
         )
         (* setContentView *)
