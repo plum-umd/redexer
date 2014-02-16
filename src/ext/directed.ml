@@ -601,7 +601,8 @@ let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
     Log.i msg;
     Log.i (path_to_str dx p)
   in
-  L.iter per_path (!ps @ !pps);
+  L.iter per_path !ps;
+  if [] = !ps then L.iter per_path !pps;
   Log.i (Pf.sprintf "\nmax / # of cc(s): %d / %d" !max_cc !num_cc);
   Log.i (Pf.sprintf "# of path(s): %d" (L.length !ps));
   Log.i (Pf.sprintf "# of partial path(s): %d" (L.length !pps));
