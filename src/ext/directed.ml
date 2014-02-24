@@ -483,10 +483,14 @@ let cc_flag = ref false
 let cc_mid = ref D.no_idx
 let p_flag = ref false
 
+(* unique dead ends *)
+let dead_ends = ref IS.empty
+
 let backtrack (dx: D.dex) cg pkg (tgt_mids: IS.t) : path list =
   cached_ccs := IM.empty;
   max_cc := 0;
   num_cc := 0;
+  dead_ends := IS.empty;
   let rec gen_path ps : PS.t =
     let per_path p =
       if [] = p then PS.empty else
@@ -510,7 +514,6 @@ let backtrack (dx: D.dex) cg pkg (tgt_mids: IS.t) : path list =
           add_implicit_call p (find_onCreate dx act_cid)
         else (* unexplored boundary *)
         (
-          let mname = D.get_mtd_full_name dx last_mid in
           if Cg.has_caller dx cg last_mid then
           (
             cc_flag := true;
@@ -518,10 +521,7 @@ let backtrack (dx: D.dex) cg pkg (tgt_mids: IS.t) : path list =
           )
           else if is_1st_party dx pkg cid then
           (
-            Log.w (Pf.sprintf "dead end: %s" mname);
-(*
-            Log.w (path_to_str dx p)
-*)
+            dead_ends := IS.add last_mid !dead_ends;
           );
           PS.empty
         )
@@ -535,7 +535,8 @@ let backtrack (dx: D.dex) cg pkg (tgt_mids: IS.t) : path list =
       if St.time "induce_cycle" (induce_cycle p) cc' then acc
       else PS.add (cc' :: p) acc
     in
-    PS.add p (gen_path (L.fold_right add_unless_cycle ccs PS.empty))
+    let explored = gen_path (L.fold_right add_unless_cycle ccs PS.empty) in
+    if [] = p then explored else PS.add p explored
   in
   let mids = snd (L.split (IPS.elements !call_sites)) in
   let ps = L.rev_map (add_implicit_call []) mids in
@@ -582,7 +583,14 @@ let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
     if 0 = len_san && len_san < L.length unique_ps then p_flag := true;
     if !cc_flag then incr cc_len;
     if !p_flag then incr path_len;
+    (* break the loop if no more useful suggestion *)
+    if not !cc_flag && not !p_flag then iter_cnt := !num_try;
   done;
+  let print_dead_end mid =
+    let mname = D.get_mtd_full_name dx mid in
+    Log.w (Pf.sprintf "dead end: %s" mname)
+  in
+  L.iter print_dead_end (IS.elements !dead_ends);
   if [] = !ps then
   (
     if !p_flag then
@@ -599,7 +607,7 @@ let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
       recommand recomm reason
     );
   );
-  let per_path p =
+  let print_path p =
     let msg =
       if sanitize_path tgt_mids p
       then "\n====== path ======"
@@ -608,8 +616,8 @@ let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
     Log.i msg;
     Log.i (path_to_str dx p)
   in
-  L.iter per_path !ps;
-  if [] = !ps then L.iter per_path !pps;
+  L.iter print_path !ps;
+  if [] = !ps then L.iter print_path !pps;
   Log.i (Pf.sprintf "\nmax / # of cc(s): %d / %d" !max_cc !num_cc);
   Log.i (Pf.sprintf "# of path(s): %d" (L.length !ps));
   Log.i (Pf.sprintf "# of partial path(s): %d" (L.length !pps));
