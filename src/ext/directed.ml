@@ -244,6 +244,22 @@ let calc_const (dx: D.dex) (mid: D.link) =
   St.time "const" DFA.fixed_pt ();
   DFA.inn
 
+(** memoization for method id *)
+let cached_onCr = ref IM.empty
+
+let find_onCreate (dx: D.dex) (cid: D.link) : D.link =
+  try IM.find cid !cached_onCr
+  with Not_found ->
+  (
+    let mid =
+      try fst (St.time "onCreate" (D.get_the_mtd dx cid) App.onCreate)
+      with D.Wrong_dex _ -> D.no_idx
+    in
+    cached_onCr := IM.add cid mid !cached_onCr;
+    mid
+  )
+
+(** mappings from listener to registering method *)
 let listeners = ref IM.empty
 
 let lkup_listener cid : D.link =
@@ -254,8 +270,11 @@ let add_listener_rel (dx: D.dex) (listener_cid: D.link) (mid: D.link) : unit =
   if not (Adr.is_listener dx listener_cid) then () else
   let cid = D.get_cid_from_mid dx mid in
   if Adr.is_activity dx cid then
-    let mids = Adr.find_lifecycle_act dx cid in
-    listeners := IM.add listener_cid (L.hd mids) !listeners
+  (
+    let onCr = find_onCreate dx cid in
+    if D.no_idx <> onCr then
+      listeners := IM.add listener_cid onCr !listeners
+  )
   else
     listeners := IM.add listener_cid mid !listeners
 
@@ -446,21 +465,6 @@ let calc_ccs (dx: D.dex) cg (mid: D.link) : Cg.cc list =
     num_cc := !num_cc + len_cc;
     cached_ccs := IM.add mid ccs !cached_ccs;
     ccs
-  )
-
-(** memoization for method id *)
-let cached_onCr = ref IM.empty
-
-let find_onCreate (dx: D.dex) (cid: D.link) : D.link =
-  try IM.find cid !cached_onCr
-  with Not_found ->
-  (
-    let mid =
-      try fst (St.time "onCreate" (D.get_the_mtd dx cid) App.onCreate)
-      with D.Wrong_dex _ -> D.no_idx
-    in
-    cached_onCr := IM.add cid mid !cached_onCr;
-    mid
   )
 
 (** memoization for Activity *)

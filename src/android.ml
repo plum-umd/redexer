@@ -253,7 +253,7 @@ let ext_sort (dx: D.dex) (sort: string) (cid: D.link) : bool =
   let ends_w_sort cid' =
     U.ends_with (D.get_ty_str dx cid') (sort^";")
   in
-  cid <> D.no_idx && D.in_hierarchy dx ends_w_sort cid
+  D.in_hierarchy dx ends_w_sort (D.get_superclass dx cid)
 
 (** check whether the given class implements the given sort *)
 let impl_sort (dx: D.dex) (sort: string) (cid: D.link) : bool =
