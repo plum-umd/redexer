@@ -565,12 +565,14 @@ let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
   St.time "api" (find_api_usage dx) data;
   let cg = St.time "cg" (make_cg dx) acts in
   St.time "listener" (find_listener dx) pkg;
-  (* assume the first element is the main Activity *)
-  let main_act = J.to_java_ty (L.hd acts) in
-  let main_cid = D.get_cid dx main_act in
-  if D.no_idx = main_cid then raise (D.Wrong_dex "directed: no launcher");
-  let onCrs = L.map (find_onCreate dx) [main_cid] in
-  let tgt_mids = L.fold_right IS.add onCrs IS.empty in
+  let tgt_mids =
+    (* assume the first element is the main Activity *)
+    let main_act = J.to_java_ty (L.hd acts) in
+    let main_cid = D.get_cid dx main_act in
+    if D.no_idx = main_cid then IS.empty else (* no launcher *)
+      let onCrs = L.map (find_onCreate dx) [main_cid] in
+      L.fold_right IS.add onCrs IS.empty
+  in
   (* (partial) paths per iteration *)
   let ps = ref ([]: path list)
   and pps = ref ([]: path list)
