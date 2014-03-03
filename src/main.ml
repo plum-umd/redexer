@@ -328,6 +328,7 @@ let main () =
       chan,  fun () -> close_in chan
   in
   try (
+    Printexc.record_backtrace true;
     match !task with
     | Some f ->
     (
@@ -350,7 +351,11 @@ let main () =
     )
     | _ -> A.usage arg_specs usage
   )
-  with End_of_file -> prerr_endline "EOF"
+  with
+  | End_of_file -> prerr_endline "EOF"
+  | e ->
+    prerr_endline ("Exception: "^(Printexc.to_string e));
+    Printexc.print_backtrace stderr
 ;;
 
 main ();;
