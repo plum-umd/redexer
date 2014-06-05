@@ -566,12 +566,13 @@ let directed_explore (dx: D.dex) pkg data (acts: string list) : unit =
   let cg = St.time "cg" (make_cg dx) acts in
   St.time "listener" (find_listener dx) pkg;
   let tgt_mids =
-    (* assume the first element is the main Activity *)
-    let main_act = J.to_java_ty (L.hd acts) in
-    let main_cid = D.get_cid dx main_act in
-    if D.no_idx = main_cid then IS.empty else (* no launcher *)
-      let onCrs = L.map (find_onCreate dx) [main_cid] in
-      L.fold_right IS.add onCrs IS.empty
+    let comps = L.map J.to_java_ty acts in
+    let cids = L.map (D.get_cid dx) comps in
+    let onCrs = L.map (find_onCreate dx) cids in
+    let add_valid_mid acc mid =
+      if mid = D.no_idx then acc else IS.add mid acc
+    in
+    L.fold_left add_valid_mid IS.empty onCrs
   in
   (* (partial) paths per iteration *)
   let ps = ref ([]: path list)

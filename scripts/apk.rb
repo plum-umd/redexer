@@ -105,7 +105,7 @@ class Apk
     f = Tempfile.new("redexer", HOME)
     begin
       f.puts @org_launcher # to place launcher first
-      f.puts @org_acts - [@org_launcher]
+      f.puts @manifest.exported - [@org_launcher]
       f.close
       Dex.directed(dex, f.path, @manifest.pkg, dex)
     ensure
