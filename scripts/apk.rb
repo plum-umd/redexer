@@ -34,11 +34,13 @@ class Apk
   require 'yaml'
   require 'tempfile'
 
-  HOME = File.dirname(__FILE__)
+  THIS_FILE = File.expand_path(__FILE__)
+  HERE = File.dirname(THIS_FILE)
+  HOME = File.join(HERE, "..")
 
-  require "#{HOME}/dex"
-  require "#{HOME}/manifest"
-  require "#{HOME}/resources"
+  require "#{File.join(HERE, "dex")}"
+  require "#{File.join(HERE, "manifest")}"
+  require "#{File.join(HERE, "resources")}"
 
   attr_reader :out, :succ
 
@@ -56,7 +58,7 @@ class Apk
       if to_dir_or_file.length > 0
         @apk = to_dir_or_file[0]
       else
-        yml = YAML.load_file(@dir+"/apktool.yml")
+        yml = YAML.load_file(File.join(@dir, "apktool.yml"))
         @apk = yml["apkFileName"]
       end
       @manifest = Manifest.new(xml)
@@ -74,15 +76,15 @@ class Apk
   end
 
   def dex
-    @dir + "/classes.dex"
+    File.join(@dir, "classes.dex")
   end
 
   def xml
-    @dir + "/AndroidManifest.xml"
+    File.join(@dir, "AndroidManifest.xml")
   end
 
-  TOOL = HOME + "/../tools"
-  APKT = TOOL + "/apktool.jar"
+  TOOL = File.join(HOME, "tools")
+  APKT = File.join(TOOL, "apktool.jar")
 
   def unpack
     if @manifest == nil
@@ -118,17 +120,17 @@ class Apk
     @out << out
     @succ = Dex.succ
   end
-  
-  JAR = TOOL + "/signapk.jar"
-  PEM = TOOL + "/platform.x509.pem"
-  PK8 = TOOL + "/platform.pk8"
+
+  JAR = File.join(TOOL, "signapk.jar")
+  PEM = File.join(TOOL, "platform.x509.pem")
+  PK8 = File.join(TOOL, "platform.pk8")
 
   def repack(to_name = File.basename(@apk))
-    unsigned = @dir + "/unsigned.apk"
+    unsigned = File.join(@dir, "unsigned.apk")
     runcmd("java -jar #{APKT} b -f #{@dir} #{unsigned}")
     succ = @succ
     if succ
-      unaligned = @dir + "/unaligned.apk"
+      unaligned = File.join(@dir, "unaligned.apk")
       runcmd("java -jar #{JAR} #{PEM} #{PK8} #{unsigned} #{unaligned}")
       system("rm -f #{to_name}") # zipalign wants it not to exist
       runcmd("zipalign 4 #{unaligned} #{to_name}")

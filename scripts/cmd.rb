@@ -34,16 +34,15 @@
 
 require 'rubygems'
 require 'optparse'
-require 'pathname'
 require 'pp'
 
-THIS_FILE = Pathname.new(__FILE__).realpath.to_s
+THIS_FILE = File.expand_path(__FILE__)
 HERE = File.dirname(THIS_FILE)
-HOME = HERE + "/.."
-RES = HOME + "/results/"
+HOME = File.join(HERE, "..")
+RES = File.join(HOME, "results")
 tmp_dir = "tmp_dir_" + rand(36**8).to_s(36) # random string with size 8
 
-require "#{HERE}/apk"
+require "#{File.join(HERE, "apk")}"
 
 cmds = [
   "unparse", "htmlunparse", "id", "combine",
@@ -65,7 +64,7 @@ to = nil
 outputdir = nil
 
 option_parser = OptionParser.new do |opts|
-  opts.banner = "Usage: ruby #{THIS_FILE} target.(apk|dex) [options]"
+  opts.banner = "Usage: ruby #{__FILE__} target.(apk|dex) [options]"
   opts.on("--cmd command", cmds, cmds.join(", ")) do |c|
     cmd = c
   end
@@ -100,8 +99,7 @@ option_parser = OptionParser.new do |opts|
 end.parse!
  
 if not (cmd == "hello") and ARGV.length < 1
-  puts "Usage: ruby #{THIS_FILE} target.(apk|dex) [options]"
-  exit
+  raise "target file is missed"
 end
 
 if not cmds.include?(cmd)
@@ -164,7 +162,7 @@ when "id"
     Dex.dump(dex, to)
   else
     Dex.dump(dex)
-    system("mv -f #{HOME}/classes.dex #{RES}") if dex.succ
+    system("mv -f #{File.join(HOME, "classes.dex")} #{RES}") if dex.succ
   end
 when "combine"
   raise "no lib dex provided" unless lib
@@ -172,7 +170,7 @@ when "combine"
     Dex.combine(dex, lib, to)
   else
     Dex.combine(dex, lib)
-    system("mv -f #{HOME}/classes.dex #{RES}") if dex.succ
+    system("mv -f #{File.join(HOME, "classes.dex")} #{RES}") if dex.succ
   end
 when "info", "classes", "api"
   if cmd == "api" and sdk
@@ -193,7 +191,7 @@ when "cg"
   pdf = to if to
   Dex.callgraph(dex, pdf)
   if Dex.pdf
-    system("mv -f #{HOME}/#{pdf} #{RES}") unless to
+    system("mv -f #{File.join(HOME, pdf)} #{RES}") unless to
   else
     puts Dex.out if dex_succ?(apk, cmd)
   end
@@ -209,7 +207,7 @@ when "cfg", "dom", "pdom"
   pdf = to if to
   Dex.send(cmd.to_sym, dex, cls, mtd, pdf)
   if Dex.pdf
-    system("mv -f #{HOME}/#{pdf} #{RES}") unless to
+    system("mv -f #{File.join(HOME, pdf)} #{RES}") unless to
   else
     puts Dex.out if dex_succ?(apk, cmd)
   end
@@ -267,8 +265,8 @@ when "logging", "directed"
     raise "repacking apk failed"
   end
   # for debugging, leave rewritten dex and xml files
-  system("cp -f #{tmp_dir}/classes.dex #{RES}")
-  system("cp -f #{tmp_dir}/AndroidManifest.xml #{RES}")
+  system("cp -f #{File.join(tmp_dir, "classes.dex")} #{RES}")
+  system("cp -f #{File.join(tmp_dir, "AndroidManifest.xml")} #{RES}")
   # and move the rewritten apk
   if not to
     rewritten = File.basename(fn)
@@ -277,7 +275,7 @@ when "logging", "directed"
   puts apk.out if apk.succ
 when "hello"
   Dex.hello
-  system("mv -f #{HOME}/classes.dex #{RES}") if dex_succ?(apk, cmd)
+  system("mv -f #{File.join(HOME, "classes.dex")} #{RES}") if dex_succ?(apk, cmd)
 end
 
 close(apk)

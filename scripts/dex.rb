@@ -31,19 +31,18 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 
 class Dex
-  require 'pathname'
 
-  THIS_FILE = Pathname.new(__FILE__).realpath.to_s
+  THIS_FILE = File.expand_path(__FILE__)
   HERE = File.dirname(THIS_FILE)
-  HOME = HERE + "/.."
-  DAT  = HOME + "/data"
-  REDEXER = HOME + "/redexer"
+  HOME = File.join(HERE, "..")
+  DAT  = File.join(HOME, "data")
+  REDEXER = File.join(HOME, "redexer")
 
   QUIET = "2>/dev/null"
   TOO = "2>&1"
 
-  DEX = HOME + "/classes.dex"
-  
+  DEX = File.join(HOME, "classes.dex")
+
   def self.unparse(dex_name=DEX, *file_name)
     yml = `#{REDEXER} -unparse #{dex_name} #{QUIET}`
     @@succ = $?.exitstatus == 0
@@ -90,14 +89,14 @@ class Dex
     self.runcmd(cmd)
   end
   
-  CSS = DAT + "/dex-format.css"
+  CSS = File.join(DAT, "dex-format.css")
 
   def self.htmlunparse(dex_name=DEX, dir_name="output")
     if not File.exists?(dir_name)
       puts "Creating new output directory: #{dir_name}"
       system("mkdir #{dir_name}")
       puts "Moving default stylesheet to #{dir_name}"
-      system("cp #{CSS} #{dir_name}/dex-format.css")
+      system("cp #{CSS} #{File.join(dir_name, "dex-format.css")}")
     end
     if !(test ?d, dir_name)
       puts "Error!  ``#{dir_name}'' exists and is not a directory"
@@ -247,7 +246,7 @@ private
     if pdf_name.length > 0
       pdf_name[0]
     else
-      base = File.basename(dex_name,".dex")
+      base = File.basename(dex_name, ".dex")
       base + ".pdf"
     end
   end
