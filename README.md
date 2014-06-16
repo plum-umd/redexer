@@ -22,7 +22,7 @@ Requirements
 
 * OCaml and Ruby
 
-This tool is tested under [OCaml][ml] 3.12 and [Ruby][rb] 1.8.6(7),
+This tool is tested under [OCaml][ml] 4.00.0 and [Ruby][rb] 1.8.6(7),
 so you need to install them (or higher versions of them).
 
 * OCaml SHA library (ocamlfind/findlib or FlexDLL)
@@ -60,7 +60,7 @@ manifest files.
 If you want to see graphs (e.g. call graph, control-flow graph,
 dominator tree, etc.), you need to install [graphviz dot][dot].
 
-[ml]: http://caml.inria.fr/ocaml/
+[ml]: http://ocaml.org/
 [rb]: http://www.ruby-lang.org/
 [sha]: https://github.com/vincenthz/ocaml-sha/
 [fdll]: http://alain.frisch.fr/flexdll.html
