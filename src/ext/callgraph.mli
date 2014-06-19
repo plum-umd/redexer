@@ -46,6 +46,9 @@ type cg
  returns [true] if a new node is introduced *)
 val add_call : Dex.dex -> cg -> Dex.link -> Dex.link -> bool
 
+(** conduct ({!Propagation}-based) [Intent] resolution analysis *)
+val intent_analysis : bool ref
+
 (** make call graph for overall {!Dex.dex} file *)
 val make_cg : Dex.dex -> cg
 

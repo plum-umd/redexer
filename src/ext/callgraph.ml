@@ -163,6 +163,9 @@ let calc_const (dx: D.dex) (mid: D.link) (ins: D.link) =
   St.time "const" DFA.fixed_pt ();
   St.time "const" DFA.out ins
 
+(** whether to conduct Intent resolution analysis or not *)
+let intent_analysis = ref false
+
 (**
   given instruction, add an edge from caller to callee, if exists,
   and return the callee ids so as to visit them incrementally
@@ -211,6 +214,7 @@ let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link list =
         (* invoke-virtual v_this, v_intent, @mid *)
         else U.get_last (U.rm_last opr)
       in
+      let caller_sig = D.get_mtd_sig dx caller in
       match IM.find (I.of_reg reg) out with
       | P.Intent i when D.no_idx <> D.get_cid dx i ->
       (
@@ -218,7 +222,31 @@ let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link list =
         let mids = Adr.find_lifecycle_act dx act_cid in
         if [] = mids then [] else
           let callee = L.hd mids in
-          if add_call dx cg caller callee then [callee] else []
+          if add_call dx cg caller callee then
+          (
+            if !intent_analysis then
+            (
+              let callee_sig = D.get_mtd_sig dx callee in
+              Log.i (Pf.sprintf "   %s" caller_sig);
+              Log.i (Pf.sprintf "~> %s" callee_sig)
+            );
+            [callee]
+          )
+          else []
+      )
+      (* Intent, but can't figure out the target component, i.e., implicit *)
+      | P.Intent i when !intent_analysis ->
+      (
+        Log.i (Pf.sprintf "   %s" caller_sig);
+        Log.i (Pf.sprintf "~> (implicit)");
+        []
+      )
+      (* in case of non-Intent *)
+      | v when !intent_analysis ->
+      (
+        Log.i (Pf.sprintf "   %s" caller_sig);
+        Log.i (Pf.sprintf "~? %s" (P.val_to_str v));
+        []
       )
       | _ -> []
     )

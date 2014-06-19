@@ -109,6 +109,10 @@ let dump_method (tx: D.dex) : unit =
   let citm = get_citm tx in
   St.time "dump_method" Up.print_method tx citm
 
+let intent (tx: D.dex) : unit =
+  Cg.intent_analysis := true;
+  ignore (St.time "callgraph" Cg.make_cg tx)
+
 let cg (tx: D.dex) : unit =
   let g = St.time "callgraph" Cg.make_cg tx in
   St.time "callgraph" (Cg.cg2dot tx) g
@@ -240,6 +244,7 @@ let do_htmlunparse   () = task := Some dump_html
 let do_combine       () = task := Some combine
 
 let do_dumpmethod    () = task := Some dump_method
+let do_intent        () = task := Some intent
 let do_cg            () = task := Some cg
 let do_cfg           () = task := Some cfg
 let do_dom           () = task := Some dom
@@ -280,8 +285,10 @@ let arg_specs = A.align
     ("-mtd",  A.Set_string mtd, " target method name");
     ("-dump_method", A.Unit do_dumpmethod, 
      " dump instructions for a specified method");
-    ("-cg",   A.Unit do_cg,     " call graph in dot format");
-    ("-cfg",  A.Unit do_cfg,    " control-flow graph in dot format");
+
+    ("-intent", A.Unit do_intent, " Intent resolution analysis");
+    ("-cg",     A.Unit do_cg,     " call graph in dot format");
+    ("-cfg",    A.Unit do_cfg,    " control-flow graph in dot format");
 
     ("-dom",  A.Unit do_dom,    " dominator tree in dot format");
     ("-pdom", A.Unit do_pdom,   " post dominator tree in dot format");

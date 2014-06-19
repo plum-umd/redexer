@@ -142,6 +142,10 @@ class Dex
     @@out
   end
 
+  def self.intent(dex_name=DEX)
+    self.runcmd("#{REDEXER} -intent #{dex_name}")
+  end
+
   def self.pdf
     @@pdf
   end

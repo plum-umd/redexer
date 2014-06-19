@@ -47,7 +47,7 @@ require "#{File.join(HERE, "apk")}"
 cmds = [
   "unparse", "htmlunparse", "id", "combine",
   "info", "classes", "api", "opstat",
-  "cg", "cfg", "dom", "pdom",
+  "intent", "cg", "cfg", "dom", "pdom",
   "dump_method", "dependants", "live", "const", "reach",
   "exported", "permissions", "sdk", "launcher",
   "activity", "service", "provider", "receiver",
@@ -186,6 +186,9 @@ when "opstat"
     Dex.opstat(dex)
   end
   puts Dex.out if dex_succ?(apk, cmd)
+when "intent"
+  Dex.intent(dex)
+  puts Dex.out if dex_succ?(apk,cmd)
 when "cg"
   pdf = cmd + ".pdf"
   pdf = to if to
