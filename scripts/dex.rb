@@ -143,7 +143,7 @@ class Dex
   end
 
   def self.intent(dex_name=DEX)
-    self.runcmd("#{REDEXER} -intent #{dex_name}")
+    self.runcmd("#{REDEXER} -intent #{dex_name} #{QUIET}")
   end
 
   def self.pdf

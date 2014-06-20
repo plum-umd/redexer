@@ -222,17 +222,13 @@ let interpret_ins (dx: D.dex) (caller: D.link) (ins: D.link) : D.link list =
         let mids = Adr.find_lifecycle_act dx act_cid in
         if [] = mids then [] else
           let callee = L.hd mids in
-          if add_call dx cg caller callee then
+          if !intent_analysis then
           (
-            if !intent_analysis then
-            (
-              let callee_sig = D.get_mtd_sig dx callee in
-              Log.i (Pf.sprintf "   %s" caller_sig);
-              Log.i (Pf.sprintf "~> %s" callee_sig)
-            );
-            [callee]
-          )
-          else []
+            let callee_sig = D.get_mtd_sig dx callee in
+            Log.i (Pf.sprintf "   %s" caller_sig);
+            Log.i (Pf.sprintf "~> %s" callee_sig)
+          );
+          if add_call dx cg caller callee then [callee] else []
       )
       (* Intent, but can't figure out the target component, i.e., implicit *)
       | P.Intent i when !intent_analysis ->
