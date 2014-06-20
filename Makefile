@@ -1,5 +1,5 @@
 SOURCES := \
-	ocamlutil/stats_stubs.c ocamlutil/stats.ml ocamlutil/clist.ml \
+	ocamlutil/stats.ml ocamlutil/clist.ml \
 	ocamlutil/uChar.ml ocamlutil/uTF8.ml \
 	ocamlutil/enum.ml ocamlutil/dynArray.ml \
 	src/util.ml src/log.ml src/java.ml src/instr.ml src/dex.ml \

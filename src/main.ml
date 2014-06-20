@@ -339,7 +339,6 @@ let main () =
     match !task with
     | Some f ->
     (
-      St.reset St.HardwareIfAvail;
       if f == dump_hello then f (D.empty_dex ()) else
       (
         let dex = St.time "parse" P.parse ch in

@@ -74,15 +74,7 @@ dominator tree, etc.), you need to install [graphviz dot][dot].
 Build
 -----
 
-Note that on some machines, macs, for example, before building you
-need to set some arch specific flags.  An export CFLAGS="-arch i386"
-or similar should work to solve strange linking problems from arch
-specific stat code.
-
-    $ ./configure
-
-It will generate ocamlutil/stat_stubs.c, which reflects your env.
-Then, make!  You can see redexer binary at the top level.
+To build redexer, just make!  You can see redexer binary at the top level.
 
     $ make (clean)
 
@@ -160,6 +152,13 @@ For instance,
 
     $ ruby scripts/cmd.rb ~/apps/top24/com.whatsapp.apk --cmd opstat
     $ ruby scripts/cmd.rb ~/apps/top24/com.whatsapp.apk --cmd opstat --op div-int/lit16,nop
+
+* Intent resolution analysis
+
+This option conducts propagation-based Intent resolution analysis,
+and prints out transitions amongst Activity classes.
+
+    $ ruby scripts/cmd.rb target.(apk|dex) --cmd intent
 
 * call graph
 
@@ -329,4 +328,19 @@ In either mode, logs are saved in log.txt and shown to the screen at once.
 Thus, after collecting logs, you may need to move that file, e.g.:
 
     $ mv log.txt app.scenario.txt
+
+* directed exploration
+
+This option finds component transition paths towards target method calls.
+
+    $ ruby scripts/cmd.rb target.apk --cmd directed
+
+You can specify target methods to be invoked in data/directed.txt
+
+Those component transition paths are used to drive apps to test security
+vulnerabilities in 3rd party libraries.  More details are described at
+the following paper:
+
+    * Brahmastra: Driving Apps to Test the Security of Third-Party Components.
+    R. Bhoraskar, et. al. In 23rd Usenix Security Symposium (Security '14).
 
