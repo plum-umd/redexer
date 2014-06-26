@@ -162,7 +162,7 @@ when "id"
     Dex.dump(dex, to)
   else
     Dex.dump(dex)
-    system("mv -f #{File.join(HOME, "classes.dex")} #{RES}") if dex.succ
+    system("mv -f classes.dex #{RES}") if dex.succ
   end
 when "combine"
   raise "no lib dex provided" unless lib
@@ -170,7 +170,7 @@ when "combine"
     Dex.combine(dex, lib, to)
   else
     Dex.combine(dex, lib)
-    system("mv -f #{File.join(HOME, "classes.dex")} #{RES}") if dex.succ
+    system("mv -f classes.dex #{RES}") if dex.succ
   end
 when "info", "classes", "api"
   if cmd == "api" and sdk
@@ -194,7 +194,7 @@ when "cg"
   pdf = to if to
   Dex.callgraph(dex, pdf)
   if Dex.pdf
-    system("mv -f #{File.join(HOME, pdf)} #{RES}") unless to
+    system("mv -f #{pdf} #{RES}") unless to
   else
     puts Dex.out if dex_succ?(apk, cmd)
   end
@@ -210,7 +210,7 @@ when "cfg", "dom", "pdom"
   pdf = to if to
   Dex.send(cmd.to_sym, dex, cls, mtd, pdf)
   if Dex.pdf
-    system("mv -f #{File.join(HOME, pdf)} #{RES}") unless to
+    system("mv -f #{pdf} #{RES}") unless to
   else
     puts Dex.out if dex_succ?(apk, cmd)
   end
@@ -278,7 +278,7 @@ when "logging", "directed"
   puts apk.out if apk.succ
 when "hello"
   Dex.hello
-  system("mv -f #{File.join(HOME, "classes.dex")} #{RES}") if dex_succ?(apk, cmd)
+  system("mv -f classes.dex #{RES}") if dex_succ?(apk, cmd)
 end
 
 close(apk)
