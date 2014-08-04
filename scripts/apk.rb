@@ -33,6 +33,7 @@
 class Apk
   require 'yaml'
   require 'tempfile'
+  require 'rbconfig'
 
   THIS_FILE = File.expand_path(__FILE__)
   HERE = File.dirname(THIS_FILE)
@@ -88,7 +89,7 @@ class Apk
 
   def unpack
     if @manifest == nil
-      runcmd("java -Djava.awt.headless=true -jar #{APKT} d -f --no-src --keep-broken-res #{@apk} #{@dir}")
+      runcmd("java -Djava.awt.headless=true -jar #{cygpath(APKT)} d -f --no-src --keep-broken-res #{cygpath(@apk)} #{cygpath(@dir)}")
       if @succ
         @manifest = Manifest.new(xml)
         org_in_manifest()
@@ -127,11 +128,11 @@ class Apk
 
   def repack(to_name = File.basename(@apk))
     unsigned = File.join(@dir, "unsigned.apk")
-    runcmd("java -jar #{APKT} b -f #{@dir} #{unsigned}")
+    runcmd("java -jar #{cygpath(APKT)} b -f #{cygpath(@dir)} #{cygpath(unsigned)}")
     succ = @succ
     if succ
       unaligned = File.join(@dir, "unaligned.apk")
-      runcmd("java -jar #{JAR} #{PEM} #{PK8} #{unsigned} #{unaligned}")
+      runcmd("java -jar #{cygpath(JAR)} #{cygpath(PEM)} #{cygpath(PK8)} #{cygpath(unsigned)} #{cygpath(unaligned)}")
       system("rm -f #{to_name}") # zipalign wants it not to exist
       runcmd("zipalign 4 #{unaligned} #{to_name}")
       File.delete(unaligned)
@@ -189,6 +190,19 @@ private
     @out << cmd + "\n"
     @out << `#{cmd} 2>&1`
     @succ = $?.exitstatus == 0
+  end
+
+  def cygpath(path)
+    if is_cygwin
+      wp = `cygpath -wp #{path}`
+      "\"#{wp.strip || wp}\""
+    else
+      path
+    end
+  end
+
+  def is_cygwin
+    RbConfig::CONFIG['host_os'] =~ /cygwin/
   end
 
 end
