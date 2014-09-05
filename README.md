@@ -317,6 +317,7 @@ all information in the memory, you may use the offline mode of the script:
     $ ./scripts/trim.py -d
 
 Note that all command-line parameters will be passed to adb logcat, and
+by default, "org.umd.logging:I *:S" is passed to filter out irrelevant logs.
 
 If logs overflow, you should use the online mode:
 
