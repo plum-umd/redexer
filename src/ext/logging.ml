@@ -359,6 +359,7 @@ object
     skip_cls <- L.exists (U.begins_with cname) [logging; "Ljava"; "Landroid"]
              || not (adr_relevant dx cdef.D.c_class_id)
 
+  val mutable mid = D.no_idx
   (* to determine supercall in constructors *)
   val mutable mname = ""
   (* the type of arguments, if exists *)
@@ -367,11 +368,18 @@ object
   val mutable rety = D.no_idx
   val mutable is_void = false
   method v_emtd (emtd: D.encoded_method) : unit =
-    mname <- D.get_mtd_name dx emtd.D.method_idx;
+    mid <- emtd.D.method_idx;
+    mname <- D.get_mtd_name dx mid;
+    (* TODO: what happens if an exception raised in a synchronized block? *)
+    let has_monitor =
+      emtd.D.code_off <> D.no_off &&
+      has_monitors dx (snd (D.get_citm dx cid mid))
+    in
     (* to skip constructors and synthetic methods (static blocks) *)
     skip_mtd <- L.mem mname [J.init; J.clinit; J.hashCode]
-             || D.is_synthetic emtd.D.m_access_flag;
-    let mit = D.get_mit dx emtd.D.method_idx in
+             || D.is_synthetic emtd.D.m_access_flag
+             || has_monitor;
+    let mit = D.get_mit dx mid in
     argv <- D.get_argv dx mit;
     if not (D.is_static emtd.D.m_access_flag) then
       argv <- cid :: argv; (* including "this" *)
@@ -382,82 +390,79 @@ object
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
     cur_citm <- citm;
-    (* TODO: what happens if an exception raised in a synchronized block? *)
-    if not (has_monitors dx citm) (* && U.begins_with mname "on" *) then
-    (
-      (* to secure at least three registers for logging *)
-      (* 3 is minimum, but 5 here to expand invoke-* operands *)
-      M.shift_reg_usage dx citm 5;
-      let this = D.calc_this citm in
 
-      (* code snippet for method exits *)
-      (* to calc the last ins correctly, do this part first *)
-      let vr =
-        if is_void then this else
-          let op, opr = M.get_last_ins dx citm in
-          match op, opr with
-          | I.OP_RETURN,        I.OPR_REGISTER r :: []
-          | I.OP_RETURN_WIDE,   I.OPR_REGISTER r :: []
-          | I.OP_RETURN_OBJECT, I.OPR_REGISTER r :: [] -> r
-          | I.OP_THROW, I.OPR_REGISTER r :: [] -> rety <- thrw; r
-          | _, _ -> raise (D.Wrong_match "is_void")
-      in
-      let vx::vy::vz::[] = vxyz 0 in
-      let ins0 = I.new_const vx (if is_void then 0 else 1)
-      and ins1 = I.new_arr vx vx (D.of_idx objs)
-      and ins2 = I.new_invoke stt_rnge [vx; vx; D.of_idx m_ext_mid]
-      and copy_ret vr vx =
-        let ins_c = I.new_const vy 0
-        and ins_a =
-          try
-            let ins_a1 = auto_boxing vr rety
-            and ins_a2 = I.new_move_result mv_r_obj vz
-            and ins_a3 = I.new_arr_op aput_obj [vz; vx; vy] in
-            [ins_a1; ins_a2; ins_a3]
-          with Not_found ->
-            [I.new_arr_op aput_obj [vr; vx; vy]]
-        in
-        CL.fromList (ins_c::ins_a)
-      in
-      let ext_insns = CL.toList (
-        CL.fromList [ins0; ins1]
-        @@ (if is_void then CL.empty else copy_ret vr vx)
-        @@ CL.single ins2
-      ) in
-      let _ = M.insrt_insns_before_end dx citm ext_insns in
-      in_out_cnt := !in_out_cnt + (L.length ext_insns);
+    (* to secure at least three registers for logging *)
+    (* 3 is minimum, but 5 here to expand invoke-* operands *)
+    M.shift_reg_usage dx citm 5;
+    let this = D.calc_this citm in
 
-      (* code snippet for method entries *)
-      let vx::vy::vz::[] = vxyz 0 in
-      let argn = citm.D.ins_size in
-      let ins0 = I.new_const vz argn
-      and ins1 = I.new_arr vx vz (D.of_idx objs)
-      and ins2 = I.new_invoke call_stt [vx; D.of_idx m_ent_mid]
-      and copy_argv (acc, (arr_i, r_i)) ty =
-        let tname = D.get_ty_str dx ty in
-        let ins_c = I.new_const vy arr_i
-        and ins_a =
-          try
-            let ins_a1 = auto_boxing (this + r_i) ty
-            and ins_a2 = I.new_move_result mv_r_obj vz
-            and ins_a3 = I.new_arr_op aput_obj [vz; vx; vy] in
-            [ins_a1; ins_a2; ins_a3]
-          with Not_found ->
-            [I.new_arr_op aput_obj [this + r_i; vx; vy]]
-        in
-        acc @@ (CL.fromList (ins_c::ins_a)),
-        (arr_i + 1, if J.is_wide tname then r_i + 2 else r_i + 1)
+    (* code snippet for method exits *)
+    (* to calc the last ins correctly, do this part first *)
+    let vr =
+      if is_void then this else
+        let op, opr = M.get_last_ins dx citm in
+        match op, opr with
+        | I.OP_RETURN,        I.OPR_REGISTER r :: []
+        | I.OP_RETURN_WIDE,   I.OPR_REGISTER r :: []
+        | I.OP_RETURN_OBJECT, I.OPR_REGISTER r :: [] -> r
+        | I.OP_THROW, I.OPR_REGISTER r :: [] -> rety <- thrw; r
+        | _, _ -> raise (D.Wrong_match "is_void")
+    in
+    let vx::vy::vz::[] = vxyz 0 in
+    let ins0 = I.new_const vx (if is_void then 0 else 1)
+    and ins1 = I.new_arr vx vx (D.of_idx objs)
+    and ins2 = I.new_invoke stt_rnge [vx; vx; D.of_idx m_ext_mid]
+    and copy_ret vr vx =
+      let ins_c = I.new_const vy 0
+      and ins_a =
+        try
+          let ins_a1 = auto_boxing vr rety
+          and ins_a2 = I.new_move_result mv_r_obj vz
+          and ins_a3 = I.new_arr_op aput_obj [vz; vx; vy] in
+          [ins_a1; ins_a2; ins_a3]
+        with Not_found ->
+          [I.new_arr_op aput_obj [vr; vx; vy]]
       in
-      let ent_insns = CL.toList (
-        CL.fromList [ins0; ins1]
-        @@ fst (L.fold_left copy_argv (CL.empty, (0, 0)) argv)
-        @@ CL.single ins2
-      ) in
-      let _ = M.insrt_insns_before_start dx citm ent_insns in
-      in_out_cnt := !in_out_cnt + (L.length ent_insns);
+      CL.fromList (ins_c::ins_a)
+    in
+    let ext_insns = CL.toList (
+      CL.fromList [ins0; ins1]
+      @@ (if is_void then CL.empty else copy_ret vr vx)
+      @@ CL.single ins2
+    ) in
+    let _ = M.insrt_insns_before_end dx citm ext_insns in
+    in_out_cnt := !in_out_cnt + (L.length ext_insns);
 
-      M.update_reg_usage dx citm
-    )
+    (* code snippet for method entries *)
+    let vx::vy::vz::[] = vxyz 0 in
+    let argn = citm.D.ins_size in
+    let ins0 = I.new_const vz argn
+    and ins1 = I.new_arr vx vz (D.of_idx objs)
+    and ins2 = I.new_invoke call_stt [vx; D.of_idx m_ent_mid]
+    and copy_argv (acc, (arr_i, r_i)) ty =
+      let tname = D.get_ty_str dx ty in
+      let ins_c = I.new_const vy arr_i
+      and ins_a =
+        try
+          let ins_a1 = auto_boxing (this + r_i) ty
+          and ins_a2 = I.new_move_result mv_r_obj vz
+          and ins_a3 = I.new_arr_op aput_obj [vz; vx; vy] in
+          [ins_a1; ins_a2; ins_a3]
+        with Not_found ->
+          [I.new_arr_op aput_obj [this + r_i; vx; vy]]
+      in
+      acc @@ (CL.fromList (ins_c::ins_a)),
+      (arr_i + 1, if J.is_wide tname then r_i + 2 else r_i + 1)
+    in
+    let ent_insns = CL.toList (
+      CL.fromList [ins0; ins1]
+      @@ fst (L.fold_left copy_argv (CL.empty, (0, 0)) argv)
+      @@ CL.single ins2
+    ) in
+    let _ = M.insrt_insns_before_start dx citm ent_insns in
+    in_out_cnt := !in_out_cnt + (L.length ent_insns);
+
+    M.update_reg_usage dx citm
 
   method v_ins (ins: D.link) : unit =
     if D.is_ins dx ins then
