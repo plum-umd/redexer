@@ -59,6 +59,8 @@ module A  = Array
 module L  = List
 module S  = String
 
+module Pf = Printf
+
 (***********************************************************************)
 (* Basic Types/Elements                                                *)
 (***********************************************************************)
@@ -304,9 +306,12 @@ let begins_w_adr (name: string) : bool =
   U.begins_with name "Landroid"
 
 let adr_relevant dx (cid: D.link) : bool =
-  let sname = D.get_ty_str dx (D.get_superclass dx cid)
-  and inames = L.map (D.get_ty_str dx) (D.get_interfaces dx cid) in
-  L.exists (fun sup -> begins_w_adr sup) (sname::inames)
+  let ext_or_impl (cid': D.link) : bool =
+    let sname = D.get_ty_str dx (D.get_superclass dx cid')
+    and inames = L.map (D.get_ty_str dx) (D.get_interfaces dx cid') in
+    L.exists (fun sup -> begins_w_adr sup) (sname::inames)
+  in
+  D.in_hierarchy dx ext_or_impl cid
 
 let has_supercall dx (mname: string) (citm: D.code_item) : bool =
   let op, _ = M.get_fst_ins dx citm in
@@ -357,7 +362,11 @@ object
     let cname = D.get_ty_str dx cid in
     (* to avoid the Logger class as well as libraries *)
     skip_cls <- L.exists (U.begins_with cname) [logging; "Ljava"; "Landroid"]
-             || not (adr_relevant dx cdef.D.c_class_id)
+             || not (adr_relevant dx cdef.D.c_class_id);
+    if skip_cls then
+    (
+      Log.d (Pf.sprintf "skip class: %s" cname)
+    )
 
   val mutable mid = D.no_idx
   (* to determine supercall in constructors *)
@@ -379,6 +388,10 @@ object
     skip_mtd <- L.mem mname [J.init; J.clinit; J.hashCode]
              || D.is_synthetic emtd.D.m_access_flag
              || has_monitor;
+    if skip_mtd then
+    (
+      Log.d (Pf.sprintf "skip : %s" (D.get_mtd_full_name dx mid))
+    );
     let mit = D.get_mit dx mid in
     argv <- D.get_argv dx mit;
     if not (D.is_static emtd.D.m_access_flag) then
@@ -389,6 +402,7 @@ object
   (* to log API usage *)
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
+    Log.d (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
     cur_citm <- citm;
 
     (* to secure at least three registers for logging *)
