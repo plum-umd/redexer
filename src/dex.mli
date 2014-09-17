@@ -489,6 +489,9 @@ val get_mit : dex -> link -> method_id_item
 (** get {!proto_id_item} for a given method. *)
 val get_pit : dex -> method_id_item -> proto_id_item
 
+(** get type for given field *)
+val get_fty : dex -> field_id_item -> link
+
 (** get a [list] of arguments for given method *)
 val get_argv : dex -> method_id_item -> link list
 

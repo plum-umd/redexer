@@ -590,6 +590,7 @@ let find_str dx (str: string) : link =
 
 (* get_ty_str : dex -> link -> string *)
 let get_ty_str dx (tid: link) : string =
+  if tid = no_idx then "" else
   get_str dx (DA.get dx.d_type_ids (of_idx tid))
 
 (* find_ty_str : dex -> string -> link *)
@@ -634,6 +635,10 @@ let get_mit dx (mid: link) : method_id_item =
 (* get_pit : dex -> method_id_item -> proto_id_item *)
 let get_pit dx (mit: method_id_item) : proto_id_item =
   DA.get dx.d_proto_ids (of_idx mit.m_proto_id)
+
+(* get_fty : dex -> field_id_item -> link *)
+let get_fty dx (fit: field_id_item) : link =
+  fit.f_type_id
 
 (* get_argv : dex -> method_id_item -> link list *)
 let get_argv dx (mit: method_id_item) : link list =
