@@ -89,7 +89,7 @@ class Apk
 
   def unpack
     if @manifest == nil
-      runcmd("java -Djava.awt.headless=true -jar #{cygpath(APKT)} d -f --no-src --keep-broken-res #{cygpath(@apk)} #{cygpath(@dir)}")
+      runcmd("java -Djava.awt.headless=true -jar #{cygpath(APKT)} d -f --no-src --keep-broken-res -o #{cygpath(@dir)} #{cygpath(@apk)}")
       if @succ
         @manifest = Manifest.new(xml)
         org_in_manifest()
@@ -128,7 +128,7 @@ class Apk
 
   def repack(to_name = File.basename(@apk))
     unsigned = File.join(@dir, "unsigned.apk")
-    runcmd("java -jar #{cygpath(APKT)} b -f #{cygpath(@dir)} #{cygpath(unsigned)}")
+    runcmd("java -jar #{cygpath(APKT)} b -f -o #{cygpath(unsigned)} #{cygpath(@dir)}")
     succ = @succ
     if succ
       unaligned = File.join(@dir, "unaligned.apk")
