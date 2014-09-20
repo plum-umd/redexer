@@ -38,7 +38,7 @@
 
 (** This module provides special functions for logging apps *)
 
-(** conclude more logging*)
+(** conclude more logging *)
 val detail : bool ref
 
 (** add non-overriden transition methods *)
