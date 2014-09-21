@@ -38,6 +38,9 @@
 
 (** This module provides special functions for logging apps *)
 
+(** conclude more logging *)
+val detail : bool ref
+
 (** add non-overriden transition methods *)
 val add_transition : Dex.dex -> unit
 

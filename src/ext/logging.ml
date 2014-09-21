@@ -79,6 +79,8 @@ let logMExt = "logMethodExit"
 let logAEnt = "logAPIEntry"
 let logAExt = "logAPIExit"
 
+let detail = ref false
+
 module SM = Map.Make(String)
 
 (* from descriptor to wrapper class: { Z => java.lang.Boolean, ... } *)
@@ -361,8 +363,9 @@ object
     cid <- cdef.D.c_class_id;
     let cname = D.get_ty_str dx cid in
     (* to avoid the Logger class as well as libraries *)
-    skip_cls <- L.exists (U.begins_with cname) [logging; "Ljava"; "Landroid"]
-             || not (adr_relevant dx cdef.D.c_class_id);
+    skip_cls <- L.exists (U.begins_with cname) [logging; "Ljava"; "Landroid"];
+    if not !detail then
+       skip_cls <- skip_cls || not (adr_relevant dx cdef.D.c_class_id);
     if skip_cls then
     (
       Log.d (Pf.sprintf "skip class: %s" cname)
