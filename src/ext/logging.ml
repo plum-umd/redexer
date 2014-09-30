@@ -304,14 +304,14 @@ let add_transition (dx: D.dex) : unit =
 let in_out_cnt = ref 0
 let api_cnt = ref 0
 
-let begins_w_adr (name: string) : bool =
-  U.begins_with name "Landroid"
+let is_library (cname: string) : bool =
+  L.exists (U.begins_with cname) ["Ljava"; "Landroid"]
 
 let adr_relevant dx (cid: D.link) : bool =
   let ext_or_impl (cid': D.link) : bool =
     let sname = D.get_ty_str dx (D.get_superclass dx cid')
     and inames = L.map (D.get_ty_str dx) (D.get_interfaces dx cid') in
-    L.exists (fun sup -> begins_w_adr sup) (sname::inames)
+    L.exists (fun sup -> U.begins_with sup "Landroid") (sname :: inames)
   in
   D.in_hierarchy dx ext_or_impl cid
 
@@ -363,9 +363,9 @@ object
     cid <- cdef.D.c_class_id;
     let cname = D.get_ty_str dx cid in
     (* to avoid the Logger class as well as libraries *)
-    skip_cls <- L.exists (U.begins_with cname) [logging; "Ljava"; "Landroid"];
+    skip_cls <- U.begins_with cname logging || is_library cname;
     if not !detail then
-       skip_cls <- skip_cls || not (adr_relevant dx cdef.D.c_class_id);
+      skip_cls <- skip_cls || not (adr_relevant dx cdef.D.c_class_id);
     if skip_cls then
     (
       Log.d (Pf.sprintf "skip class: %s" cname)
@@ -499,7 +499,7 @@ object
           let lid = if sid = D.no_idx then cid else sid in
           let lname = D.get_ty_str dx lid in
           let mname = D.get_mtd_name dx mid in
-          if begins_w_adr lname && S.length mname > 1 then
+          if is_library lname then
           (
             let vx::vy::vz::[] = vxyz 0
             and mit = D.get_mit dx mid in
