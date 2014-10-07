@@ -499,7 +499,7 @@ object
           let lid = if sid = D.no_idx then cid else sid in
           let lname = D.get_ty_str dx lid in
           let mname = D.get_mtd_name dx mid in
-          if is_library lname then
+          if is_library lname && mname <> JL.v_of then
           (
             let vx::vy::vz::[] = vxyz 0
             and mit = D.get_mit dx mid in
