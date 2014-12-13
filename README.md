@@ -25,11 +25,18 @@ Requirements
 This tool is tested under [OCaml][ml] 4.00.0 and [Ruby][rb] 1.8.6(7),
 so you need to install them (or higher versions of them).
 
-* OCaml SHA library (ocamlfind/findlib or FlexDLL)
+* OCaml package/library manager and SHA library
 
-If you're using a linux machine, you can easily find a distribution.
+To manipulate a SHA-1 signature (hash) in the DEX format,
+we utilize [OCaml SHA library][sha] via [ocamlfind/findlib][flib],
+an OCaml library manager.  The easiest way to install both is
+using [OPAM][opam], an OCaml package manager, which has
+both packages---[OPAM ocamlfind][opam-ocamlfind] and [OPAM sha][opam-sha].
 
-If not, e.g., using a Mac, you need to install it by yourself.
+You can also build and/or install both packages directly.
+If you're using a linux machine, you can easily find distributions.
+
+If not, e.g., using a Mac, you need to build it by yourself.
 You can find the original source codes at [here][sha].
 Build it by running make, and link the resulting directory into ocamlfind's
 root site-lib directory; or sudo make install.
@@ -65,6 +72,9 @@ dominator tree, etc.), you need to install [graphviz dot][dot].
 [sha]: https://github.com/vincenthz/ocaml-sha/
 [fdll]: http://alain.frisch.fr/flexdll.html
 [flib]: http://projects.camlcity.org/projects/findlib.html/
+[opam]: http://opam.ocaml.org/
+[opam-ocamlfind]: http://opam.ocaml.org/packages/ocamlfind/ocamlfind.1.5.5/
+[opam-sha]: http://opam.ocaml.org/packages/sha/sha.1.9/
 [apk]: http://code.google.com/p/android-apktool/
 [sdk]: http://developer.android.com/sdk/index.html
 [gem]: http://rubygems.org/
