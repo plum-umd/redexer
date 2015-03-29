@@ -371,7 +371,7 @@ object
       skip_cls <- skip_cls || not (adr_relevant dx cdef.D.c_class_id);
     if skip_cls then
     (
-      Log.i (Pf.sprintf "skip class: %s" cname)
+      Log.d (Pf.sprintf "skip class: %s" cname)
     )
 
   val mutable mid = D.no_idx
@@ -397,7 +397,7 @@ object
 
     if skip_mtd then
     (
-      Log.i (Pf.sprintf "skip : %s" (D.get_mtd_full_name dx mid))
+      Log.d (Pf.sprintf "skip : %s" (D.get_mtd_full_name dx mid))
     );
     let mit = D.get_mit dx mid in
     argv <- D.get_argv dx mit;
@@ -409,7 +409,7 @@ object
   (* to log API usage *)
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
-    Log.i (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
+    Log.d (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
 
     cur_citm <- citm;
 
