@@ -307,6 +307,9 @@ let api_cnt = ref 0
 let is_library (cname: string) : bool =
   L.exists (U.begins_with cname) ["Ljava"; "Landroid"]
 
+let is_not_javalang (cname: string) : bool =
+  not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"])
+
 let adr_relevant dx (cid: D.link) : bool =
   let ext_or_impl (cid': D.link) : bool =
     let sname = D.get_ty_str dx (D.get_superclass dx cid')
@@ -368,7 +371,7 @@ object
       skip_cls <- skip_cls || not (adr_relevant dx cdef.D.c_class_id);
     if skip_cls then
     (
-      Log.d (Pf.sprintf "skip class: %s" cname)
+      Log.i (Pf.sprintf "skip class: %s" cname)
     )
 
   val mutable mid = D.no_idx
@@ -391,9 +394,10 @@ object
     skip_mtd <- L.mem mname [J.init; J.clinit; J.hashCode]
              || D.is_synthetic emtd.D.m_access_flag
              || has_monitor;
+
     if skip_mtd then
     (
-      Log.d (Pf.sprintf "skip : %s" (D.get_mtd_full_name dx mid))
+      Log.i (Pf.sprintf "skip : %s" (D.get_mtd_full_name dx mid))
     );
     let mit = D.get_mit dx mid in
     argv <- D.get_argv dx mit;
@@ -405,7 +409,8 @@ object
   (* to log API usage *)
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
-    Log.d (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
+    Log.i (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
+
     cur_citm <- citm;
 
     (* to secure at least three registers for logging *)
@@ -499,7 +504,8 @@ object
           let lid = if sid = D.no_idx then cid else sid in
           let lname = D.get_ty_str dx lid in
           let mname = D.get_mtd_name dx mid in
-          if is_library lname && mname <> JL.v_of then
+          if is_library lname && is_not_javalang (D.get_mtd_full_name dx mid) then
+          (* mname <> JL.v_of then *)
           (
             let vx::vy::vz::[] = vxyz 0
             and mit = D.get_mit dx mid in
