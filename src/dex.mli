@@ -47,6 +47,10 @@ exception Wrong_dex of string
 (** raise if there is no other cases for match block *)
 exception Wrong_match of string
 
+(** raise when attempting to get last instruction of method that has
+    no return *)
+exception No_return
+
 (** raise if something is not implemented yet *)
 exception NOT_YET of string
 

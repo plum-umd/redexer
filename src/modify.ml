@@ -441,8 +441,10 @@ let get_last_cursor (dx: D.dex) (citm: D.code_item) : cursor =
     op = I.OP_THROW || (0x0e <= hx && hx <= 0x11) (* OP_RETURN_* *)
   in
   let ins =
-    if 1 = L.length inss then L.hd inss
-    else L.find find_return_or_throw inss
+    if 0 = L.length inss then (raise D.No_return)
+    else
+    (if 1 = L.length inss then L.hd inss
+     else L.find find_return_or_throw inss)
   in
   get_cursor citm ins
 

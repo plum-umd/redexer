@@ -55,6 +55,7 @@ module J = Java
 
 exception Wrong_dex of string
 exception Wrong_match of string
+exception No_return
 exception NOT_YET of string
 
 type dex = {

@@ -111,7 +111,8 @@ val get_ins : Dex.dex -> Dex.code_item -> cursor -> Instr.instr
 (** get the first {!Instr.instr} *)
 val get_fst_ins : Dex.dex -> Dex.code_item -> Instr.instr
 
-(** get the last {!Instr.instr} *)
+(** get the last {!Instr.instr}, raise {!Dex.No_return} if no return
+    for method *)
 val get_last_ins : Dex.dex -> Dex.code_item -> Instr.instr
 
 (** insert an {!Instr.instr} at {!cursor} point; {!cursor} will be advanced *)
