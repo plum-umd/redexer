@@ -1,38 +1,37 @@
-SOURCES := \
-	ocamlutil/stats.ml ocamlutil/clist.ml \
-	ocamlutil/uChar.ml ocamlutil/uTF8.ml \
-	ocamlutil/enum.ml ocamlutil/dynArray.ml \
-	src/util.ml src/log.ml src/java.ml src/instr.ml src/dex.ml \
-	src/parse.ml src/visitor.ml src/android.ml \
-	src/ext/unparse.ml src/ext/htmlunparse.ml \
-	src/ext/ctrlflow.ml src/ext/dataflow.ml \
-	src/ext/liveness.ml src/ext/propagation.ml src/ext/reaching.ml \
-	src/ext/callgraph.ml \
-	src/modify.ml src/combine.ml src/dump.ml \
-	src/ext/logging.ml src/ext/directed.ml \
-	src/main.ml
+default: redexer model
 
-DOC_FILES := \
-	src/util.mli src/log.mli src/java.mli src/instr.mli src/dex.mli \
-	src/parse.mli src/visitor.mli src/android.mli \
-	src/ext/unparse.mli src/ext/htmlunparse.mli \
-	src/ext/callgraph.mli src/ext/ctrlflow.mli src/ext/dataflow.mli \
-	src/ext/liveness.mli src/ext/propagation.mli src/ext/reaching.mli \
-	src/modify.mli src/combine.mli src/dump.mli \
-	src/ext/logging.mli src/main.mli
+all: redexer graphLog model
 
-RESULT := redexer
+# native code targets
+redexer: main.native
 
-OCAMLFLAGS := -g
-PACKS := sha
-LIBS := unix str
-ANNOTATE := yes
-CC := gcc
+# debugging code targets; could also (more likely) build *.d.byte separately
+debug: main.d.byte
 
-all: native-code
+# auxiliary targets
+doc:
+	ocamlbuild redexer.docdir/index.html
+	mkdir -p docs
+	rm -rf docs/api
+	mv redexer.docdir docs/api
 
-api: all htdoc
-	cp -rf doc/redexer/html/ docs/api/
-	rm -rf doc
+api: doc
 
--include OCamlMakefile
+clean:
+	ocamlbuild -clean
+	rm -f redexer redexer.d.byte redexer.native
+	rm -rf docs
+
+allclean: clean 
+
+# x.native; strip the .native extension after building
+%.native:
+	ocamlbuild -pkgs sha,str,unix $@
+	mv $@ $*
+
+# x.d.byte or x.byte
+%.byte:
+	ocamlbuild $@
+
+.PHONY: doc debug all model test clean modelclean allclean default
+
