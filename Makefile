@@ -4,6 +4,7 @@ all: redexer graphLog model
 
 # native code targets
 redexer: main.native
+	mv main redexer
 
 # debugging code targets; could also (more likely) build *.d.byte separately
 debug: main.d.byte
@@ -26,7 +27,7 @@ allclean: clean
 
 # x.native; strip the .native extension after building
 %.native:
-	ocamlbuild -pkgs sha,str,unix $@
+	ocamlbuild -pkgs sha,str,unix,ppx_deriving.std,ppx_deriving_yojson $@
 	mv $@ $*
 
 # x.d.byte or x.byte
