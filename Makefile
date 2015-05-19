@@ -11,12 +11,16 @@ debug: main.d.byte
 # auxiliary targets
 doc:
 	ocamlbuild redexer.docdir/index.html
+	mkdir -p docs
 	rm -rf docs/api
 	mv redexer.docdir docs/api
 
+api: doc
+
 clean:
 	ocamlbuild -clean
-	rm -f redexer redexer.d.byte redexer.native 
+	rm -f redexer redexer.d.byte redexer.native
+	rm -rf docs
 
 allclean: clean 
 
