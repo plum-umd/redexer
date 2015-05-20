@@ -1,0 +1,5 @@
+# Subdirectories
+<ocamlutil> or <src/**>: include
+
+true: package(sha,str,unix,ppx_deriving.std,ppx_deriving_yojson)
+

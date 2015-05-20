@@ -27,7 +27,7 @@ allclean: clean
 
 # x.native; strip the .native extension after building
 %.native:
-	ocamlbuild -pkgs sha,str,unix,ppx_deriving.std,ppx_deriving_yojson $@
+	ocamlbuild -cflag -dsource -use-ocamlfind $@
 	mv $@ $*
 
 # x.d.byte or x.byte
