@@ -1,3 +1,4 @@
+.DS_Store
 *~
 
 # Compiled source #
@@ -12,3 +13,5 @@
 *.cmi
 *.cmo
 *.cmx
+_build
+redexer

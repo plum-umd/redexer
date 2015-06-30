@@ -86,7 +86,7 @@ let outputdir = ref "output"
 let dump_html (tx : D.dex) : unit =
   St.time "dump_html" (Hup.generate_documentation tx !outputdir) !infile
 
-let lib = ref "logging/bin/classes.dex"
+let lib = ref "data/logging.dex"
 
 let combine (tx: D.dex) : unit =
  try (

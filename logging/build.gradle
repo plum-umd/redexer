@@ -13,3 +13,14 @@ allprojects {
         jcenter()
     }
 }
+
+// copy classes.dex to data/
+task copyDex (dependsOn: 'app:dexDebug', type: Copy) {
+    def redexer = ".."
+    from "app/build/intermediates/dex/debug"
+    into "$redexer/data"
+    rename { String filename ->
+        filename.replace("classes", "logging")
+    }
+    outputs.upToDateWhen { false } // forcefully executing
+}

@@ -1,5 +1,4 @@
-redexer
-=======
+# redexer
 
 Redexer is a reengineering tool that manipulates Android app binaries.
 This tool is able to parse a DEX file into an in-memory data structure;
@@ -8,8 +7,7 @@ to infer with which parameters the app uses certain permissions
 structure to produce an output DEX file (we name these features
 Dr. Android, which stands for Dalvik Rewriting for Android).
 
-Publications
-------------
+## Publications
 
 * [Dr. Android and Mr. Hide: Fine-grained Permissions in Android Applications.][spsm]
   Jinseong Jeon, Kristopher K. Micinski, Jeffrey A. Vaughan, Ari Fogel, Nikhilesh Reddy, Jeffrey S. Foster, and Todd Millstein.
@@ -17,12 +15,12 @@ Publications
 
 [spsm]: http://dx.doi.org/10.1145/2381934.2381938
 
-Requirements
-------------
+
+## Requirements
 
 * OCaml and Ruby
 
-This tool is tested under [OCaml][ml] 4.00.0 and [Ruby][rb] 1.8.6(7),
+This tool is tested under [OCaml][ml] 4.02.2 and [Ruby][rb] 1.8.6(7),
 so you need to install them (or higher versions of them).
 
 * OCaml package/library manager and SHA library
@@ -81,8 +79,8 @@ dominator tree, etc.), you need to install [graphviz dot][dot].
 [xml]: http://nokogiri.org/
 [dot]: http://www.graphviz.org/
 
-Build
------
+
+## Build
 
 To build redexer, just make!  You can see redexer binary at the top level.
 
@@ -97,8 +95,7 @@ You can generate API documents in html format as well.
 
     $ make api
 
-Usage
------
+## Usage
 
 * help
 
@@ -307,14 +304,15 @@ Assume path to ANDROID_SDK is set.
 * logging
 
 This is a variant of the rewrite feature.  Using this feature, you can log
-apps behavior from specific points of view.  First, build logging/ as follows.
+apps behavior from specific points of view.  The pre-built dex file
+for logging library is provided: data/logging.dex.  If you want to add
+more features or utilities, build it as follows:
 
     $ cd logging
-    $ android update project -p .
-    $ ant debug
+    $ gradle copyDex
     $ cd ..
 
-After logging/bin/classes.dex is generated correctly, use the following command.
+Then, use the following command.
 
     $ ruby scripts/cmd.rb target.apk --cmd logging
 
@@ -353,5 +351,5 @@ vulnerabilities in 3rd party libraries.  More details are described at
 the following paper:
 
     * Brahmastra: Driving Apps to Test the Security of Third-Party Components.
-    R. Bhoraskar, et. al. In 23rd Usenix Security Symposium (Security '14).
+    R. Bhoraskar, et al., In 23rd Usenix Security Symposium (Security '14).
 
