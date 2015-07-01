@@ -52,7 +52,7 @@ cmds = [
   "exported", "permissions", "sdk", "launcher",
   "activity", "service", "provider", "receiver",
   "custom_views", "fragments", "buttons",
-  "hello", "logging", "directed"
+  "hello", "logging", "logging_ui", "directed"
 ]
 
 cmd = ""
@@ -250,7 +250,7 @@ when "custom_views", "fragments", "buttons"
     require 'pp'
     PP.pp res
   end
-when "logging", "directed"
+when "logging", "logging_ui", "directed"
   apk.send(cmd.to_sym)
   if not apk.succ
     puts apk.out

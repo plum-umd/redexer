@@ -104,6 +104,18 @@ class Apk
     @succ = Dex.succ
   end
 
+  DAT = File.join(HOME, "data")
+  LIBDEX = File.join(DAT, "logging-ui.dex")
+
+  def logging_ui()
+    @manifest.add_a11y_srv()
+    @manifest.save_to(xml)
+    @res.add_a11y_srv_meta(@manifest.pkg)
+    Dex.combine(dex, LIBDEX, dex)
+    @out << Dex.out
+    @succ = Dex.succ
+  end
+
   def directed()
     f = Tempfile.new("redexer", HOME)
     begin

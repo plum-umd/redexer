@@ -7,6 +7,7 @@ to infer with which parameters the app uses certain permissions
 structure to produce an output DEX file (we name these features
 Dr. Android, which stands for Dalvik Rewriting for Android).
 
+
 ## Publications
 
 * [Dr. Android and Mr. Hide: Fine-grained Permissions in Android Applications.][spsm]
@@ -52,7 +53,7 @@ variables are set correctly as follows:
 To unpack and repack apk files, we use [apktool][apk], an open source APK
 reengineering tool.  Since it uses aapt, Android Asset Packaging Tool,
 you need to install [Android SDK][sdk] or sources.  Besides, we use
-zipalign, which also comes from Android SDK, to optimize rewritten apps.
+`zipalign`, which also comes from Android SDK, to optimize rewritten apps.
 
 * RubyGems and Nokogiri
 
@@ -94,6 +95,7 @@ for apktool is up to users.  For instance, you need to do like
 You can generate API documents in html format as well.
 
     $ make api
+
 
 ## Usage
 
@@ -208,7 +210,7 @@ This option conducts a classic forward data-flow analysis.
 
 * dependants
 
-This option finds class dependancy.
+This option finds class dependency.
 
     $ ruby scripts/cmd.rb target.(apk|dex) --cmd dependants --mtd cls.mtd
 
@@ -305,14 +307,14 @@ Assume path to ANDROID_SDK is set.
 
 This is a variant of the rewrite feature.  Using this feature, you can log
 apps behavior from specific points of view.  The pre-built dex file
-for logging library is provided: data/logging.dex.  If you want to add
+for logging library is provided: `data/logging.dex`.  If you want to add
 more features or utilities, build it as follows:
 
     $ cd logging
     $ gradle copyDex
     $ cd ..
 
-Then, use the following command.
+Then, use the following command:
 
     $ ruby scripts/cmd.rb target.apk --cmd logging
 
@@ -325,7 +327,7 @@ all information in the memory, you may use the offline mode of the script:
     $ ./scripts/trim.py -d
 
 Note that all command-line parameters will be passed to adb logcat, and
-by default, "org.umd.logging:I *:S" is passed to filter out irrelevant logs.
+by default, `org.umd.logging:I *:S` is passed to filter out irrelevant logs.
 
 If logs overflow, you should use the online mode:
 
@@ -337,6 +339,27 @@ In either mode, logs are saved in log.txt and shown to the screen at once.
 Thus, after collecting logs, you may need to move that file, e.g.:
 
     $ mv log.txt app.scenario.txt
+
+* logging user interactions
+
+The logging feature above is general in that you can specify what to log
+at a method level.  (See `logging` module for more details.)
+However, this is sometimes too verbose and may induce performance degradation.
+This feature is designed to log only user interactions.  Using this feature,
+you can capture UI-related events only.  Similarly, the pre-built dex file
+for logging library is provided: `data/logging-ui.dex`.  If you want to modify
+the verbosity of UI information, build it as follows:
+
+    $ cd logging-ui
+    $ gradle copyDex
+    $ cd ..
+
+Then, use the following command:
+
+    $ ruby scripts/cmd.rb target.apk --cmd logging_ui
+
+In the logcat, messages with tags `org.umd.logging_ui.*` are interactions
+between the user and the app under test.
 
 * directed exploration
 

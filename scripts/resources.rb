@@ -32,6 +32,7 @@
 
 class Resources
   require 'nokogiri'
+  require 'fileutils'
 
   attr_reader :out
 
@@ -137,6 +138,28 @@ class Resources
     ids
   end
 
+  A11Y_META = "ui_logging_service"
+  A11Y_SRV = "accessibility-service"
+
+  def add_a11y_srv_meta(pkg)
+    doc = Nokogiri::XML::Document.new
+    # <accessibility-service .../>
+    mnode = Nokogiri::XML::Node.new(A11Y_SRV, doc)
+    mnode["xmlns:android"] = "http://schemas.android.com/apk/res/android"
+    a11y = NS+":accessibility"
+    mnode[a11y+"EventTypes"] = "typeAllMask"
+    mnode[a11y+"Flags"] = "flagReportViewIds"
+    mnode[a11y+"FeedbackType"] = "feedbackGeneric"
+    mnode[NS+":canRetrieveWindowContent"] = "true"
+    mnode[NS+":packageNames"] = pkg
+
+    doc.add_child(mnode)
+    xml_dir = get_or_create_dir(@dir, "xml")
+    f = File.open(File.join(xml_dir, A11Y_META+".xml"), 'w')
+    doc.write_xml_to(f)
+    f.close
+  end
+
 private
 
   def extract_str(elt)
@@ -156,6 +179,10 @@ private
   # tmp_blahblah/res/layout*/*.xml => layout*/*.xml
   def sanitize_path(res)
     res.split('/').last(2).join('/')
+  end
+
+  def get_or_create_dir(base, dir_name)
+    FileUtils::mkdir_p File.join(base, dir_name)
   end
 
 end
