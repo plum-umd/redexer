@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">logging-ui</string>
+    <string name="accessibility_service_label">UI Logging</string>
+</resources>
