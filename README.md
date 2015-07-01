@@ -358,6 +358,10 @@ Then, use the following command:
 
     $ ruby scripts/cmd.rb target.apk --cmd logging_ui
 
+The logging library is inherited from android a11y service, which requires
+user's explicit consent.  Thus, after installing the rewritten apk, go to
+`Settings/Accessibility` and turn on `UI Logging` service.
+(This step can be viewed similar to turning on device debugging mode.)
 In the logcat, messages with tags `org.umd.logging_ui.*` are interactions
 between the user and the app under test.
 
