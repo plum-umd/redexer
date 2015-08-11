@@ -89,7 +89,7 @@ class Dex
     when :fine
       str = "-logging-detail"
     end
-    self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging #{detail} #{TOO}")
+    self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging #{str} #{TOO}")
   end
 
   def self.directed(dex_name, acts, pkg, *out_name)

@@ -258,7 +258,7 @@ when "custom_views", "fragments", "buttons"
     PP.pp res
   end
 when "logging", "logging_ui", "directed"
-  apk.send(cmd.to_sym)
+  apk.send(cmd.to_sym,detail)
   if not apk.succ
     puts apk.out
     close(apk)
