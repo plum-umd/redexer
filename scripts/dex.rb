@@ -80,9 +80,16 @@ class Dex
   
   LOGREGEXES = File.join(DAT, "logging-regexes.txt")
 
-  def self.logging(dex_name=DEX, *out_name)
+  def self.logging(dex_name=DEX, detail=:none, *out_name)
     opt = self.out_opt(out_name)
-    self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging -logging-mtds #{LOGREGEXES} #{TOO}")
+    str = ""
+    case detail
+    when :regex
+      str = "-logging-mtds #{LOGREGEXES}"
+    when :fine
+      str = "-logging-detail"
+    end
+    self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging #{detail} #{TOO}")
   end
 
   def self.directed(dex_name, acts, pkg, *out_name)
