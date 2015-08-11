@@ -38,6 +38,7 @@ class Dex
   DAT  = File.join(HOME, "data")
   REDEXER = File.join(HOME, "redexer")
 
+
   QUIET = "2>/dev/null"
   TOO = "2>&1"
 
@@ -77,9 +78,11 @@ class Dex
     self.runcmd("#{REDEXER} #{opt} -lib #{lib} -combine #{dex_name}")
   end
   
+  LOGREGEXES = File.join(DAT, "logging-regexes.txt")
+
   def self.logging(dex_name=DEX, *out_name)
     opt = self.out_opt(out_name)
-    self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging #{TOO}")
+    self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging -logging-mtds #{LOGREGEXES} #{TOO}")
   end
 
   def self.directed(dex_name, acts, pkg, *out_name)
@@ -90,7 +93,7 @@ class Dex
   end
   
   CSS = File.join(DAT, "dex-format.css")
-
+  
   def self.htmlunparse(dex_name=DEX, dir_name="output")
     if not File.exists?(dir_name)
       puts "Creating new output directory: #{dir_name}"
