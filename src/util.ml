@@ -154,6 +154,12 @@ let begins_with (str: string) (prefix: string) : bool =
 let ends_with (str: string) (suffix: string) : bool =
   begins_with (str_rev str) (str_rev suffix)
 
+(* matches : string -> string -> bool *)
+let matches (str: string) (regex: string) : bool =
+  let re = RE.regexp_string regex in
+  try ignore (RE.search_forward re str 0); true
+  with Not_found -> false
+
 (* contains : string -> string -> bool *)
 let contains (str: string) (sub: string) : bool =
   let re = RE.regexp_string sub in

@@ -38,8 +38,14 @@
 
 (** This module provides special functions for logging apps *)
 
+(** Set the granularity for logging *)
+type detail =
+  | Default              (** Default granularity *)
+  | Fine                 (** Fine grained granularity *)
+  | Regex of string list (** Log all methods matching a set of regular expressions *)
+
 (** conclude more logging *)
-val detail : bool ref
+val detail : detail ref
 
 (** add non-overriden transition methods *)
 val add_transition : Dex.dex -> unit

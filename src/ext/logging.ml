@@ -79,7 +79,13 @@ let logMExt = "logMethodExit"
 let logAEnt = "logAPIEntry"
 let logAExt = "logAPIExit"
 
-let detail = ref false
+(* Granularity of methods to be logged *)
+type detail =
+  | Default
+  | Fine   
+  | Regex of string list
+
+let detail = ref Default
 
 module SM = Map.Make(String)
 
@@ -310,11 +316,11 @@ let is_library (cname: string) : bool =
 let is_not_javalang (cname: string) : bool =
   not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"])
 
-let adr_relevant dx (cid: D.link) : bool =
+let adr_relevant dx (cid: D.link) regexes : bool =
   let ext_or_impl (cid': D.link) : bool =
     let sname = D.get_ty_str dx (D.get_superclass dx cid')
     and inames = L.map (D.get_ty_str dx) (D.get_interfaces dx cid') in
-    L.exists (fun sup -> U.begins_with sup "Landroid") (sname :: inames)
+    L.exists (fun sup -> L.exists (fun regex -> U.matches sup regex) regexes) (sname :: inames)
   in
   D.in_hierarchy dx ext_or_impl cid
 
@@ -365,10 +371,13 @@ object
   method v_cdef (cdef: D.class_def_item) : unit =
     cid <- cdef.D.c_class_id;
     let cname = D.get_ty_str dx cid in
+    let dfltlst = ["^Landroid"] in
     (* to avoid the Logger class as well as libraries *)
     skip_cls <- U.begins_with cname logging || is_library cname;
-    if not !detail then
-      skip_cls <- skip_cls || not (adr_relevant dx cdef.D.c_class_id);
+    skip_cls <- skip_cls || (match !detail with
+        | Default -> not (adr_relevant dx cdef.D.c_class_id dfltlst)
+        | Fine -> false
+        | Regex strs -> not (adr_relevant dx cdef.D.c_class_id strs));
     if skip_cls then
     (
       Log.d (Pf.sprintf "skip class: %s" cname)
