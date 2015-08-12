@@ -85,7 +85,7 @@ class Dex
     str = ""
     case detail
     when :regex
-      str = "-logging-mtds #{LOGREGEXES}"
+      str = "-logging-regex #{LOGREGEXES}"
     when :fine
       str = "-logging-detail"
     end
