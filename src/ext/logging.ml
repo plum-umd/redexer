@@ -403,7 +403,6 @@ object
     skip_mtd <- L.mem mname [J.init; J.clinit; J.hashCode]
              || D.is_synthetic emtd.D.m_access_flag
              || has_monitor;
-
     if skip_mtd then
     (
       Log.d (Pf.sprintf "skip : %s" (D.get_mtd_full_name dx mid))
@@ -515,7 +514,7 @@ object
           let lid = if sid = D.no_idx then cid else sid in
           let lname = D.get_ty_str dx lid in
           let mname = D.get_mtd_name dx mid in
-          if is_library lname && is_not_javalang (D.get_mtd_full_name dx mid) then
+          if true (*is_library lname && is_not_javalang (D.get_mtd_full_name dx mid)*) then
           (* mname <> JL.v_of then *)
           (
             let vx::vy::vz::[] = vxyz 0
