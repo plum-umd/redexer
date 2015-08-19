@@ -310,11 +310,14 @@ let add_transition (dx: D.dex) : unit =
 let in_out_cnt = ref 0
 let api_cnt = ref 0
 
+let libraries = ["Ljava"; "Landroid"; "Lorg/apache"]
+
 let is_library (cname: string) : bool =
-  L.exists (U.begins_with cname) ["Ljava"; "Landroid"]
+  L.exists (U.begins_with cname) libraries
 
 let is_not_javalang (cname: string) : bool =
   not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"])
+
 
 let adr_relevant dx (cid: D.link) regexes : bool =
   let ext_or_impl (cid': D.link) : bool =
@@ -391,6 +394,8 @@ object
   (* the type of return value, if exists *)
   val mutable rety = D.no_idx
   val mutable is_void = false
+
+  (* Visits method entries, attempts to insert logging code. *)
   method v_emtd (emtd: D.encoded_method) : unit =
     mid <- emtd.D.method_idx;
     mname <- D.get_mtd_name dx mid;
@@ -403,6 +408,7 @@ object
     skip_mtd <- L.mem mname [J.init; J.clinit; J.hashCode]
              || D.is_synthetic emtd.D.m_access_flag
              || has_monitor;
+
     if skip_mtd then
     (
       Log.d (Pf.sprintf "skip : %s" (D.get_mtd_full_name dx mid))
@@ -514,7 +520,14 @@ object
           let lid = if sid = D.no_idx then cid else sid in
           let lname = D.get_ty_str dx lid in
           let mname = D.get_mtd_name dx mid in
-          if true (*is_library lname && is_not_javalang (D.get_mtd_full_name dx mid)*) then
+          let fine_method (cname: string) : bool =
+            U.begins_with cname "Ljava/lang/reflect" || not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"]) in
+          (* decide whether or not to log a given method name *)
+          let log_method_call mname = match !detail with
+            | Default  -> is_library lname && is_not_javalang (D.get_mtd_full_name dx mid)
+            | Fine     -> is_library lname && fine_method (D.get_mtd_full_name dx mid)
+            | Regex rl -> L.exists (fun regex -> U.matches mname regex) rl in
+          if log_method_call mname then
           (* mname <> JL.v_of then *)
           (
             let vx::vy::vz::[] = vxyz 0
