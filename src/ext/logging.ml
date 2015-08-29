@@ -520,13 +520,16 @@ object
           let lid = if sid = D.no_idx then cid else sid in
           let lname = D.get_ty_str dx lid in
           let mname = D.get_mtd_name dx mid in
+          let full = D.get_mtd_full_name dx mid in
           let fine_method (cname: string) : bool =
             U.begins_with cname "Ljava/lang/reflect" || not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"]) in
           (* decide whether or not to log a given method name *)
           let log_method_call mname = match !detail with
-            | Default  -> is_library lname && is_not_javalang (D.get_mtd_full_name dx mid)
-            | Fine     -> is_library lname && fine_method (D.get_mtd_full_name dx mid)
-            | Regex rl -> L.exists (fun regex -> U.matches mname regex) rl in
+            | Default  -> is_library lname && is_not_javalang full
+            | Fine     -> is_library lname && fine_method full
+            | Regex rl -> fine_method full
+                          || L.exists (fun regex ->
+                              U.matches full regex) rl in
           if log_method_call mname then
           (* mname <> JL.v_of then *)
           (
