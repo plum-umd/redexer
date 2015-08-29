@@ -523,13 +523,27 @@ object
           let full = D.get_mtd_full_name dx mid in
           let fine_method (cname: string) : bool =
             U.begins_with cname "Ljava/lang/reflect" || not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"]) in
+          (* Regular expressions of methods to blacklist *)
+          let blacklist_regexes =
+            [] in
+          (* Check if a method should not be logged. *)
+          let blacklist name =
+            L.exists (fun x -> U.matches name x) blacklist_regexes in
+          (* Regular expressions of methods to whitelist *)
+          let whitelist_regexes =
+            [] in
+          (* Check if a method should not be logged. *)
+          let whitelist name =
+            L.exists (fun x -> U.matches name x) blacklist_regexes in
           (* decide whether or not to log a given method name *)
           let log_method_call mname = match !detail with
             | Default  -> is_library lname && is_not_javalang full
             | Fine     -> is_library lname && fine_method full
-            | Regex rl -> fine_method full
-                          || L.exists (fun regex ->
-                              U.matches full regex) rl in
+            | Regex rl -> 
+              if blacklist full then false
+              else
+                fine_method full || whitelist full 
+          in
           if log_method_call mname then
           (* mname <> JL.v_of then *)
           (
