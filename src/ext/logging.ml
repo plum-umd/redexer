@@ -380,7 +380,7 @@ object
     skip_cls <- skip_cls || (match !detail with
         | Default -> not (adr_relevant dx cdef.D.c_class_id dfltlst)
         | Fine -> false
-        | Regex strs -> not (adr_relevant dx cdef.D.c_class_id strs));
+        | Regex strs -> false);
     if skip_cls then
     (
       Log.d (Pf.sprintf "skip class: %s" cname)
@@ -525,7 +525,7 @@ object
             U.begins_with cname "Ljava/lang/reflect" || not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"]) in
           (* Regular expressions of methods to blacklist *)
           let blacklist_regexes =
-            [] in
+            ["Lbr/com/threeloops/android/lib/paint/view/paint/DrawUtils"] in
           (* Check if a method should not be logged. *)
           let blacklist name =
             L.exists (fun x -> U.matches name x) blacklist_regexes in
@@ -544,9 +544,13 @@ object
               else
                 fine_method full || whitelist full 
           in
+          let do_logging = log_method_call mname in
+          if (not do_logging) then
+            Log.i ("skipping log of method "^ full);
           if log_method_call mname then
           (* mname <> JL.v_of then *)
           (
+            Log.i ("log of method "^ full);
             let vx::vy::vz::[] = vxyz 0
             and mit = D.get_mit dx mid in
             let ent_cursor = M.get_cursor cur_citm ins in
