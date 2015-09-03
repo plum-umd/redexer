@@ -352,6 +352,19 @@ let mtd_sig_exists (dx: D.dex) (cid: D.link) (mname: string) : D.link =
     if D.own_the_mtd dx cid mid then mid else D.no_idx
   with D.Wrong_dex _ -> D.no_idx
 
+(* method implementation exists? *)
+let mtd_body_exists (dx: D.dex) (cid: D.link) (mname: string) : D.link =
+  let mid = mtd_sig_exists dx cid mname in
+  if mid = D.no_idx then mid else
+  try let _, _ = D.get_citm dx cid mid in mid
+  with D.Wrong_dex _ -> D.no_idx
+
+
+(* make_method_overridable : D.dex -> D.link -> D.link -> unit *)
+let make_method_overridable (dx: D.dex) (cid: D.link) (mid: D.link) : unit =
+  let emtd = D.get_emtd dx cid mid in
+  emtd.D.m_access_flag <- wipe_off_final emtd.D.m_access_flag
+
 (* new_sig : D.dex -> D.link -> string -> string -> string list -> D.link *)
 let new_sig (dx: D.dex) (cid: D.link) (mname: string)
     (rety: string) (argv: string list) : D.link =
@@ -365,15 +378,22 @@ let new_sig (dx: D.dex) (cid: D.link) (mname: string)
       D.m_name_id  = find_or_new_str dx mname;
     } in
     DA.add dx.D.d_method_ids mit;
+    (* Climb inheratance hierarchy to strip off final qualifiers *)
+    let finder (_, mit') : bool =
+      D.mtd_comp dx mit mit' = 0
+    in
+    let rec loop cid = 
+      let sid = D.get_superclass dx cid in
+      if sid = D.no_idx then () else
+        ((try
+            let mid = fst (L.find finder (D.get_mtds dx sid)) in
+            make_method_overridable dx sid mid
+          with Not_found -> ());
+         loop sid)
+    in
+    loop cid;
     nid
   )
-
-(* method implementation exists? *)
-let mtd_body_exists (dx: D.dex) (cid: D.link) (mname: string) : D.link =
-  let mid = mtd_sig_exists dx cid mname in
-  if mid = D.no_idx then mid else
-  try let _, _ = D.get_citm dx cid mid in mid
-  with D.Wrong_dex _ -> D.no_idx
 
 (* new_method : D.dex -> D.link -> string
   -> J.access_flag list -> string -> string list -> D.link *)
@@ -408,10 +428,6 @@ let new_method (dx: D.dex) (cid: D.link) (mname: string)
     mid
   )
 
-(* make_method_overridable : D.dex -> D.link -> D.link -> unit *)
-let make_method_overridable (dx: D.dex) (cid: D.link) (mid: D.link) : unit =
-  let emtd = D.get_emtd dx cid mid in
-  emtd.D.m_access_flag <- wipe_off_final emtd.D.m_access_flag
 
 (* instruction inserting point *)
 type cursor = int
