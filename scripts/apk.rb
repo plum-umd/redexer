@@ -74,6 +74,7 @@ class Apk
     @res = Resources.new(@dir)
     @out = ""
     @succ = true
+    @detail = :none
   end
 
   def dex
@@ -97,23 +98,13 @@ class Apk
     end
     @succ
   end
-  
-  def logging_regex()
-    Dex.logging_regex
-    logging()
-  end
 
-  def logging_fine()
-    Dex.logging_fine
-    logging()
-  end
-  
-  def logging()
-    Dex.logging(dex, dex)
+  def logging(detail)
+    Dex.logging(dex,detail,dex)
     @out << Dex.out
     @succ = Dex.succ
   end
-
+  
   DAT = File.join(HOME, "data")
   LIBDEX = File.join(DAT, "logging-ui.dex")
 
