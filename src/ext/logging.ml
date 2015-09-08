@@ -371,7 +371,7 @@ object
       skip_cls <- skip_cls || not (adr_relevant dx cdef.D.c_class_id);
     if skip_cls then
     (
-      Log.d (Pf.sprintf "skip class: %s" cname)
+      Log.i (Pf.sprintf "skipping class: %s" cname)
     )
 
   val mutable mid = D.no_idx
@@ -397,7 +397,7 @@ object
 
     if skip_mtd then
     (
-      Log.d (Pf.sprintf "skip : %s" (D.get_mtd_full_name dx mid))
+      Log.i (Pf.sprintf "skipping entry of: %s" (D.get_mtd_full_name dx mid))
     );
     let mit = D.get_mit dx mid in
     argv <- D.get_argv dx mit;

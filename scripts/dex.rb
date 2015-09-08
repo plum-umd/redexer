@@ -36,12 +36,13 @@ class Dex
   HERE = File.dirname(THIS_FILE)
   HOME = File.join(HERE, "..")
   DAT  = File.join(HOME, "data")
-  REDEXER = File.join(HOME, "redexer")
+  REDEXER = File.join(HOME, "redexer ")
 
   QUIET = "2>/dev/null"
   TOO = "2>&1"
 
   DEX = File.join(HOME, "classes.dex")
+  @@level = :default
 
   def self.unparse(dex_name=DEX, *file_name)
     yml = `#{REDEXER} -unparse #{dex_name} #{QUIET}`
@@ -77,9 +78,25 @@ class Dex
     self.runcmd("#{REDEXER} #{opt} -lib #{lib} -combine #{dex_name}")
   end
   
+  def self.logging_fine
+    @@level = :fine
+  end
+  
+  def self.logging_regex
+    @@level = :regex
+  end
+  
   def self.logging(dex_name=DEX, *out_name)
     opt = self.out_opt(out_name)
-    self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging #{TOO}")
+    case @@level
+    when :fine
+      logging = "-logging -logging-detail"
+    when :regex
+      logging = "-logging -logging-regex"
+    else
+      logging = "-logging"
+    end
+    self.runcmd("#{REDEXER} #{opt} #{dex_name} #{logging} #{TOO}")
   end
 
   def self.directed(dex_name, acts, pkg, *out_name)

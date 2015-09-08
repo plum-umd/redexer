@@ -98,6 +98,16 @@ class Apk
     @succ
   end
   
+  def logging_regex()
+    Dex.logging_regex
+    logging()
+  end
+
+  def logging_fine()
+    Dex.logging_fine
+    logging()
+  end
+  
   def logging()
     Dex.logging(dex, dex)
     @out << Dex.out
