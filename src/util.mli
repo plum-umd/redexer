@@ -84,8 +84,11 @@ val begins_with : string -> string -> bool
 (** [true] if the given [string] ends with the given suffix *)
 val ends_with : string -> string -> bool
 
-(** [true] if the given [string] contains the other [string] *)
+(** [true] if the given [string] matches the regular expression [string] *)
 val contains : string -> string -> bool
+
+(** [true] if the given [string] begins with the given prefix *)
+val matches : string -> string -> bool
 
 (** find the common prefix of the given [string]s *)
 val common_prefix : string -> string -> string

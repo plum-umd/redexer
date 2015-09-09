@@ -79,7 +79,13 @@ let logMExt = "logMethodExit"
 let logAEnt = "logAPIEntry"
 let logAExt = "logAPIExit"
 
-let detail = ref false
+(* Granularity of methods to be logged *)
+type detail =
+  | Default
+  | Fine   
+  | Regex of string list
+
+let detail = ref Default
 
 module SM = Map.Make(String)
 
@@ -304,17 +310,20 @@ let add_transition (dx: D.dex) : unit =
 let in_out_cnt = ref 0
 let api_cnt = ref 0
 
+let libraries = ["Ljava"; "Landroid"; "Lorg/apache"]
+
 let is_library (cname: string) : bool =
-  L.exists (U.begins_with cname) ["Ljava"; "Landroid"]
+  L.exists (U.begins_with cname) libraries
 
 let is_not_javalang (cname: string) : bool =
   not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"])
 
-let adr_relevant dx (cid: D.link) : bool =
+
+let adr_relevant dx (cid: D.link) regexes : bool =
   let ext_or_impl (cid': D.link) : bool =
     let sname = D.get_ty_str dx (D.get_superclass dx cid')
     and inames = L.map (D.get_ty_str dx) (D.get_interfaces dx cid') in
-    L.exists (fun sup -> U.begins_with sup "Landroid") (sname :: inames)
+    L.exists (fun sup -> L.exists (fun regex -> U.matches sup regex) regexes) (sname :: inames)
   in
   D.in_hierarchy dx ext_or_impl cid
 
@@ -349,6 +358,30 @@ class logger (dx: D.dex) =
   in
   let v_of_map = SM.mapi get_v_of c_map 
   in
+  (* Regular expressions of methods to blacklist *)
+  let blacklist_regexes =
+    ["Lbr/com/threeloops/android/lib/paint/view/paint/DrawUtils"] in
+  (* Check if a method should not be logged. *)
+  let blacklist name =
+    L.exists (fun x -> U.matches name x) blacklist_regexes in
+  (* Regular expressions of methods to whitelist *)
+  let whitelist_regexes =
+    [] in
+  (* Check if a method should not be logged. *)
+  let whitelist name =
+    L.exists (fun x -> U.matches name x) blacklist_regexes in
+  let fine_method (cname: string) : bool =
+    U.begins_with cname "Ljava/lang/reflect"
+    || not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"]) in
+  (* decide whether or not to log a given method name *)
+  let instrument_method name = match !detail with
+    | Default  -> is_library name && is_not_javalang name
+    | Fine     -> is_library name && fine_method name
+    | Regex rl -> 
+      if blacklist name then false
+      else
+        fine_method name || whitelist name 
+  in
   let auto_boxing (r: int) (ty: D.link) : I.instr =
     let tname = D.get_ty_str dx ty in
     (* below will raise an exception unless primitive type *)
@@ -362,18 +395,26 @@ object
   inherit V.iterator dx
 
   val mutable cid = D.no_idx
+
+  (* Visited upon *class* entry. We skip classes for which we don't
+     have any code: Android internal classes, apache.org.* classes,
+     etc...
+  *)
   method v_cdef (cdef: D.class_def_item) : unit =
     cid <- cdef.D.c_class_id;
     let cname = D.get_ty_str dx cid in
+    let dfltlst = ["^Landroid"] in
     (* to avoid the Logger class as well as libraries *)
     skip_cls <- U.begins_with cname logging || is_library cname;
-    if not !detail then
-      skip_cls <- skip_cls || not (adr_relevant dx cdef.D.c_class_id);
+    skip_cls <- skip_cls || (match !detail with
+        | Default -> not (adr_relevant dx cdef.D.c_class_id dfltlst)
+        | Fine -> false
+        | Regex strs -> 
+          (blacklist cname || not (whitelist cname)));
     if skip_cls then
     (
-      Log.d (Pf.sprintf "skip class: %s" cname)
+      Log.i (Pf.sprintf "skipping class: %s" cname)
     )
-
   val mutable mid = D.no_idx
   (* to determine supercall in constructors *)
   val mutable mname = ""
@@ -382,6 +423,8 @@ object
   (* the type of return value, if exists *)
   val mutable rety = D.no_idx
   val mutable is_void = false
+
+  (* Visits method entries, attempts to insert logging code. *)
   method v_emtd (emtd: D.encoded_method) : unit =
     mid <- emtd.D.method_idx;
     mname <- D.get_mtd_name dx mid;
@@ -397,7 +440,7 @@ object
 
     if skip_mtd then
     (
-      Log.d (Pf.sprintf "skip : %s" (D.get_mtd_full_name dx mid))
+      Log.i (Pf.sprintf "skipping entry of: %s" (D.get_mtd_full_name dx mid))
     );
     let mit = D.get_mit dx mid in
     argv <- D.get_argv dx mit;
@@ -506,9 +549,13 @@ object
           let lid = if sid = D.no_idx then cid else sid in
           let lname = D.get_ty_str dx lid in
           let mname = D.get_mtd_name dx mid in
-          if is_library lname && is_not_javalang (D.get_mtd_full_name dx mid) then
-          (* mname <> JL.v_of then *)
+          let full = D.get_mtd_full_name dx mid in
+          let do_logging = instrument_method mname in
+          if (not do_logging) then
+            (Log.i ("skipping log of method "^ full))
+          else
           (
+            Log.i ("log of method "^ full);
             let vx::vy::vz::[] = vxyz 0
             and mit = D.get_mit dx mid in
             let ent_cursor = M.get_cursor cur_citm ins in

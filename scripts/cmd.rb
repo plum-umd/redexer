@@ -52,7 +52,7 @@ cmds = [
   "exported", "permissions", "sdk", "launcher",
   "activity", "service", "provider", "receiver",
   "custom_views", "fragments", "buttons",
-  "hello", "logging", "logging_ui", "directed"
+  "hello", "logging", "logging_fine", "logging_regex", "logging_ui", "directed"
 ]
 
 cmd = ""
@@ -61,10 +61,17 @@ sdk = nil
 mtd = nil
 lib = nil
 to = nil
+detail = :none
 outputdir = nil
 
 option_parser = OptionParser.new do |opts|
   opts.banner = "Usage: ruby #{__FILE__} target.(apk|dex) [options]"
+  opts.on("--logging-fine", "turn on fine grained logging") do
+    detail = :fine
+  end    
+  opts.on("--logging-regex", "turn on regex based logging") do
+    detail = :regex
+  end    
   opts.on("--cmd command", cmds, cmds.join(", ")) do |c|
     cmd = c
   end
@@ -251,7 +258,7 @@ when "custom_views", "fragments", "buttons"
     PP.pp res
   end
 when "logging", "logging_ui", "directed"
-  apk.send(cmd.to_sym)
+  apk.send(cmd.to_sym,detail)
   if not apk.succ
     puts apk.out
     close(apk)
