@@ -358,18 +358,41 @@ class logger (dx: D.dex) =
   in
   let v_of_map = SM.mapi get_v_of c_map 
   in
+
+  (* Map implementation *)
+  let rec map (f, l) = match l with
+    | [] -> []
+    | (h::t) -> (f h)::(map (f, t)) in
+
+  (* Regular expressions of methods to whitelist *)
+  let rec read_regexp_config (filename: string) : string list = 
+    let chan = open_in filename in
+    let reg_list = (recursive_read chan) in
+    close_in chan ;
+    (* print_list reg_list ; *)
+    reg_list
+  and recursive_read chan : string list =
+    try
+      let line = input_line chan in
+      (line :: recursive_read chan)
+    with End_of_file ->
+      []
+  in
+
   (* Regular expressions of methods to blacklist *)
-  let blacklist_regexes =
-    ["Lbr/com/threeloops/android/lib/paint/view/paint/DrawUtils"] in
+  let blacklist_regexes = map (U.parse_regexp, (read_regexp_config "data/blacklist.txt"))in
+
   (* Check if a method should not be logged. *)
   let blacklist name =
     L.exists (fun x -> U.matches name x) blacklist_regexes in
+
   (* Regular expressions of methods to whitelist *)
-  let whitelist_regexes =
-    [] in
+  let whitelist_regexes = map (U.parse_regexp, (read_regexp_config "data/whitelist.txt")) in
+
   (* Check if a method should not be logged. *)
   let whitelist name =
-    L.exists (fun x -> U.matches name x) blacklist_regexes in
+    L.exists (fun x -> U.matches name x) whitelist_regexes in
+
   let fine_method (cname: string) : bool =
     U.begins_with cname "Ljava/lang/reflect"
     || not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"]) in
@@ -403,7 +426,7 @@ object
   method v_cdef (cdef: D.class_def_item) : unit =
     cid <- cdef.D.c_class_id;
     let cname = D.get_ty_str dx cid in
-    let dfltlst = ["^Landroid"] in
+    let dfltlst = map (U.parse_regexp, ["^Landroid"]) in
     (* to avoid the Logger class as well as libraries *)
     skip_cls <- U.begins_with cname logging || is_library cname;
     skip_cls <- skip_cls || (match !detail with
