@@ -61,6 +61,8 @@ module S  = String
 
 module Pf = Printf
 
+module Js = Yojson.Safe
+
 (***********************************************************************)
 (* Basic Types/Elements                                                *)
 (***********************************************************************)
@@ -83,7 +85,11 @@ let logAExt = "logAPIExit"
 type detail =
   | Default
   | Fine   
-  | Regex of string list
+  | Regex of Js.json
+
+let json = try
+    Js.from_file "data/logging.json"
+  with _ -> `Null
 
 let detail = ref Default
 
@@ -342,7 +348,71 @@ let has_monitors dx (citm: D.code_item) : bool =
 let vxyz (s: int) : int list =
   L.map (fun i -> i mod 16) (U.range s (s + 2) [])
 
-class logger (dx: D.dex) =
+  
+(*
+  let black_or_whitelist name =
+    let `Assoc(l) = !detail in
+    let pstr = (function | `String x -> x) in
+    let whitelist =
+      (try L.map pstr (L.assoc "whitelist" (L.assoc name l)) with _ -> []) in
+    let blacklist = 
+      (try L.map pstr (L.assoc "blacklist" (L.assoc name l)) with _ -> []) in
+    let mlist l str =
+      L.exists (fun re -> U.matches str (U.parse_regexp re)) l
+    fun string -> 
+
+
+  (* Map implementation *)
+  let rec map (f, l) = match l with
+    | [] -> []
+    | (h::t) -> (f h)::(map (f, t)) in
+
+  (* Regular expressions of methods to whitelist *)
+  let rec read_regexp_config (filename: string) : string list = 
+    let chan = open_in filename in
+    let reg_list = (recursive_read chan) in
+    close_in chan ;
+    (* print_list reg_list ; *)
+    reg_list
+  and recursive_read chan : string list =
+    try
+      let line = input_line chan in
+      (line :: recursive_read chan)
+    with End_of_file ->
+      []
+  in
+
+  (* Regular expressions of methods to blacklist *)
+  let blacklist_regexes = map (U.parse_regexp, (read_regexp_config "data/blacklist.txt"))in
+
+  (* Check if a method should not be logged. *)
+  let blacklist name =
+    L.exists (fun x -> U.matches name x) blacklist_regexes in
+
+  (* Regular expressions of methods to whitelist *)
+  let whitelist_regexes = map (U.parse_regexp, (read_regexp_config "data/whitelist.txt")) in
+
+  (* Check if a method should not be logged. *)
+  let whitelist name =
+    L.exists (fun x -> U.matches name x) whitelist_regexes in
+
+  let fine_method (cname: string) : bool =
+    U.begins_with cname "Ljava/lang/reflect"
+    || not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"]) in
+  (* decide whether or not to log a given method name *)
+  let instrument_method name = match !detail with
+    | Default  -> is_library name && is_not_javalang name
+    | Fine     -> is_library name && fine_method name
+    | Regex rl -> 
+      if blacklist name then false
+      else
+        fine_method name || whitelist name 
+  in
+*)
+
+(* The logger class is virtual so we can implement different behavior
+   for each type of configuration. *)
+class virtual logger (dx: D.dex) =
   let logger_cid = D.get_cid dx logger in
   let m_ent_mid, _ = D.get_the_mtd dx logger_cid logMEnt
   and m_ext_mid, _ = D.get_the_mtd dx logger_cid logMExt
@@ -358,30 +428,6 @@ class logger (dx: D.dex) =
   in
   let v_of_map = SM.mapi get_v_of c_map 
   in
-  (* Regular expressions of methods to blacklist *)
-  let blacklist_regexes =
-    ["Lbr/com/threeloops/android/lib/paint/view/paint/DrawUtils"] in
-  (* Check if a method should not be logged. *)
-  let blacklist name =
-    L.exists (fun x -> U.matches name x) blacklist_regexes in
-  (* Regular expressions of methods to whitelist *)
-  let whitelist_regexes =
-    [] in
-  (* Check if a method should not be logged. *)
-  let whitelist name =
-    L.exists (fun x -> U.matches name x) blacklist_regexes in
-  let fine_method (cname: string) : bool =
-    U.begins_with cname "Ljava/lang/reflect"
-    || not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"]) in
-  (* decide whether or not to log a given method name *)
-  let instrument_method name = match !detail with
-    | Default  -> is_library name && is_not_javalang name
-    | Fine     -> is_library name && fine_method name
-    | Regex rl -> 
-      if blacklist name then false
-      else
-        fine_method name || whitelist name 
-  in
   let auto_boxing (r: int) (ty: D.link) : I.instr =
     let tname = D.get_ty_str dx ty in
     (* below will raise an exception unless primitive type *)
@@ -391,10 +437,21 @@ class logger (dx: D.dex) =
     (* use invoke-*-range to support registers whose index is over 1 byte *)
     I.new_invoke stt_rnge (args @ [D.of_idx v_of])
   in
-object
+  object(self)
   inherit V.iterator dx
-
+      
   val mutable cid = D.no_idx
+                      
+  (* Whether or not this whole class should be skipped. Note that
+     libraries (for which we don't have code) will *always* be
+     skipped. *)
+  method virtual skip_class : string -> bool
+
+  (* Whether or not we should instrument entries / exits of a method. *)
+  method virtual log_entry : D.encoded_method -> string -> bool
+
+  (* Whether or not we should instrument calls to entries / exits of a method. *)
+  method virtual log_call : string -> bool
 
   (* Visited upon *class* entry. We skip classes for which we don't
      have any code: Android internal classes, apache.org.* classes,
@@ -403,14 +460,9 @@ object
   method v_cdef (cdef: D.class_def_item) : unit =
     cid <- cdef.D.c_class_id;
     let cname = D.get_ty_str dx cid in
-    let dfltlst = ["^Landroid"] in
     (* to avoid the Logger class as well as libraries *)
     skip_cls <- U.begins_with cname logging || is_library cname;
-    skip_cls <- skip_cls || (match !detail with
-        | Default -> not (adr_relevant dx cdef.D.c_class_id dfltlst)
-        | Fine -> false
-        | Regex strs -> 
-          (blacklist cname || not (whitelist cname)));
+    skip_cls <- skip_cls || self#skip_class cname;
     if skip_cls then
     (
       Log.i (Pf.sprintf "skipping class: %s" cname)
@@ -423,6 +475,7 @@ object
   (* the type of return value, if exists *)
   val mutable rety = D.no_idx
   val mutable is_void = false
+  val mutable log_entry = false
 
   (* Visits method entries, attempts to insert logging code. *)
   method v_emtd (emtd: D.encoded_method) : unit =
@@ -433,104 +486,100 @@ object
       emtd.D.code_off <> D.no_off &&
       has_monitors dx (snd (D.get_citm dx cid mid))
     in
+    let full = D.get_mtd_full_name dx mid in
     (* to skip constructors and synthetic methods (static blocks) *)
-    skip_mtd <- L.mem mname [J.init; J.clinit; J.hashCode]
-             || D.is_synthetic emtd.D.m_access_flag
-             || has_monitor;
-
-    if skip_mtd then
-    (
-      Log.i (Pf.sprintf "skipping entry of: %s" (D.get_mtd_full_name dx mid))
-    );
+    log_entry <- has_monitor || not (self#log_entry emtd full);
+    if log_entry then
+      Log.i (Pf.sprintf "logging entry of: %s" full)
+    else 
+      Log.i (Pf.sprintf "skipping entry of: %s" full);
     let mit = D.get_mit dx mid in
     argv <- D.get_argv dx mit;
     if not (D.is_static emtd.D.m_access_flag) then
       argv <- cid :: argv; (* including "this" *)
     rety <- D.get_rety dx mit;
     is_void <- 0 = D.ty_comp dx rety ty_void
-
+                 
   (* to log API usage *)
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
     Log.d (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
-
     cur_citm <- citm;
-
     (* to secure at least three registers for logging *)
     (* 3 is minimum, but 5 here to expand invoke-* operands *)
     M.shift_reg_usage dx citm 5;
     let this = D.calc_this citm in
-    
     (* code snippet for method exits *)
     (* to calc the last ins correctly, do this part first *)
-    try 
-      let vr =
-        if is_void then this else
-          let op, opr = M.get_last_ins dx citm in
-          match op, opr with
-          | I.OP_RETURN,        I.OPR_REGISTER r :: []
-          | I.OP_RETURN_WIDE,   I.OPR_REGISTER r :: []
-          | I.OP_RETURN_OBJECT, I.OPR_REGISTER r :: [] -> r
-          | I.OP_THROW, I.OPR_REGISTER r :: [] -> rety <- thrw; r
-          | _, _ -> raise (D.Wrong_match "is_void")
-      in
-      let vx::vy::vz::[] = vxyz 0 in
-      let ins0 = I.new_const vx (if is_void then 0 else 1)
-      and ins1 = I.new_arr vx vx (D.of_idx objs)
-      and ins2 = I.new_invoke stt_rnge [vx; vx; D.of_idx m_ext_mid]
-      and copy_ret vr vx =
-        let ins_c = I.new_const vy 0
-        and ins_a =
-          try
-            let ins_a1 = auto_boxing vr rety
-            and ins_a2 = I.new_move_result mv_r_obj vz
-            and ins_a3 = I.new_arr_op aput_obj [vz; vx; vy] in
-            [ins_a1; ins_a2; ins_a3]
-          with Not_found ->
-            [I.new_arr_op aput_obj [vr; vx; vy]]
+    if log_entry then 
+      (try 
+        let vr =
+          if is_void then this else
+            let op, opr = M.get_last_ins dx citm in
+            match op, opr with
+            | I.OP_RETURN,        I.OPR_REGISTER r :: []
+            | I.OP_RETURN_WIDE,   I.OPR_REGISTER r :: []
+            | I.OP_RETURN_OBJECT, I.OPR_REGISTER r :: [] -> r
+            | I.OP_THROW, I.OPR_REGISTER r :: [] -> rety <- thrw; r
+            | _, _ -> raise (D.Wrong_match "is_void")
         in
-        CL.fromList (ins_c::ins_a)
-      in
-      let ext_insns = CL.toList (
-          CL.fromList [ins0; ins1]
-          @@ (if is_void then CL.empty else copy_ret vr vx)
-          @@ CL.single ins2
-        ) in
-      let _ = M.insrt_insns_before_end dx citm ext_insns in
-      in_out_cnt := !in_out_cnt + (L.length ext_insns);
-
-      (* code snippet for method entries *)
-      let vx::vy::vz::[] = vxyz 0 in
-      let argn = citm.D.ins_size in
-      let ins0 = I.new_const vz argn
-      and ins1 = I.new_arr vx vz (D.of_idx objs)
-      and ins2 = I.new_invoke call_stt [vx; D.of_idx m_ent_mid]
-      and copy_argv (acc, (arr_i, r_i)) ty =
-        let tname = D.get_ty_str dx ty in
-        let ins_c = I.new_const vy arr_i
-        and ins_a =
-          try
-            let ins_a1 = auto_boxing (this + r_i) ty
-            and ins_a2 = I.new_move_result mv_r_obj vz
-            and ins_a3 = I.new_arr_op aput_obj [vz; vx; vy] in
-            [ins_a1; ins_a2; ins_a3]
-          with Not_found ->
-            [I.new_arr_op aput_obj [this + r_i; vx; vy]]
+        let vx::vy::vz::[] = vxyz 0 in
+        let ins0 = I.new_const vx (if is_void then 0 else 1)
+        and ins1 = I.new_arr vx vx (D.of_idx objs)
+        and ins2 = I.new_invoke stt_rnge [vx; vx; D.of_idx m_ext_mid]
+        and copy_ret vr vx =
+          let ins_c = I.new_const vy 0
+          and ins_a =
+            try
+              let ins_a1 = auto_boxing vr rety
+              and ins_a2 = I.new_move_result mv_r_obj vz
+              and ins_a3 = I.new_arr_op aput_obj [vz; vx; vy] in
+              [ins_a1; ins_a2; ins_a3]
+            with Not_found ->
+              [I.new_arr_op aput_obj [vr; vx; vy]]
+          in
+          CL.fromList (ins_c::ins_a)
         in
-        acc @@ (CL.fromList (ins_c::ins_a)),
-        (arr_i + 1, if J.is_wide tname then r_i + 2 else r_i + 1)
-      in
-      let ent_insns = CL.toList (
-          CL.fromList [ins0; ins1]
-          @@ fst (L.fold_left copy_argv (CL.empty, (0, 0)) argv)
-          @@ CL.single ins2
-        ) in
-      let _ = M.insrt_insns_before_start dx citm ent_insns in
-      in_out_cnt := !in_out_cnt + (L.length ent_insns);
+        let ext_insns = CL.toList (
+            CL.fromList [ins0; ins1]
+            @@ (if is_void then CL.empty else copy_ret vr vx)
+            @@ CL.single ins2
+          ) in
+        let _ = M.insrt_insns_before_end dx citm ext_insns in
+        in_out_cnt := !in_out_cnt + (L.length ext_insns);
 
-      M.update_reg_usage dx citm
-    with D.No_return -> ()
+        (* code snippet for method entries *)
+        let vx::vy::vz::[] = vxyz 0 in
+        let argn = citm.D.ins_size in
+        let ins0 = I.new_const vz argn
+        and ins1 = I.new_arr vx vz (D.of_idx objs)
+        and ins2 = I.new_invoke call_stt [vx; D.of_idx m_ent_mid]
+        and copy_argv (acc, (arr_i, r_i)) ty =
+          let tname = D.get_ty_str dx ty in
+          let ins_c = I.new_const vy arr_i
+          and ins_a =
+            try
+              let ins_a1 = auto_boxing (this + r_i) ty
+              and ins_a2 = I.new_move_result mv_r_obj vz
+              and ins_a3 = I.new_arr_op aput_obj [vz; vx; vy] in
+              [ins_a1; ins_a2; ins_a3]
+            with Not_found ->
+              [I.new_arr_op aput_obj [this + r_i; vx; vy]]
+          in
+          acc @@ (CL.fromList (ins_c::ins_a)),
+          (arr_i + 1, if J.is_wide tname then r_i + 2 else r_i + 1)
+        in
+        let ent_insns = CL.toList (
+            CL.fromList [ins0; ins1]
+            @@ fst (L.fold_left copy_argv (CL.empty, (0, 0)) argv)
+            @@ CL.single ins2
+          ) in
+        let _ = M.insrt_insns_before_start dx citm ent_insns in
+        in_out_cnt := !in_out_cnt + (L.length ent_insns);
 
+        M.update_reg_usage dx citm
+       with D.No_return -> ())
+      
   method v_ins (ins: D.link) : unit =
     if D.is_ins dx ins then
     (
@@ -550,12 +599,12 @@ object
           let lname = D.get_ty_str dx lid in
           let mname = D.get_mtd_name dx mid in
           let full = D.get_mtd_full_name dx mid in
-          let do_logging = instrument_method mname in
+          let do_logging = self#log_call mname in
           if (not do_logging) then
-            (Log.i ("skipping log of method "^ full))
+            (Log.i ("skipping log of method call "^ full))
           else
           (
-            Log.i ("log of method "^ full);
+            Log.i ("log of method call "^ full);
             let vx::vy::vz::[] = vxyz 0
             and mit = D.get_mit dx mid in
             let ent_cursor = M.get_cursor cur_citm ins in
@@ -658,8 +707,96 @@ object
   method finish () : unit =
     Log.i ("# of method  logging instruction(s): "^(Log.of_i !in_out_cnt));
     Log.i ("# of API-use logging instruction(s): "^(Log.of_i !api_cnt))
-
 end
+
+(* Different possible logger implementations. *)
+
+(* Default logging behavior. *)
+class default_logger (dx: D.dex) =
+  object (self)
+    inherit logger dx
+    method skip_class _ = false
+    method log_entry emtd mname = 
+      not (L.mem mname [J.init; J.clinit; J.hashCode]
+           || D.is_synthetic emtd.D.m_access_flag)
+    method log_call _ = false
+  end
+
+(* Fine grained logging behavior: instrument as many method entries
+   and calls as possible. *)
+class fine_logger (dx: D.dex) =
+  object (self)
+    inherit logger dx
+    method skip_class _ = false
+    method log_entry emtd mname = 
+      not (L.mem mname [J.init; J.clinit; J.hashCode]
+           || D.is_synthetic emtd.D.m_access_flag)
+    method log_call _ = false
+  end
+
+(* Configuration based logger, uses the JSON configuration file to
+   make decisions about what will be logged. *)
+class configurable_logger json (dx: D.dex) = 
+  object (self)
+    inherit default_logger dx
+    method skip_class _ = false
+    method log_entry emtd mname = 
+      not (L.mem mname [J.init; J.clinit; J.hashCode]
+           || D.is_synthetic emtd.D.m_access_flag)
+    method log_call _ = false
+  end
+
+(* Log entries only for some key methods (such as .onCreate()) that we
+   care about. *)
+class log_transition_entries (dx: D.dex) =
+  let calls =
+    ["onClick";
+     "onFocusChange";
+     "onGenericMotion";
+     "onHover";
+     "onKey";
+     "onLongClick";
+     "onSystemUiVisibilityChange";
+     "onTouch";
+     "isChecked";
+     "onTouchEvent";
+     "onItemClick";
+     "onListItemClick";
+     "onInterceptTouchEvent";
+     "onOptionsItemSelected";
+     "onMenuItemSelected";
+     "onKeyDown";
+     "onKeyLongPress";
+     "onKeyMultiple";
+     "onKeyUp";
+     "onMenuItemClick";
+     "onResume";
+     "onPause";
+     "onStart";
+     "onDestroy";
+     "onCreate"]
+  in
+  let passoc = function `Assoc x -> x | _ -> failwith "unexpected json" in
+  let plist = function `List x -> x | _ -> failwith "unexpected json" in
+  let regex_strings =
+    let method_calls = L.assoc "method-entries" (passoc json) in
+    let entries = plist (L.assoc "whitelist" (passoc method_calls)) in
+    L.map (function `String s -> s | _ -> failwith "unexpected json") entries
+  in
+  let regexps = L.map U.parse_regexp regex_strings in
+  object (self)
+    inherit logger dx
+    method skip_class _ = false
+    method log_entry emtd mname = 
+      not (L.mem mname [J.init; J.clinit; J.hashCode]
+           || D.is_synthetic emtd.D.m_access_flag)
+      && 
+      L.exists (fun x -> U.ends_with mname x) calls
+        
+    (* *)
+    method log_call mname = 
+      L.exists (fun x -> U.matches mname x) regexps
+  end
 
 (***********************************************************************)
 (* Rewrite to log apps behavior                                        *)
@@ -669,7 +806,13 @@ end
 let modify (dx: D.dex) : unit =
   (* add non-overriden transition methods *)
   St.time "transition" add_transition dx;
+  let logging = (new log_transition_entries dx) in
+(*  match !detail with
+  | Default -> (new default_logger dx)
+  | Fine    -> (new log_transition_entries dx)
+  | Regex j -> (new configurable_logger j dx)
+in*)
   (* log API uses and entry/exit of all methods, except for Logger itself *)
-  St.time "instrument" V.iter (new logger dx);
+  St.time "instrument" V.iter (logging : logger :> V.visitor  );
   St.time "expand-opr" M.expand_opr dx
 

@@ -87,8 +87,11 @@ val ends_with : string -> string -> bool
 (** [true] if the given [string] matches the regular expression [string] *)
 val contains : string -> string -> bool
 
-(** [true] if the given [string] begins with the given prefix *)
-val matches : string -> string -> bool
+(** parse a [string] into a [Str.regexp] *)
+val parse_regexp : string -> Str.regexp
+
+(** [true] if the given [string] begins with the given prefix described by the [Str.regexp] *)
+val matches : string -> Str.regexp -> bool
 
 (** find the common prefix of the given [string]s *)
 val common_prefix : string -> string -> string

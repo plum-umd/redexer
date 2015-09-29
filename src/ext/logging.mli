@@ -42,7 +42,7 @@
 type detail =
   | Default              (** Default granularity *)
   | Fine                 (** Fine grained granularity *)
-  | Regex of string list (** Log all methods matching a set of regular expressions *)
+  | Regex of Yojson.Safe.json (** Log all methods matching a configured set of regular expressions *)
 
 (** conclude more logging *)
 val detail : detail ref
