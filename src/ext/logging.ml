@@ -35,7 +35,6 @@
 (***********************************************************************)
 (* Logging                                                             *)
 (***********************************************************************)
-(* adb shell find "/sdcard/Folder1" -iname "*.jpg" | tr -d '\015' | while read line; do adb pull $line; done; *)
 
 module St = Stats
 module CL = Clist
@@ -88,7 +87,7 @@ type detail =
   | Fine   
   | Regex of Js.json
 
-let json = try
+let config = try
     Js.from_file "data/logging.json"
   with _ -> `Null
 
@@ -402,10 +401,9 @@ class virtual logger (dx: D.dex) =
     (* to avoid the Logger class as well as libraries *)
     skip_cls <- U.begins_with cname logging || is_library cname;
     skip_cls <- skip_cls || self#skip_class cname;
-    if skip_cls then
-    (
-      Log.d (Pf.sprintf "skipping class: %s" cname)
-    )
+    let yesno = if skip_cls then "skipping" else "logging" in
+    Log.i (Pf.sprintf "%s class: %s" yesno cname)
+
   val mutable mid = D.no_idx
   (* to determine supercall in constructors *)
   val mutable mname = ""
@@ -716,8 +714,9 @@ class log_transition_entries (dx: D.dex) =
      "onDestroy";
      "onCreate"]
   in
-  let passoc = function `Assoc x -> x | _ -> failwith "unexpected json 1" in
-  let plist = function `List x -> x | _ -> failwith "unexpected json 2" in
+  let passoc = function `Assoc x -> x | _ -> failwith "JSON parse error: expected object" in
+  let plist = function `List x -> x | _ -> failwith "JSON parse error: expected array" in
+  let pstring = function `String x -> x | _ -> failwith "JSON parse error: expected string" in
   let rec concat_regexp (l : string list) : string =
     match l with
       [] -> ""
@@ -726,14 +725,23 @@ class log_transition_entries (dx: D.dex) =
                  | _ -> ((x ^ "\\|") ^ (concat_regexp xs))
   in
   let regex_strings =
-    let method_calls = L.assoc "method-entries" (passoc json) in
+    let method_calls = L.assoc "method-entries" (passoc config) in
     let entries = plist (L.assoc "whitelist" (passoc method_calls)) in
     concat_regexp (L.map (function `String s -> s | _ -> failwith "unexpected json") entries)
   in
   let regexps = U.parse_regexp regex_strings in
+  let blacklisted_classes =
+    try L.map pstring (plist (U.json_select config "classes/blacklist")) 
+    with _ ->
+      Log.w ("could not load blacklisted classes from JSON config: config.blacklist.[]");
+      []
+  in
   object (self)
     inherit logger dx
-    method skip_class _ = false
+        
+    method skip_class cname =
+      L.exists (fun x -> x = cname) blacklisted_classes
+        
     method log_entry emtd mname = 
       not (L.mem mname [J.init; J.clinit; J.hashCode]
            || D.is_synthetic emtd.D.m_access_flag)
