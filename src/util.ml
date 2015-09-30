@@ -40,6 +40,7 @@ module S = String
 module L = List
 
 module RE = Str
+module Js = Yojson.Safe
 
 module IntKey =
 struct
@@ -177,4 +178,22 @@ let common_prefix (s1: string) (s2: string) : string =
     | _, _ -> pre
   in
   implode (h [] (explode s1) (explode s2))
+
+(***********************************************************************)
+(* a few JSON utilities                                                *)
+(***********************************************************************)
+
+let json_select (j : Js.json) selector = 
+  let pieces = RE.split (RE.regexp "/") selector in
+  let rec iter json = function
+    | [] -> json
+    | hd::tl -> (match json with
+        | `Assoc al -> iter (L.assoc hd al) tl
+        | _ -> failwith ("expected JSON object with field " ^ hd ^  " but found something else."))
+  in
+  iter j pieces
+    
+
+
+
 

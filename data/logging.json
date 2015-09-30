@@ -1,4 +1,9 @@
 {
+    "classes":
+    {
+        "blacklist":
+        ["Lorg/codehaus/jackson/map/ser/std/MapSerializer;"]
+    },
     "method-entries":
     {
         "whitelist":
