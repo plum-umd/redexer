@@ -731,6 +731,7 @@ class log_transition_entries (dx: D.dex) =
     concat_regexp (L.map (function `String s -> s | _ -> failwith "unexpected json") entries)
   in
   let regexps = U.parse_regexp regex_strings in
+
   object (self)
     inherit logger dx
     method skip_class _ = false
