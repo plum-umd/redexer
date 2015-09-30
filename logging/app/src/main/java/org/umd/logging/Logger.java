@@ -42,23 +42,29 @@ import java.lang.Throwable;
 import java.lang.StackTraceElement;
 import java.lang.StringBuilder;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.HashSet;
+import java.text.SimpleDateFormat;
+import java.io.FileOutputStream;
+import java.io.File;
 // import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.RadioButton;
 import android.widget.TextView;
-import android.widget.ImageButton;
+//import android.widget.ImageButton;
 
-import android.content.Context;
-import android.content.res.XmlResourceParser;
+//import android.content.Context;
+//import android.content.res.XmlResourceParser;
 import android.app.Activity;
 import android.app.Fragment;
-//import android.support.v4.app.Fragment;
+// import android.support.v4.app.Fragment;
 import android.view.MenuItem;
 import android.view.View;
 import android.net.Uri;
+import android.os.Environment;
+import android.graphics.Bitmap;
 
 
 public class Logger {
@@ -66,7 +72,6 @@ public class Logger {
 	static final Set<Class> WRAPPER_TYPES = new HashSet(Arrays.asList(
 																	  Boolean.class, Character.class, Byte.class, Short.class, Integer.class,
 																	  Long.class, Float.class, Double.class, Void.class));
-	
 	static boolean isWrapperType(Class clazz) {
 		return WRAPPER_TYPES.contains(clazz);
 	}
@@ -87,12 +92,24 @@ public class Logger {
 			} else if (arg.getClass() == Class.class) {
 				s_arg = ((Class)arg).getName();
 				//check it dynamically with reflexion
-			}else if(firstArg && (arg instanceof Fragment || arg instanceof Activity)){
-				s_arg = "-+-+-" + arg.getClass().getName() + "@" + System.identityHashCode(arg);
+			}else if(firstArg && arg instanceof Activity){
+				s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<activity=true>";
+			}else if(firstArg && arg instanceof Fragment){
+				s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<fragment=true>";
 			}else{
 				s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
 				//<text=fetch><id=2131230785><imagename=button><tmp2=com.example.nikofinas.exampleapp:id/button><tmp3=com.example.nikofinas.exampleapp><tmp4=id><tmp5=false>
 				if(arg instanceof View){
+					if(firstArg){
+						String file = takeScreenshot(((Activity)((View)arg).getContext()));
+						s_arg += "<file=" + file + ">";
+						int[] location = new int[2];
+						((View)arg).getLocationOnScreen(location);
+						s_arg += "<x=" + String.valueOf(location[0]) + ">";
+						s_arg += "<y=" + String.valueOf(location[1]) + ">";
+						s_arg += "<width=" + String.valueOf(((View)arg).getWidth()) + ">";
+						s_arg += "<height=" + String.valueOf(((View)arg).getHeight()) + ">";
+					}
 					if(arg instanceof TextView){
 						s_arg += "<text=" + ((TextView)arg).getText() + ">";
 						if(arg instanceof RadioButton){
@@ -173,6 +190,43 @@ public class Logger {
 	
 	public static void logAPIExit(String cname, String mname, Object... args) {
 		log("Api <", cname, mname, args);
+	}
+
+	private static String takeScreenshot(Activity act) {
+	  Date now = new Date();
+    SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss");
+
+    // android.text.format.DateFormat.format("yyyy-MM-dd_hh:mm:ss", now);
+    String dateString = "";
+		try{
+			// getLocationOnScreen
+			dateString = sdfr.format(now);
+    } catch (Throwable e) {
+        // Several error may come out with file handling or OOM
+        e.printStackTrace();
+    }
+    try {
+        // image naming and path  to include sd card  appending name you choose for file
+        String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
+
+        // create bitmap screen capture
+        View v1 = act.getWindow().getDecorView().getRootView();
+        v1.setDrawingCacheEnabled(true);
+        Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
+        v1.setDrawingCacheEnabled(false);
+
+        File imageFile = new File(mPath);
+
+        FileOutputStream outputStream = new FileOutputStream(imageFile);
+        int quality = 100;
+        bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
+        outputStream.flush();
+        outputStream.close();
+    } catch (Throwable e) {
+        // Several error may come out with file handling or OOM
+        e.printStackTrace();
+    }
+    return dateString;
 	}
 	
 }

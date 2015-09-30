@@ -35,6 +35,7 @@
 (***********************************************************************)
 (* Logging                                                             *)
 (***********************************************************************)
+(* adb shell find "/sdcard/Folder1" -iname "*.jpg" | tr -d '\015' | while read line; do adb pull $line; done; *)
 
 module St = Stats
 module CL = Clist
@@ -197,7 +198,7 @@ let add_transition (dx: D.dex) : unit =
   let per_srv (comp: string) : unit =
     let cid = M.new_class dx comp D.pub in
     (* Service.(onCreate | onDestroy) *)
-    L.iter (insrt_void_no_arg cid) [App.onCreate; App.onDestroy];
+    L.iter (insrt_void_no_arg cid) [App.onCreate; App.onDestroy; App.onResume];
     (* Service.onRebind *)
     L.iter (insrt_void_intent cid) [App.onRebind]
   in
@@ -348,68 +349,6 @@ let has_monitors dx (citm: D.code_item) : bool =
 let vxyz (s: int) : int list =
   L.map (fun i -> i mod 16) (U.range s (s + 2) [])
 
-  
-(*
-  let black_or_whitelist name =
-    let `Assoc(l) = !detail in
-    let pstr = (function | `String x -> x) in
-    let whitelist =
-      (try L.map pstr (L.assoc "whitelist" (L.assoc name l)) with _ -> []) in
-    let blacklist = 
-      (try L.map pstr (L.assoc "blacklist" (L.assoc name l)) with _ -> []) in
-    let mlist l str =
-      L.exists (fun re -> U.matches str (U.parse_regexp re)) l
-    fun string -> 
-
-
-  (* Map implementation *)
-  let rec map (f, l) = match l with
-    | [] -> []
-    | (h::t) -> (f h)::(map (f, t)) in
-
-  (* Regular expressions of methods to whitelist *)
-  let rec read_regexp_config (filename: string) : string list = 
-    let chan = open_in filename in
-    let reg_list = (recursive_read chan) in
-    close_in chan ;
-    (* print_list reg_list ; *)
-    reg_list
-  and recursive_read chan : string list =
-    try
-      let line = input_line chan in
-      (line :: recursive_read chan)
-    with End_of_file ->
-      []
-  in
-
-  (* Regular expressions of methods to blacklist *)
-  let blacklist_regexes = map (U.parse_regexp, (read_regexp_config "data/blacklist.txt"))in
-
-  (* Check if a method should not be logged. *)
-  let blacklist name =
-    L.exists (fun x -> U.matches name x) blacklist_regexes in
-
-  (* Regular expressions of methods to whitelist *)
-  let whitelist_regexes = map (U.parse_regexp, (read_regexp_config "data/whitelist.txt")) in
-
-  (* Check if a method should not be logged. *)
-  let whitelist name =
-    L.exists (fun x -> U.matches name x) whitelist_regexes in
-
-  let fine_method (cname: string) : bool =
-    U.begins_with cname "Ljava/lang/reflect"
-    || not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"]) in
-  (* decide whether or not to log a given method name *)
-  let instrument_method name = match !detail with
-    | Default  -> is_library name && is_not_javalang name
-    | Fine     -> is_library name && fine_method name
-    | Regex rl -> 
-      if blacklist name then false
-      else
-        fine_method name || whitelist name 
-  in
-*)
-
 (* The logger class is virtual so we can implement different behavior
    for each type of configuration. *)
 class virtual logger (dx: D.dex) =
@@ -465,7 +404,7 @@ class virtual logger (dx: D.dex) =
     skip_cls <- skip_cls || self#skip_class cname;
     if skip_cls then
     (
-      Log.i (Pf.sprintf "skipping class: %s" cname)
+      Log.d (Pf.sprintf "skipping class: %s" cname)
     )
   val mutable mid = D.no_idx
   (* to determine supercall in constructors *)
@@ -488,11 +427,11 @@ class virtual logger (dx: D.dex) =
     in
     let full = D.get_mtd_full_name dx mid in
     (* to skip constructors and synthetic methods (static blocks) *)
-    log_entry <- has_monitor || not (self#log_entry emtd full);
+    log_entry <- not has_monitor && (self#log_entry emtd full);
     if log_entry then
-      Log.i (Pf.sprintf "logging entry of: %s" full)
-    else 
-      Log.i (Pf.sprintf "skipping entry of: %s" full);
+      Log.i (Pf.sprintf "logging entry of: %s" full);
+    (* else 
+      Log.i (Pf.sprintf "skipping entry of: %s" full); *)
     let mit = D.get_mit dx mid in
     argv <- D.get_argv dx mit;
     if not (D.is_static emtd.D.m_access_flag) then
@@ -599,9 +538,10 @@ class virtual logger (dx: D.dex) =
           let lname = D.get_ty_str dx lid in
           let mname = D.get_mtd_name dx mid in
           let full = D.get_mtd_full_name dx mid in
-          let do_logging = self#log_call mname in
+          let do_logging = self#log_call full in
           if (not do_logging) then
-            (Log.i ("skipping log of method call "^ full))
+            ()
+            (* (Log.i ("skipping log of method call "^ full)) *)
           else
           (
             Log.i ("log of method call "^ full);
@@ -776,14 +716,21 @@ class log_transition_entries (dx: D.dex) =
      "onDestroy";
      "onCreate"]
   in
-  let passoc = function `Assoc x -> x | _ -> failwith "unexpected json" in
-  let plist = function `List x -> x | _ -> failwith "unexpected json" in
+  let passoc = function `Assoc x -> x | _ -> failwith "unexpected json 1" in
+  let plist = function `List x -> x | _ -> failwith "unexpected json 2" in
+  let rec concat_regexp (l : string list) : string =
+    match l with
+      [] -> ""
+    | x :: xs -> match xs with 
+                 | [] -> x
+                 | _ -> ((x ^ "\\|") ^ (concat_regexp xs))
+  in
   let regex_strings =
     let method_calls = L.assoc "method-entries" (passoc json) in
     let entries = plist (L.assoc "whitelist" (passoc method_calls)) in
-    L.map (function `String s -> s | _ -> failwith "unexpected json") entries
+    concat_regexp (L.map (function `String s -> s | _ -> failwith "unexpected json") entries)
   in
-  let regexps = L.map U.parse_regexp regex_strings in
+  let regexps = U.parse_regexp regex_strings in
   object (self)
     inherit logger dx
     method skip_class _ = false
@@ -795,7 +742,7 @@ class log_transition_entries (dx: D.dex) =
         
     (* *)
     method log_call mname = 
-      L.exists (fun x -> U.matches mname x) regexps
+      U.matches mname regexps
   end
 
 (***********************************************************************)
@@ -807,11 +754,6 @@ let modify (dx: D.dex) : unit =
   (* add non-overriden transition methods *)
   St.time "transition" add_transition dx;
   let logging = (new log_transition_entries dx) in
-(*  match !detail with
-  | Default -> (new default_logger dx)
-  | Fine    -> (new log_transition_entries dx)
-  | Regex j -> (new configurable_logger j dx)
-in*)
   (* log API uses and entry/exit of all methods, except for Logger itself *)
   St.time "instrument" V.iter (logging : logger :> V.visitor  );
   St.time "expand-opr" M.expand_opr dx
