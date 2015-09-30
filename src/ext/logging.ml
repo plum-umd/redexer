@@ -488,7 +488,7 @@ class virtual logger (dx: D.dex) =
     in
     let full = D.get_mtd_full_name dx mid in
     (* to skip constructors and synthetic methods (static blocks) *)
-    log_entry <- has_monitor || not (self#log_entry emtd full);
+    log_entry <- not has_monitor && (self#log_entry emtd full);
     if log_entry then
       Log.i (Pf.sprintf "logging entry of: %s" full)
     else 
@@ -783,7 +783,7 @@ class log_transition_entries (dx: D.dex) =
     let entries = plist (L.assoc "whitelist" (passoc method_calls)) in
     L.map (function `String s -> s | _ -> failwith "unexpected json") entries
   in
-  let regexps = L.map U.parse_regexp regex_strings in
+  (*let regexps = L.map U.parse_regexp regex_strings in*)
   object (self)
     inherit logger dx
     method skip_class _ = false
@@ -795,7 +795,7 @@ class log_transition_entries (dx: D.dex) =
         
     (* *)
     method log_call mname = 
-      L.exists (fun x -> U.matches mname x) regexps
+      L.exists (fun x -> mname = x) regex_strings
   end
 
 (***********************************************************************)
