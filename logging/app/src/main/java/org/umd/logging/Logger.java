@@ -79,7 +79,7 @@ public class Logger {
 	static String join(Iterable<Object> args, String delimiter) {
 		StringBuilder buf = new StringBuilder();
 		Iterator<Object> iter = args.iterator();
-		Boolean firstArg = true;
+		int argCount = 0;
 		while (iter.hasNext()) {
 			Object arg = iter.next();
 			String s_arg = "";
@@ -92,15 +92,15 @@ public class Logger {
 			} else if (arg.getClass() == Class.class) {
 				s_arg = ((Class)arg).getName();
 				//check it dynamically with reflexion
-			}else if(firstArg && arg instanceof Activity){
+			}else if(argCount == 0 && arg instanceof Activity){
 				s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<activity=true>";
-			}else if(firstArg && arg instanceof Fragment){
+			}else if(argCount == 0 && arg instanceof Fragment){
 				s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<fragment=true>";
 			}else{
 				s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
 				//<text=fetch><id=2131230785><imagename=button><tmp2=com.example.nikofinas.exampleapp:id/button><tmp3=com.example.nikofinas.exampleapp><tmp4=id><tmp5=false>
 				if(arg instanceof View){
-					if(firstArg){
+					if(argCount == 0 || argCount == 1){
 						String file = takeScreenshot(((Activity)((View)arg).getContext()));
 						s_arg += "<file=" + file + ">";
 						int[] location = new int[2];
@@ -147,7 +147,7 @@ public class Logger {
 			if (!iter.hasNext())
 				break;
 			buf.append(delimiter);
-			firstArg = false;
+			argCount++;
 		}
 		return buf.toString();
 	}
@@ -194,7 +194,7 @@ public class Logger {
 
 	private static String takeScreenshot(Activity act) {
 	  Date now = new Date();
-    SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss");
+    SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
 
     // android.text.format.DateFormat.format("yyyy-MM-dd_hh:mm:ss", now);
     String dateString = "";
