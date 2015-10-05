@@ -196,37 +196,36 @@ public class Logger {
 	  Date now = new Date();
     SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
 
-    // android.text.format.DateFormat.format("yyyy-MM-dd_hh:mm:ss", now);
     String dateString = "";
 		try{
 			// getLocationOnScreen
 			dateString = sdfr.format(now);
-    } catch (Throwable e) {
-        // Several error may come out with file handling or OOM
-        e.printStackTrace();
-    }
-    try {
-        // image naming and path  to include sd card  appending name you choose for file
-        String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
+	  } catch (Throwable e) {
+      // Several error may come out with file handling or OOM
+      e.printStackTrace();
+	  }
+	  try {
+      // image naming and path  to include sd card  appending name you choose for file
+      String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
 
-        // create bitmap screen capture
-        View v1 = act.getWindow().getDecorView().getRootView();
-        v1.setDrawingCacheEnabled(true);
-        Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
-        v1.setDrawingCacheEnabled(false);
+      // create bitmap screen capture
+      View v1 = act.getWindow().getDecorView().getRootView();
+      v1.setDrawingCacheEnabled(true);
+      Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
+      v1.setDrawingCacheEnabled(false);
 
-        File imageFile = new File(mPath);
+      File imageFile = new File(mPath);
 
-        FileOutputStream outputStream = new FileOutputStream(imageFile);
-        int quality = 100;
-        bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
-        outputStream.flush();
-        outputStream.close();
-    } catch (Throwable e) {
-        // Several error may come out with file handling or OOM
-        e.printStackTrace();
-    }
-    return dateString;
+      FileOutputStream outputStream = new FileOutputStream(imageFile);
+      int quality = 100;
+      bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
+      outputStream.flush();
+      outputStream.close();
+	  } catch (Throwable e) {
+      // Several error may come out with file handling or OOM
+      e.printStackTrace();
+	  }
+	  return dateString;
 	}
 	
 }
