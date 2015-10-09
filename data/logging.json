@@ -8,6 +8,7 @@
     {
         "whitelist":
         [
+".*;->isChecked",
 "Landroid/accessibilityservice/UiTestAutomationBridge;->disconnect",
 "Landroid/accounts/AccountManager[^/]*;->doWork",
 "Landroid/accounts/AccountManager[^/]*;->onReceive",
