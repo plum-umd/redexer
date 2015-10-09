@@ -9,6 +9,7 @@
         "whitelist":
         [
 ".*;->isChecked",
+".*;->query",
 "Landroid/accessibilityservice/UiTestAutomationBridge;->disconnect",
 "Landroid/accounts/AccountManager[^/]*;->doWork",
 "Landroid/accounts/AccountManager[^/]*;->onReceive",
