@@ -59,12 +59,15 @@ import android.widget.TextView;
 //import android.content.res.XmlResourceParser;
 import android.app.Activity;
 import android.app.Fragment;
+import android.app.Dialog;
 // import android.support.v4.app.Fragment;
 import android.view.MenuItem;
 import android.view.View;
 import android.net.Uri;
 import android.os.Environment;
 import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
+import android.graphics.Canvas;
 
 
 public class Logger {
@@ -98,17 +101,20 @@ public class Logger {
 				s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<fragment=true>";
 			}else{
 				s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
-				//<text=fetch><id=2131230785><imagename=button><tmp2=com.example.nikofinas.exampleapp:id/button><tmp3=com.example.nikofinas.exampleapp><tmp4=id><tmp5=false>
 				if(arg instanceof View){
 					if(argCount == 0 || argCount == 1){
-						String file = takeScreenshot(((Activity)((View)arg).getContext()));
-						s_arg += "<file=" + file + ">";
-						int[] location = new int[2];
-						((View)arg).getLocationOnScreen(location);
-						s_arg += "<x=" + String.valueOf(location[0]) + ">";
-						s_arg += "<y=" + String.valueOf(location[1]) + ">";
-						s_arg += "<width=" + String.valueOf(((View)arg).getWidth()) + ">";
-						s_arg += "<height=" + String.valueOf(((View)arg).getHeight()) + ">";
+						try{
+							String file = takeScreenshot(((Activity)((View)arg).getContext()),null);
+							s_arg += "<file=" + file + ">";
+							int[] location = new int[2];
+							((View)arg).getLocationOnScreen(location);
+							s_arg += "<x=" + String.valueOf(location[0]) + ">";
+							s_arg += "<y=" + String.valueOf(location[1]) + ">";
+							s_arg += "<width=" + String.valueOf(((View)arg).getWidth()) + ">";
+							s_arg += "<height=" + String.valueOf(((View)arg).getHeight()) + ">";
+						}catch(Exception e){
+							System.out.println(e.getMessage());
+						}
 					}
 					if(arg instanceof TextView){
 						s_arg += "<text=" + ((TextView)arg).getText() + ">";
@@ -141,6 +147,26 @@ public class Logger {
 				if(arg instanceof MenuItem){
 					s_arg += "<id=" + ((MenuItem)arg).getItemId() + ">";
 					s_arg += "<menuname=" + ((MenuItem)arg).getTitleCondensed() + ">";
+		    	String fname = saveIcon((MenuItem)arg);
+		    	if(fname != ""){
+		    		s_arg += "<iconfile=" + fname + ">";
+		    	}
+				}
+				if(arg instanceof Dialog){
+					if(argCount == 0 || argCount == 1){
+						String file = takeScreenshot(null,(Dialog)arg);
+						if(file != ""){
+							s_arg += "<file=" + file + ">";
+							int width = ((Dialog)arg).getWindow().getDecorView().getWidth();
+							int height = ((Dialog)arg).getWindow().getDecorView().getHeight();
+							int x = (int)((Dialog)arg).getWindow().getDecorView().getX();
+							int y = (int)((Dialog)arg).getWindow().getDecorView().getY();
+							s_arg += "<x=" + String.valueOf(x) + ">";
+							s_arg += "<y=" + String.valueOf(y) + ">";
+							s_arg += "<width=" + String.valueOf(width) + ">";
+							s_arg += "<height=" + String.valueOf(height) + ">";
+						}
+					}
 				}
 			}
 			buf.append(s_arg);
@@ -192,40 +218,86 @@ public class Logger {
 		log("Api <", cname, mname, args);
 	}
 
-	private static String takeScreenshot(Activity act) {
-	  Date now = new Date();
+	private static String saveIcon(MenuItem mitem){
+  	Date now = new Date();
     SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
 
     String dateString = "";
 		try{
 			// getLocationOnScreen
 			dateString = sdfr.format(now);
-	  } catch (Throwable e) {
-      // Several error may come out with file handling or OOM
-      e.printStackTrace();
-	  }
-	  try {
-      // image naming and path  to include sd card  appending name you choose for file
-      String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
+		} catch (Throwable e) {
+    	// Several error may come out with file handling or OOM
+    	e.printStackTrace();
+  		return "";
+		}
+		try {
+    	// image naming and path  to include sd card  appending name you choose for file
+    	String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
 
-      // create bitmap screen capture
-      View v1 = act.getWindow().getDecorView().getRootView();
-      v1.setDrawingCacheEnabled(true);
-      Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
-      v1.setDrawingCacheEnabled(false);
+    	Drawable drawable = mitem.getIcon();
+    	Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
 
-      File imageFile = new File(mPath);
+	    Canvas canvas = new Canvas(bitmap);
+	    drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+	    drawable.draw(canvas);
 
-      FileOutputStream outputStream = new FileOutputStream(imageFile);
-      int quality = 100;
-      bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
-      outputStream.flush();
-      outputStream.close();
-	  } catch (Throwable e) {
-      // Several error may come out with file handling or OOM
-      e.printStackTrace();
-	  }
-	  return dateString;
+    	File imageFile = new File(mPath);
+
+    	FileOutputStream outputStream = new FileOutputStream(imageFile);
+    	int quality = 90;
+    	bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
+    	outputStream.flush();
+    	outputStream.close();
+		} catch (Throwable e) {
+    	// Several error may come out with file handling or OOM
+  		e.printStackTrace();
+  		return "";
+		}
+		return dateString;
+	}
+
+	private static String takeScreenshot(Activity act, Dialog diag) {
+  	Date now = new Date();
+    SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
+
+    String dateString = "";
+		try{
+			// getLocationOnScreen
+			dateString = sdfr.format(now);
+		} catch (Throwable e) {
+    	// Several error may come out with file handling or OOM
+    	e.printStackTrace();
+  		return "";
+		}
+		try {
+    	// image naming and path  to include sd card  appending name you choose for file
+    	String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
+
+    	// create bitmap screen capture
+    	View v1;
+    	if(act != null){
+    		v1 = act.getWindow().getDecorView().getRootView();
+    	}else{
+    		v1 = diag.getWindow().getDecorView().getRootView();
+    	}
+    	v1.setDrawingCacheEnabled(true);
+    	Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
+    	v1.setDrawingCacheEnabled(false);
+
+    	File imageFile = new File(mPath);
+
+    	FileOutputStream outputStream = new FileOutputStream(imageFile);
+    	int quality = 90;
+    	bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
+    	outputStream.flush();
+    	outputStream.close();
+		} catch (Throwable e) {
+	    // Several error may come out with file handling or OOM
+    	e.printStackTrace();
+  		return "";
+		}
+		return dateString;
 	}
 	
 }

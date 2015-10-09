@@ -401,8 +401,8 @@ class virtual logger (dx: D.dex) =
     (* to avoid the Logger class as well as libraries *)
     skip_cls <- U.begins_with cname logging || is_library cname;
     skip_cls <- skip_cls || self#skip_class cname;
-    (* let yesno = if skip_cls then "skipping" else "logging" in *)
-    (* Log.i (Pf.sprintf "%s class: %s" yesno cname) *)
+    (* let yesno = if skip_cls then "skipping" else "logging" in
+    Log.i (Pf.sprintf "%s class: %s" yesno cname) *)
 
   val mutable mid = D.no_idx
   (* to determine supercall in constructors *)
@@ -695,6 +695,7 @@ class log_transition_entries (dx: D.dex) =
      "onKey";
      "onLongClick";
      "onSystemUiVisibilityChange";
+     "onCheckedChanged";
      "onTouch";
      "isChecked";
      "onTouchEvent";
@@ -712,7 +713,8 @@ class log_transition_entries (dx: D.dex) =
      "onPause";
      "onStart";
      "onDestroy";
-     "onCreate"]
+     "onCreate";
+     "onBackPressed"]
   in
   let passoc = function `Assoc x -> x | _ -> failwith "JSON parse error: expected object" in
   let plist = function `List x -> x | _ -> failwith "JSON parse error: expected array" in
