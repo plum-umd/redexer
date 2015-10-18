@@ -8,6 +8,7 @@
     {
         "whitelist":
         [
+            "Lsymdroid",
             ".*;->query",
             "Landroid/accessibilityservice/UiTestAutomationBridge;->disconnect",
 "Landroid/accounts/AccountManager[^/]*;->doWork",
@@ -619,11 +620,7 @@
 "Landroid/content/ContentService;->setIsSyncable",
 "Landroid/content/ContentService;->setMasterSyncAutomatically",
 "Landroid/content/ContentService;->setSyncAutomatically",
-"Landroid/content/Context;->clearWallpaper",
-"Landroid/content/Context;->removeStickyBroadcast",
-"Landroid/content/Context;->sendStickyBroadcast",
-"Landroid/content/Context;->sendStickyOrderedBroadcast",
-"Landroid/content/Context;->setWallpaper",
+"Landroid/content/Context;->.*",
 "Landroid/content/ContextWrapper;->clearWallpaper",
 "Landroid/content/ContextWrapper;->removeStickyBroadcast",
 "Landroid/content/ContextWrapper;->sendStickyBroadcast",
