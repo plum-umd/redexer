@@ -49,6 +49,7 @@ module V = Visitor
 
 module Up  = Unparse
 module Hup = Htmlunparse
+module Jup = Jsonunparse
 
 module Cg = Callgraph
 module Ct = Ctrlflow
@@ -68,6 +69,8 @@ module A = Arg
 module L = List
 module S = String
 
+module Yj = Yojson.Basic
+
 (***********************************************************************)
 (* Basic Elements/Functions                                            *)
 (***********************************************************************)
@@ -82,9 +85,17 @@ let dump_hello _ : unit =
 
 let infile = ref "-"
 let outputdir = ref "output"
+let jsonout = ref "output.json"
 
 let dump_html (tx : D.dex) : unit =
   St.time "dump_html" (Hup.generate_documentation tx !outputdir) !infile
+
+let dump_json (tx : D.dex) : unit =
+  let chan = open_out !jsonout in
+  St.time "dump_json" (fun _ ->
+	    Yj.pretty_to_channel chan (Jup.generate_json tx);
+	    close_out chan
+	  ) ()
 
 let lib = ref "data/logging.dex"
 
@@ -244,6 +255,7 @@ let do_dump          () = task := Some dump
 let do_hello         () = task := Some dump_hello
 
 let do_htmlunparse   () = task := Some dump_html
+let do_jsonunparse   () = task := Some dump_json
 
 let do_combine       () = task := Some combine
 
@@ -281,6 +293,10 @@ let arg_specs = A.align
     ("-outputdir",   A.Set_string outputdir,
      " directory in which to place generated htmls (default: "^(!outputdir)^")");
     ("-htmlunparse", A.Unit do_htmlunparse, " format dex in an html document");
+
+    ("-jsonoutput",   A.Set_string jsonout,
+     " JSON file to write (default: "^(!jsonout)^")");
+    ("-jsonunparse", A.Unit do_jsonunparse, " format dex in JSON");
 
     ("-lib",     A.Set_string lib,  " library dex name (default: "^(!lib)^")");
     ("-combine", A.Unit do_combine, " combine two dex files");

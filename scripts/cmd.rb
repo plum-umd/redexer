@@ -45,7 +45,7 @@ tmp_dir = "tmp_dir_" + rand(36**8).to_s(36) # random string with size 8
 require "#{File.join(HERE, "apk")}"
 
 cmds = [
-  "unparse", "htmlunparse", "id", "combine",
+  "unparse", "htmlunparse", "jsonunparse", "id", "combine",
   "info", "classes", "api", "opstat",
   "intent", "cg", "cfg", "dom", "pdom",
   "dump_method", "dependants", "live", "const", "reach",
@@ -163,6 +163,12 @@ when "htmlunparse"
     Dex.htmlunparse(dex, outputdir)
   else
     Dex.htmlunparse(dex)
+  end
+when "jsonunparse"
+  if outputdir
+    Dex.jsonunparse(dex, outputdir)
+  else
+    Dex.jsonunparse(dex)
   end
 when "id"
   if to

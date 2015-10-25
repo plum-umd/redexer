@@ -116,6 +116,11 @@ class Dex
       @@succ = $?.exitstatus == 0
     end
   end
+
+  def self.jsonunparse(dex_name=DEX, file_name="output.json")
+    self.runcmd("#{REDEXER} -jsonunparse #{dex_name} -jsonoutput #{file_name}")
+    @@succ = $?.exitstatus == 0
+  end
   
   def self.opstat(dex_name=DEX, *opcode)
     fmt = /0x[0-9a-fA-F]{8}: \[sort: instruction\, op: (\S+)(\, opr: \[.+\])?\]/
