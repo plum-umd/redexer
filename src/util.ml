@@ -48,8 +48,8 @@ struct
 end
 
 module IS = Set.Make(IntKey)
-
 module IM = Map.Make(IntKey)
+module CM = Map.Make(Char)
 
 (* read_lines : in_channel -> string list *)
 let read_lines ch : string list =
@@ -177,4 +177,20 @@ let common_prefix (s1: string) (s2: string) : string =
     | _, _ -> pre
   in
   implode (h [] (explode s1) (explode s2))
+
+  
+let filename_sanatize_map = CM.add ';' "_" (CM.add '/' "_" CM.empty)
+  
+(* sanatize_class_filename : string -> string *)
+let sanatize_class_filename clsname = 
+  let replace str (map : string CM.t) =
+    let rec combine k lst =
+      match k with
+      | hd :: tl ->
+         (try combine tl (lst @ (explode (CM.find hd map)))
+          with | Not_found -> combine tl (lst @ [ hd ]))
+      | [] -> implode lst
+    in combine (explode str) []
+  in
+  replace clsname filename_sanatize_map
 

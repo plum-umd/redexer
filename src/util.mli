@@ -96,3 +96,5 @@ val matches : string -> Str.regexp -> bool
 (** find the common prefix of the given [string]s *)
 val common_prefix : string -> string -> string
 
+(** Take a java class name and turn it into a name that can be placed into a file *)
+val sanatize_class_filename : string -> string

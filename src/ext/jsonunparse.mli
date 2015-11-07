@@ -42,4 +42,5 @@
 
  *)
 
-val generate_json : Dex.dex -> Yojson.Basic.json
+(** Generate json for a dex file given an output folder *)
+val generate_json : Dex.dex -> string -> Yojson.Basic.json

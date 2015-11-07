@@ -158,7 +158,7 @@ when "unparse"
     yml = Dex.unparse(dex)
     puts yml if dex_succ?(apk, cmd)
   end
-when "htmlunparse"
+when "htmlunparse" 
   if outputdir
     Dex.htmlunparse(dex, outputdir)
   else

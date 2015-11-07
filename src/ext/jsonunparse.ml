@@ -45,7 +45,7 @@ module P = Printf
 module L = List
 module A = DynArray
 module S = String
-module CM = Map.Make(Char)
+module U = Util
 
 open Yojson.Basic
   
@@ -147,7 +147,6 @@ let get_class_name (d : D.dex) (c : D.class_def_item) : string =
   get_ty_str d c.D.c_class_id
     
 let p_method (d : D.dex) (c : D.class_def_item) (mtd : D.encoded_method) : json =
-  let class_name = get_class_name d c in
   let mid_item = A.get d.D.d_method_ids (D.of_idx mtd.D.method_idx) in
   let proto_item = A.get d.D.d_proto_ids (D.of_idx mid_item.D.m_proto_id) in
   let shorty = get_str d proto_item.D.shorty in
@@ -172,8 +171,8 @@ let p_method (d : D.dex) (c : D.class_def_item) (mtd : D.encoded_method) : json 
 	   "regs-used", `Int citm.D.registers_size;
 	   "ins-size", `Int citm.D.ins_size;
 	   "instructions", instructions d i]))
-    
-let p_class (d : D.dex) (c : D.class_def_item) : json =
+
+let p_class (d : D.dex) (c : D.class_def_item) : string * json =
   let class_name = get_class_name d c in
   let fields = D.get_flds d c.D.c_class_id in
   let source_file =
@@ -188,7 +187,7 @@ let p_class (d : D.dex) (c : D.class_def_item) : json =
      ["name", `String (get_str d fid.D.f_name_id);
       "type", `String (get_ty_str d fid.D.f_type_id)]
   in
-  `Assoc
+  class_name, `Assoc
    (
      (match cdata with
       | None -> []
@@ -203,13 +202,20 @@ let p_class (d : D.dex) (c : D.class_def_item) : json =
 	"source-file", source_file;
 	"static-fields", `List (L.map pfield fields)])
    
-let classes (d : D.dex) : json =
-  `List (L.map (p_class d) (A.to_list d.D.d_class_defs))
-      
+let classes (d : D.dex) outputdir : json =
+  let classes : (string*json) list = (L.map (p_class d) (A.to_list d.D.d_class_defs)) in
+  `Assoc (L.map (fun (cname, json) -> 
+	      let fname = cname ^ ".json" in
+	      let chan = open_out
+			   (outputdir ^ "/" ^ (U.sanatize_class_filename fname)) in
+	      pretty_to_channel chan json;
+	      close_out chan;
+	      (cname, `String fname)) classes)
+   
 (* generate_documentation : D.dex -> json *)
-let rec generate_json (d : D.dex) : json =
+let rec generate_json (d : D.dex) (outputdir : string) : json =
   `Assoc
    ["strings", strings d;
     "methods", methods d;
     "types", types d;
-    "classes", classes d]
+    "classes", classes d outputdir]

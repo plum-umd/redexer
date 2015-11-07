@@ -85,15 +85,15 @@ let dump_hello _ : unit =
 
 let infile = ref "-"
 let outputdir = ref "output"
-let jsonout = ref "output.json"
+let jsonout = ref "output"
 
 let dump_html (tx : D.dex) : unit =
   St.time "dump_html" (Hup.generate_documentation tx !outputdir) !infile
 
 let dump_json (tx : D.dex) : unit =
-  let chan = open_out !jsonout in
+  let chan = open_out (!outputdir ^ "/index.json") in
   St.time "dump_json" (fun _ ->
-	    Yj.pretty_to_channel chan (Jup.generate_json tx);
+	    Yj.pretty_to_channel chan (Jup.generate_json tx !outputdir);
 	    close_out chan
 	  ) ()
 
@@ -291,11 +291,8 @@ let arg_specs = A.align
     ("-hello", A.Unit do_hello,  " API test");
 
     ("-outputdir",   A.Set_string outputdir,
-     " directory in which to place generated htmls (default: "^(!outputdir)^")");
+     " directory in which to place generated {html|json} (default: "^(!outputdir)^")");
     ("-htmlunparse", A.Unit do_htmlunparse, " format dex in an html document");
-
-    ("-jsonoutput",   A.Set_string jsonout,
-     " JSON file to write (default: "^(!jsonout)^")");
     ("-jsonunparse", A.Unit do_jsonunparse, " format dex in JSON");
 
     ("-lib",     A.Set_string lib,  " library dex name (default: "^(!lib)^")");
