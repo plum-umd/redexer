@@ -79,7 +79,6 @@ let methods (d : D.dex) : json =
     let proto_id = D.get_pit d mtd_id_item in
     `Assoc
      ["cls_name", `String (get_ty_str d mtd_id_item.D.m_class_id);
-      "cls_name", `String (get_ty_str d mtd_id_item.D.m_class_id);
       "shorty", `String (get_str d proto_id.D.shorty);
       "name", `String (printed_method_name (get_str d mtd_id_item.D.m_name_id))]
   in
@@ -124,6 +123,10 @@ let rec instructions d insns : json =
 		 `Assoc ["type", `String "type-ref";
 			 "index", `Int i;
 			 "value", `String (I.opr_to_string opr)]
+	      | I.FIELD_IDS ->
+		 `Assoc ["type", `String "field-ref";
+			 "index", `Int i;
+			 "value", `String (I.opr_to_string opr)]			 
               | I.METHOD_IDS ->
 		 `Assoc ["type", `String "method-ref";
 			 "index", `Int i;
@@ -135,7 +138,8 @@ let rec instructions d insns : json =
               | _ -> `String (I.opr_to_string opr))
 	  | _ -> `String (I.opr_to_string opr)) in
        `Assoc
-	["op", `String (I.op_to_string op);
+	["index", `Int (D.of_off lnk);
+         "op", `String (I.op_to_string op);
 	 "oprs", `List (L.map popr opr)]
     | _ ->
        `Null
@@ -146,7 +150,8 @@ let rec instructions d insns : json =
 let get_class_name (d : D.dex) (c : D.class_def_item) : string =
   get_ty_str d c.D.c_class_id
     
-let p_method (d : D.dex) (c : D.class_def_item) (mtd : D.encoded_method) : json =
+let p_method (d : D.dex) (c : D.class_def_item) (is_virtual : bool) 
+	     (mtd : D.encoded_method) : json =
   let mid_item = A.get d.D.d_method_ids (D.of_idx mtd.D.method_idx) in
   let proto_item = A.get d.D.d_proto_ids (D.of_idx mid_item.D.m_proto_id) in
   let shorty = get_str d proto_item.D.shorty in
@@ -159,7 +164,9 @@ let p_method (d : D.dex) (c : D.class_def_item) (mtd : D.encoded_method) : json 
   in
   `Assoc
    (["name", `String method_name;
+     "mid", `Int (D.of_idx mtd.D.method_idx);
      "shorty", `String shorty;
+     "virtual", `Bool is_virtual;
      "return", `String return_type]
     @ 
       (match citm with
@@ -192,8 +199,8 @@ let p_class (d : D.dex) (c : D.class_def_item) : string * json =
      (match cdata with
       | None -> []
       | Some cdata ->
-	 ["direct-methods", `List (L.map (p_method d c) cdata.D.direct_methods);
-	  "virtual-methods", `List (L.map (p_method d c) cdata.D.virtual_methods)])
+	 ["methods", `List ((L.map (p_method d c false) cdata.D.direct_methods) @
+		      (L.map (p_method d c true) cdata.D.virtual_methods))])
      @
        ["name", `String class_name;
 	"access-flags", `Int c.D.c_access_flag;
@@ -204,13 +211,23 @@ let p_class (d : D.dex) (c : D.class_def_item) : string * json =
    
 let classes (d : D.dex) outputdir : json =
   let classes : (string*json) list = (L.map (p_class d) (A.to_list d.D.d_class_defs)) in
-  `Assoc (L.map (fun (cname, json) -> 
-	      let fname = cname ^ ".json" in
-	      let chan = open_out
-			   (outputdir ^ "/" ^ (U.sanatize_class_filename fname)) in
-	      pretty_to_channel chan json;
-	      close_out chan;
-	      (cname, `String fname)) classes)
+  let i = ref 0 in
+  `List (L.map (fun (cname, json) -> 
+	     let fname = U.sanatize_class_filename @@ cname ^ ".json" in
+	     let chan = open_out
+			  (outputdir ^ "/" ^ fname) in
+	     pretty_to_channel chan json;
+	     close_out chan;
+	     let i' = !i in
+	     i := !i+1;
+	     (`Assoc ["name", `String cname; "file", `String fname; "index", `Int i'])) classes)
+
+let fields (d: D.dex) : json = 
+  `List
+   (L.map (fun field -> `Assoc ["class", `Int (D.of_idx field.D.f_class_id);
+				"type", `String (D.get_str d field.D.f_type_id);
+				"name", `String (D.get_str d field.D.f_name_id)])
+	  @@ A.to_list d.D.d_field_ids)
    
 (* generate_documentation : D.dex -> json *)
 let rec generate_json (d : D.dex) (outputdir : string) : json =
@@ -218,4 +235,5 @@ let rec generate_json (d : D.dex) (outputdir : string) : json =
    ["strings", strings d;
     "methods", methods d;
     "types", types d;
+    "fields", fields d;
     "classes", classes d outputdir]
