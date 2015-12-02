@@ -396,10 +396,11 @@ class logger (dx: D.dex) =
   let fine_method (cname: string) : bool =
     U.begins_with cname "Ljava/lang/reflect"
     || not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"]) in
+  
   (* decide whether or not to log a given method name *)
   let instrument_method name = match !detail with
     | Default  -> is_library name && is_not_javalang name
-    | Fine     -> is_library name && fine_method name
+    | Fine     -> is_not_javalang name
     | Regex rl -> 
       if blacklist name then false
       else
@@ -573,7 +574,7 @@ object
           let lname = D.get_ty_str dx lid in
           let mname = D.get_mtd_name dx mid in
           let full = D.get_mtd_full_name dx mid in
-          let do_logging = instrument_method mname in
+          let do_logging = instrument_method full in
           if (not do_logging) then
             (Log.i ("skipping log of method "^ full))
           else
