@@ -52,7 +52,7 @@ cmds = [
   "exported", "permissions", "sdk", "launcher",
   "activity", "service", "provider", "receiver",
   "custom_views", "fragments", "buttons",
-  "hello", "logging", "logging_fine", "logging_regex", "logging_ui", "directed"
+  "hello", "logging", "logging_ui", "directed"
 ]
 
 cmd = ""
