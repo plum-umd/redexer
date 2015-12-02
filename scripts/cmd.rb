@@ -270,6 +270,7 @@ when "logging", "logging_ui", "directed"
     close(apk)
     raise "rewriting dex failed"
   end
+  apk.add_permission
   if to
     apk.repack(to)
   else

@@ -84,7 +84,12 @@ val new_sig : Dex.dex -> Dex.link -> string
 val new_method : Dex.dex -> Dex.link -> string
  -> Dex.access_flag list -> string -> string list -> Dex.link
 
-(** rip off the [final] qualifer on {!Dex.encoded_method} *)
+(** rip off the [final] qualifer on {!Dex.encoded_method} 
+
+    @raises {Dex.Wrong_dex} if the method cannot be found (e.g.,
+ because it is part of a framework class).
+
+*)
 val make_method_overridable : Dex.dex -> Dex.link -> Dex.link -> unit
 
 (** instruction inserting point *)

@@ -237,8 +237,8 @@ with End_of_file -> prerr_endline "EOF"
 | D.Wrong_dex msg -> prerr_endline msg
                        
 (* Extract regular expressions from a file *)
-let log_regex f : Lgg.detail = 
-  Lgg.Regex (U.read_lines (open_in f))
+(*let log_regex f : Lgg.detail = ()*)
+  (*Lgg.Regex (U.read_lines (open_in f))*)
     
 (***********************************************************************)
 (* Arguments                                                           *)
@@ -318,8 +318,8 @@ let arg_specs = A.align
 
     ("-logging",  A.Unit do_logging,
      " instrument logging feature into the given dex");
-    ("-logging-regex", A.String (fun f -> Lgg.detail := log_regex f),
-     " log methods with regular expressions drawn from a file");
+    (*("-logging-regex", A.String (fun f -> Lgg.detail := log_regex f),
+     " log methods with regular expressions drawn from a file");*)
     ("-logging-detail", A.Unit (fun () -> Lgg.detail := Fine),
      " logging more methods (default: false)");
 
