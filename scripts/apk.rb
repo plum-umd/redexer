@@ -99,6 +99,10 @@ class Apk
     @succ
   end
 
+  def unpacked 
+    @manifest == nil
+  end
+
   def logging(detail)
     Dex.logging(dex,detail,dex)
     @out << Dex.out

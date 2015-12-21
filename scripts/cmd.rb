@@ -40,7 +40,7 @@ THIS_FILE = File.expand_path(__FILE__)
 HERE = File.dirname(THIS_FILE)
 HOME = File.join(HERE, "..")
 RES = File.join(HOME, "results")
-tmp_dir = "tmp_dir_" + rand(36**8).to_s(36) # random string with size 8
+$tmp_dir = "tmp_dir_" + rand(36**8).to_s(36) # random string with size 8
 
 require "#{File.join(HERE, "apk")}"
 
@@ -125,7 +125,7 @@ case File.extname(fn)
 when ".dex"
   dex = fn
 when ".apk"
-  apk = Apk.new(fn, tmp_dir)
+  apk = Apk.new(fn, $tmp_dir)
   if apk.unpack
     dex = apk.dex
   else
@@ -148,6 +148,34 @@ def dex_succ?(apk, cmd)
     raise "cannot get #{cmd}"
   end
   true
+end
+
+def rewrite_and_install(apk,fn,to,res)
+  if not apk.succ
+    puts apk.out
+    close(apk)
+    raise "rewriting dex failed"
+  end
+  apk.add_permission
+  if to
+    apk.repack(to)
+  else
+    apk.repack
+  end
+  if not apk.succ
+    puts apk.out
+    close(apk)
+    raise "repacking apk failed"
+  end
+  # for debugging, leave rewritten dex and xml files
+  system("cp -f #{File.join($tmp_dir, "classes.dex")} #{res}")
+  system("cp -f #{File.join($tmp_dir, "AndroidManifest.xml")} #{res}")
+  # and move the rewritten apk
+  if not to
+    rewritten = File.basename(fn)
+    system("mv -f #{rewritten} #{res}") if apk.succ
+  end
+  puts apk.out if apk.succ
 end
 
 case cmd
@@ -263,33 +291,12 @@ when "custom_views", "fragments", "buttons"
     require 'pp'
     PP.pp res
   end
-when "logging", "logging_ui", "directed"
+when "logging", "logging_ui"
   apk.send(cmd.to_sym,detail)
-  if not apk.succ
-    puts apk.out
-    close(apk)
-    raise "rewriting dex failed"
-  end
-  apk.add_permission
-  if to
-    apk.repack(to)
-  else
-    apk.repack
-  end
-  if not apk.succ
-    puts apk.out
-    close(apk)
-    raise "repacking apk failed"
-  end
-  # for debugging, leave rewritten dex and xml files
-  system("cp -f #{File.join(tmp_dir, "classes.dex")} #{RES}")
-  system("cp -f #{File.join(tmp_dir, "AndroidManifest.xml")} #{RES}")
-  # and move the rewritten apk
-  if not to
-    rewritten = File.basename(fn)
-    system("mv -f #{rewritten} #{RES}") if apk.succ
-  end
-  puts apk.out if apk.succ
+  rewrite_and_install(apk,fn,to,RES)
+when "directed"
+  apk.directed
+  rewrite_and_install(apk,fn,to,RES)
 when "hello"
   Dex.hello
   system("mv -f classes.dex #{RES}") if dex_succ?(apk, cmd)
