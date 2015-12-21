@@ -48,10 +48,7 @@ variables are set correctly as follows:
     CAML_LD_LIBRARY_PATH=%OCAMLLIB%\stublibs
     FLEXLINKFLAGS=-L%MinGW%\lib -L%MinGW%\lib\gcc\mingw32\N.N.N
 
-** OPAM packages
-
-Redexer uses the following OPAM packages:
-
+* OPAM packages:
  - sha
  - str
  - ppx_deriving
