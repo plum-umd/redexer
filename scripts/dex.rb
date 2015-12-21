@@ -101,19 +101,31 @@ class Dex
   end
   
   CSS = File.join(DAT, "dex-format.css")
-  
-  def self.htmlunparse(dex_name=DEX, dir_name="output")
+
+  def self.dodir(dir_name) 
     if not File.exists?(dir_name)
       puts "Creating new output directory: #{dir_name}"
       system("mkdir #{dir_name}")
-      puts "Moving default stylesheet to #{dir_name}"
-      system("cp #{CSS} #{File.join(dir_name, "dex-format.css")}")
     end
     if !(test ?d, dir_name)
       puts "Error!  ``#{dir_name}'' exists and is not a directory"
     else
-      self.runcmd("#{REDEXER} -htmlunparse #{dex_name} -outputdir #{dir_name}")
+      yield 
       @@succ = $?.exitstatus == 0
+    end
+  end
+
+  def self.htmlunparse(dex_name=DEX, dir_name="output")
+    self.dodir(dir_name) do
+      puts "Moving default stylesheet to #{dir_name}"
+      system("cp #{CSS} #{File.join(dir_name, "dex-format.css")}")
+      self.runcmd("#{REDEXER} -htmlunparse #{dex_name} -outputdir #{dir_name}")
+    end
+  end
+
+  def self.jsonunparse(dex_name=DEX, dir_name="output")
+    self.dodir(dir_name) do
+      self.runcmd("#{REDEXER} -jsonunparse #{dex_name} -outputdir #{dir_name}")
     end
   end
   

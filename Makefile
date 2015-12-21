@@ -27,7 +27,7 @@ allclean: clean
 
 # x.native; strip the .native extension after building
 %.native:
-	ocamlbuild -cflag -dsource -use-ocamlfind $@
+	ocamlbuild -use-ocamlfind $@
 	mv $@ $*
 
 # x.d.byte or x.byte

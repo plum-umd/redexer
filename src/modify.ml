@@ -385,11 +385,17 @@ let new_sig (dx: D.dex) (cid: D.link) (mname: string)
     let rec loop cid = 
       let sid = D.get_superclass dx cid in
       if sid = D.no_idx then () else
-        ((try
-            let mid = fst (L.find finder (D.get_mtds dx sid)) in
-            make_method_overridable dx sid mid
-          with Not_found -> ());
-         loop sid)
+        begin (try
+		  let mid = fst (L.find finder (D.get_mtds dx sid)) in
+		  make_method_overridable dx sid mid
+		with Not_found -> ()
+		   (* This will be thrown from `Dex.get_emtd` when we
+		   traverse up to a framework class. E.g., trying to
+		   lookup the method for something in `Activity`. *)
+		   | D.Wrong_dex _ -> ()
+	      );
+	      loop sid			    
+	end
     in
     loop cid;
     nid

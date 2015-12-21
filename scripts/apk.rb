@@ -99,6 +99,10 @@ class Apk
     @succ
   end
 
+  def unpacked 
+    @manifest == nil
+  end
+
   def logging(detail)
     Dex.logging(dex,detail,dex)
     @out << Dex.out
@@ -156,6 +160,25 @@ class Apk
   def clean
     # if rewriting is successful, results folder will have dex and xml files
     system("rm -rf #{@dir}")
+  end
+
+  PERMISSION = "\t<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>"
+  MANIFEST_START = "<manifest.*>"
+  def add_permission()
+    file_path = File.join(@dir, "AndroidManifest.xml")
+    if not (File.readlines(file_path).grep(/#{PERMISSION}/).size > 0)
+      temp_file = Tempfile.new(@dir)
+      begin
+        File.readlines(file_path).each do |line|
+          temp_file.puts(line)
+          temp_file.puts(PERMISSION) if line =~ /#{MANIFEST_START}/
+        end
+        temp_file.close
+        FileUtils.mv(temp_file.path,file_path)
+      ensure
+        temp_file.delete
+      end
+    end
   end
   
   def launcher

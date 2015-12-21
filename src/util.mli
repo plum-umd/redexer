@@ -96,3 +96,8 @@ val matches : string -> Str.regexp -> bool
 (** find the common prefix of the given [string]s *)
 val common_prefix : string -> string -> string
 
+(** Take a java class name and turn it into a name that can be placed into a file *)
+val sanatize_class_filename : string -> string
+
+(** select a field in a JSON object hierarchy using a string e.g., "foo/bar/baz" *)
+val json_select : Yojson.Safe.json -> string -> Yojson.Safe.json

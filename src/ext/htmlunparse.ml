@@ -57,7 +57,7 @@ module S = String
   
 module FN = Filename
   
-module CM = Map.Make(Char)
+module U = Util
   
 (***********************************************************************)
 (* Basic Types/Elements                                                *)
@@ -95,24 +95,10 @@ let implode l =
   let rec imp i =
     function | [] -> result | c :: l -> (result.[i] <- c; imp (i + 1) l)
   in imp 0 l
-  
-(* replace : string -> string CM.t -> string *)
-let replace str (map : string CM.t) =
-  let rec combine k lst =
-    match k with
-      | hd :: tl ->
-        (try combine tl (lst @ (explode (CM.find hd map)))
-         with | Not_found -> combine tl (lst @ [ hd ]))
-      | [] -> implode lst
-  in combine (explode str) []
-  
+
 (***********************************************************************)
 (* HTML unparsing                                                      *)
 (***********************************************************************)
-let filename_sanatize_map = CM.add ';' "_" (CM.add '/' "_" CM.empty)
-  
-(* sanatize_class_filename : string -> string *)
-let sanatize_class_filename clsname = replace clsname filename_sanatize_map
 
 let printed_method_name (mtd_name: string) =
   if (mtd_name = "") then
@@ -120,7 +106,7 @@ let printed_method_name (mtd_name: string) =
   else
     mtd_name
       
-let get_class_link fname = find_link_path (sanatize_class_filename fname)
+let get_class_link fname = find_link_path (U.sanatize_class_filename fname)
   
 let get_ty_str d lnk =
   match lnk with
@@ -163,7 +149,7 @@ let print_methods (d : D.dex) : unit =
 	let proto_id = D.get_pit d mtd_id_item in
 	let shorty = get_str d proto_id.D.shorty in
 	let name = printed_method_name (get_str d mtd_id_item.D.m_name_id) in
-	let link = Printf.sprintf "%s#%s;%s" (get_class_link cls_name) (sanatize_class_filename cls_name) name in
+	let link = Printf.sprintf "%s#%s;%s" (get_class_link cls_name) (U.sanatize_class_filename cls_name) name in
 	pp "<tr><td>%X</td><td><a name=\"method%d\"></a><a href=\"%s\">%s</a></td><td>%s</td><td>%s</td></tr>" 
 	  num num link name cls_name shorty;
 	print_mtd_ids tl (num+1) 
@@ -367,7 +353,7 @@ let print_method (d : D.dex) (c : D.class_def_item)
     try Some (snd (D.get_citm d c.D.c_class_id mtd.D.method_idx))
     with | D.Wrong_dex _ -> None
   in
-  (pp "<a name=\"%s;%s\"></a><h3>Method <code>%s</code></h3>\n" (sanatize_class_filename class_name)
+  (pp "<a name=\"%s;%s\"></a><h3>Method <code>%s</code></h3>\n" (U.sanatize_class_filename class_name)
      method_name method_name;
    pp "<code><b>%s</b></code>\n" shorty;
    pp "Return type: %s\n" return_type;
@@ -386,7 +372,7 @@ let print_methods_index (d : D.dex) class_name cdata : unit =
   let print_method_index mtd =
     let mid_item = A.get d.D.d_method_ids (D.of_idx mtd.D.method_idx) in
     let name = get_str d mid_item.D.m_name_id in
-    pp "<a href=\"#%s;%s\"><code>%s</code></a><br>" (sanatize_class_filename class_name) name 
+    pp "<a href=\"#%s;%s\"><code>%s</code></a><br>" (U.sanatize_class_filename class_name) name 
       (printed_method_name name)
   in
   (pp "<b>Direct methods:</b><br>";
@@ -445,7 +431,7 @@ let make_class (d : D.dex) (c : D.class_def_item) : unit =
   let class_name = get_class_name d c
   in
   (cur_out :=
-     open_out (find_file_path (sanatize_class_filename class_name));
+     open_out (find_file_path (U.sanatize_class_filename class_name));
    print_beginning class_name;
    print_class d c;
    print_end_close ())
