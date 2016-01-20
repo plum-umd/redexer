@@ -16,3 +16,4 @@
 *.cmx
 _build
 redexer
+output/*

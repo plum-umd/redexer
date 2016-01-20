@@ -56,6 +56,12 @@ sig
   (** [android.app.Application] *)
   val application : string
 
+  (** [android.app.Fragment] *)
+  val fragment : string
+
+  (** [android.support.v4.app.Fragment] *)
+  val v4fragment : string
+
   (** [android.app.ListActivity] *)
   val lst_act : string
 
