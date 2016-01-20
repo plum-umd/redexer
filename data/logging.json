@@ -3,7 +3,8 @@
     {
         "blacklist":
         ["Lorg/codehaus/jackson/map/ser/std/MapSerializer.*",
-         "Landroid/database/sqlite/SQLiteDatabase.*"]
+         "Landroid/database/sqlite/SQLiteDatabase.*",
+         "Lretrofit/RestMethodInfo.*"]
     },
     "method-entries":
     {
@@ -12,8 +13,12 @@
     	],
         "whitelist":
         [
-            "Lsymdroid",
-            ".*;->query",
+        "Lsymdroid",
+        ".*;->doInBackground",
+        ".*;->onPreExecute",
+        ".*;->executeOnExecutor",
+        ".*;->onPostExecute",
+        ".*;->execute",
 	    ".*;->isChecked",
 	    "Landroid/accessibilityservice/UiTestAutomationBridge;->disconnect",
 	    "Landroid/accounts/AccountManager[^/]*;->doWork",

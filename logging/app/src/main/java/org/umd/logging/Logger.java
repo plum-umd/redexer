@@ -39,6 +39,7 @@ package org.umd.logging;
 
 import android.util.Log;
 import java.lang.Throwable;
+import java.lang.Thread;
 import java.lang.StackTraceElement;
 import java.lang.StringBuilder;
 import java.util.Arrays;
@@ -49,18 +50,14 @@ import java.util.HashSet;
 import java.text.SimpleDateFormat;
 import java.io.FileOutputStream;
 import java.io.File;
-// import android.widget.Button;
+
 import android.widget.CheckBox;
 import android.widget.RadioButton;
 import android.widget.TextView;
-//import android.widget.ImageButton;
 
-//import android.content.Context;
-//import android.content.res.XmlResourceParser;
 import android.app.Activity;
-import android.app.Fragment;
 import android.app.Dialog;
-// import android.support.v4.app.Fragment;
+
 import android.view.MenuItem;
 import android.view.View;
 import android.net.Uri;
@@ -68,236 +65,245 @@ import android.os.Environment;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.graphics.Canvas;
-
+import android.os.AsyncTask;
+import org.umd.logging.FragmentMapper;
 
 public class Logger {
-	final static String tag = Logger.class.getPackage().getName();
-	static final Set<Class> WRAPPER_TYPES = new HashSet(Arrays.asList(
-																	  Boolean.class, Character.class, Byte.class, Short.class, Integer.class,
-																	  Long.class, Float.class, Double.class, Void.class));
-	static boolean isWrapperType(Class clazz) {
-		return WRAPPER_TYPES.contains(clazz);
-	}
-	
-	static String join(Iterable<Object> args, String delimiter) {
-		StringBuilder buf = new StringBuilder();
-		Iterator<Object> iter = args.iterator();
-		int argCount = 0;
-		while (iter.hasNext()) {
-			Object arg = iter.next();
-			String s_arg = "";
-			if (arg == null) {
-				s_arg = "null";
-			} else if (isWrapperType(arg.getClass())) {
-				s_arg = arg.toString();
-			} else if (arg.getClass() == String.class) {
-				s_arg = "\"" + ((String)arg).replace("\n","\\n") + "\"";
-			} else if (arg.getClass() == Class.class) {
-				s_arg = ((Class)arg).getName();
-				//check it dynamically with reflexion
-			}else if(argCount == 0 && arg instanceof Activity){
-				s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<activity=true>";
-			}else if(argCount == 0 && arg instanceof Fragment){
-				s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<fragment=true>";
-			}else{
-				s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
-				if(arg instanceof View){
-					if(argCount == 0 || argCount == 1){
-						try{
-							String file = takeScreenshot(((Activity)((View)arg).getContext()),null);
-							s_arg += "<file=" + file + ">";
-							int[] location = new int[2];
-							((View)arg).getLocationOnScreen(location);
-							s_arg += "<x=" + String.valueOf(location[0]) + ">";
-							s_arg += "<y=" + String.valueOf(location[1]) + ">";
-							s_arg += "<width=" + String.valueOf(((View)arg).getWidth()) + ">";
-							s_arg += "<height=" + String.valueOf(((View)arg).getHeight()) + ">";
-						}catch(Exception e){
-							System.out.println(e.getMessage());
-						}
-					}
-					if(arg instanceof TextView){
-						s_arg += "<text=" + ((TextView)arg).getText() + ">";
-						if(arg instanceof RadioButton){
-							s_arg += "<value=" + ((RadioButton)arg).isChecked() + ">";
-						}else if(arg instanceof CheckBox){
-							s_arg += "<value=" + ((CheckBox)arg).isChecked() + ">";
-						}
-					}
-					try{
-						s_arg += "<id=" + ((View)arg).getId() + ">"; //This is unique per app
-						s_arg += "<imagename=" + ((View)arg).getResources().getResourceEntryName(((View)arg).getId()) + ">";
-					//s_arg += "<tmp2=" + ((View)arg).getResources().getResourceName(((View)arg).getId()) + ">";
-					//s_arg += "<tmp3=" + ((View)arg).getResources().getResourcePackageName(((View)arg).getId()) + ">";
-					//s_arg += "<tmp4=" + ((View)arg).getResources().getResourceTypeName(((View)arg).getId()) + ">";
-					//s_arg += "<tmp5=" + ((View)arg).getResources().getString(((View)arg).getId()) + ">";
-					/*try{
-						String name = ((View)arg).getResources().getResourceName(((View)arg).getId());
-						String type = ((View)arg).getResources().getResourceTypeName(((View)arg).getId());
-						String packagen = ((View)arg).getResources().getResourcePackageName(((View)arg).getId());
-						int resid = ((View)arg).getResources().getInteger(((View)arg).getId());
-						s_arg += "<tmp6=" + ((View)arg).getResources().getXml(resid).getText() + ">";*/
-					}catch(Exception e){
-			    		System.out.println(e.getMessage());
-					}
-				}
-				if(arg instanceof Uri){
-					s_arg += "<URI=" + ((Uri)arg).toString() + ">";
-				}
-				if(arg instanceof MenuItem){
-					s_arg += "<id=" + ((MenuItem)arg).getItemId() + ">";
-					s_arg += "<menuname=" + ((MenuItem)arg).getTitleCondensed() + ">";
-		    	String fname = saveIcon((MenuItem)arg);
-		    	if(fname != ""){
-		    		s_arg += "<iconfile=" + fname + ">";
-		    	}
-				}
-				if(arg instanceof Dialog){
-					if(argCount == 0 || argCount == 1){
-						String file = takeScreenshot(null,(Dialog)arg);
-						if(file != ""){
-							s_arg += "<file=" + file + ">";
-							int width = ((Dialog)arg).getWindow().getDecorView().getWidth();
-							int height = ((Dialog)arg).getWindow().getDecorView().getHeight();
-							int x = (int)((Dialog)arg).getWindow().getDecorView().getX();
-							int y = (int)((Dialog)arg).getWindow().getDecorView().getY();
-							s_arg += "<x=" + String.valueOf(x) + ">";
-							s_arg += "<y=" + String.valueOf(y) + ">";
-							s_arg += "<width=" + String.valueOf(width) + ">";
-							s_arg += "<height=" + String.valueOf(height) + ">";
-						}
-					}
-				}
-			}
-			buf.append(s_arg);
-			if (!iter.hasNext())
-				break;
-			buf.append(delimiter);
-			argCount++;
-		}
-		return buf.toString();
-	}
-	
-	static String ofJavaTy(String cname) {
-		String sanitized = cname;
-		if (cname.startsWith("L") && cname.endsWith(";")) {
-			sanitized = cname.substring(1, cname.length() - 1).replace('/','.');
-		}
-		return sanitized;
-	}
-	
-	static void log(String io, String cname, String mname, Object... args) {
-		String s_args = join(Arrays.asList(args), ", ");
-        long threadId = Thread.currentThread().getId();
-		String msg = io + " " + threadId + " " + ofJavaTy(cname) + "." + mname + "(" + s_args + ")";
-		Log.i(tag, msg);
-	}
-	
-	static void logMethod(String io, Object... args) {
-		StackTraceElement elts[] = (new Throwable ()).getStackTrace();
-		// 0 : org.umd.logging.Logger.logMethod
-		// 1 : org.umd.logging.Logger.logMethod(Entry|Exit)
-		String cname = elts[2].getClassName();
-		String mname = elts[2].getMethodName();
-		log("Method " + io, cname, mname, args);
-	}
-	
-	public static void logMethodEntry(Object... args) {
-		logMethod(">", args);
-	}
-	
-	public static void logMethodExit(Object... args) {
-		logMethod("<", args);
-	}
-	
-	public static void logAPIEntry(String cname, String mname, Object... args) {
-		log("Api >", cname, mname, args);
-	}
-	
-	public static void logAPIExit(String cname, String mname, Object... args) {
-		log("Api <", cname, mname, args);
-	}
+  final static String tag = Logger.class.getPackage().getName();
+  static final Set<Class> WRAPPER_TYPES = new HashSet(Arrays.asList(
+                                    Boolean.class, Character.class, Byte.class, Short.class, Integer.class,
+                                    Long.class, Float.class, Double.class, Void.class));
+  static boolean isWrapperType(Class clazz) {
+    return WRAPPER_TYPES.contains(clazz);
+  }
+  
+  static String join(Iterable<Object> args, String delimiter) {
+    StringBuilder buf = new StringBuilder();
+    Iterator<Object> iter = args.iterator();
+    int argCount = 0;
+    while (iter.hasNext()) {
+      Object arg = iter.next();
+      String s_arg = "";
+      if (arg == null) {
+        s_arg = "null";
+      } else if (isWrapperType(arg.getClass())) {
+        s_arg = arg.toString();
+      } else if (arg.getClass() == String.class) {
+        s_arg = "\"" + ((String)arg).replace("\n","\\n") + "\"";
+      } else if (arg.getClass() == Class.class) {
+        s_arg = ((Class)arg).getName();
+      //Check if first argument is an activity
+      }else if(argCount == 0 && arg instanceof Activity){
+        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<activity=true>";
+      //Check if first argument is a fragment
+      }else if(argCount == 0 && FragmentMapper.getInstance().isFragment(arg.getClass())){
+        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<fragment=true>";
+      //Check if first argument is an asynctask object
+      }else if(argCount == 0 && arg instanceof AsyncTask){
+        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<atask=true>";
+      //Annotate all of the arguments
+      }else{
+        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
+        if(arg instanceof View){
+          if(argCount == 0 || argCount == 1){
+            try{
+              String file = takeScreenshot(((Activity)((View)arg).getContext()),null);
+              s_arg += "<file=" + file + ">";
+              int[] location = new int[2];
+              ((View)arg).getLocationOnScreen(location);
+              s_arg += "<x=" + String.valueOf(location[0]) + ">";
+              s_arg += "<y=" + String.valueOf(location[1]) + ">";
+              s_arg += "<width=" + String.valueOf(((View)arg).getWidth()) + ">";
+              s_arg += "<height=" + String.valueOf(((View)arg).getHeight()) + ">";
+            }catch(Exception e){
+              System.out.println(e.getMessage());
+            }
+          }
+          if(arg instanceof TextView){
+            s_arg += "<text=" + ((TextView)arg).getText() + ">";
+            if(arg instanceof RadioButton){
+              s_arg += "<value=" + ((RadioButton)arg).isChecked() + ">";
+            }else if(arg instanceof CheckBox){
+              s_arg += "<value=" + ((CheckBox)arg).isChecked() + ">";
+            }
+          }
+          try{
+            s_arg += "<id=" + ((View)arg).getId() + ">"; //This is unique per app
+            s_arg += "<imagename=" + ((View)arg).getResources().getResourceEntryName(((View)arg).getId()) + ">";
+          //s_arg += "<tmp2=" + ((View)arg).getResources().getResourceName(((View)arg).getId()) + ">";
+          //s_arg += "<tmp3=" + ((View)arg).getResources().getResourcePackageName(((View)arg).getId()) + ">";
+          //s_arg += "<tmp4=" + ((View)arg).getResources().getResourceTypeName(((View)arg).getId()) + ">";
+          //s_arg += "<tmp5=" + ((View)arg).getResources().getString(((View)arg).getId()) + ">";
+          /*try{
+            String name = ((View)arg).getResources().getResourceName(((View)arg).getId());
+            String type = ((View)arg).getResources().getResourceTypeName(((View)arg).getId());
+            String packagen = ((View)arg).getResources().getResourcePackageName(((View)arg).getId());
+            int resid = ((View)arg).getResources().getInteger(((View)arg).getId());
+            s_arg += "<tmp6=" + ((View)arg).getResources().getXml(resid).getText() + ">";*/
+          }catch(Exception e){
+              System.out.println(e.getMessage());
+          }
+        }
+        if(arg instanceof Uri){
+          s_arg += "<URI=" + ((Uri)arg).toString() + ">";
+        }
+        if(arg instanceof MenuItem){
+          s_arg += "<id=" + ((MenuItem)arg).getItemId() + ">";
+          s_arg += "<menuname=" + ((MenuItem)arg).getTitleCondensed() + ">";
+            String fname = saveIcon((MenuItem)arg);
+            if(fname != ""){
+              s_arg += "<iconfile=" + fname + ">";
+            }
+        }
+        if(arg instanceof Dialog){
+          if(argCount == 0 || argCount == 1){
+            String file = takeScreenshot(null,(Dialog)arg);
+            if(file != ""){
+              s_arg += "<file=" + file + ">";
+              int width = ((Dialog)arg).getWindow().getDecorView().getWidth();
+              int height = ((Dialog)arg).getWindow().getDecorView().getHeight();
+              int x = (int)((Dialog)arg).getWindow().getDecorView().getX();
+              int y = (int)((Dialog)arg).getWindow().getDecorView().getY();
+              s_arg += "<x=" + String.valueOf(x) + ">";
+              s_arg += "<y=" + String.valueOf(y) + ">";
+              s_arg += "<width=" + String.valueOf(width) + ">";
+              s_arg += "<height=" + String.valueOf(height) + ">";
+            }
+          }
+        }
+        if(arg instanceof Thread){
+          s_arg += "<thread=" + ((Thread)arg).getId() + ">";
+        }
+      }
+      buf.append(s_arg);
+      if (!iter.hasNext())
+        break;
+      buf.append(delimiter);
+      argCount++;
+    }
+    return buf.toString();
+  }
+  
+  static String ofJavaTy(String cname) {
+    String sanitized = cname;
+    if (cname.startsWith("L") && cname.endsWith(";")) {
+      sanitized = cname.substring(1, cname.length() - 1).replace('/','.');
+    }
+    return sanitized;
+  }
+  
+  static void log(String io, String cname, String mname, Object... args) {
+    String s_args = join(Arrays.asList(args), ", ");
+    long threadId = Thread.currentThread().getId();
+    String msg = io + " " + threadId + " " + ofJavaTy(cname) + "." + mname + "(" + s_args + ")";
+    Log.i(tag, msg);
+  }
+  
+  static void logMethod(String io, Object... args) {
+    StackTraceElement elts[] = (new Throwable ()).getStackTrace();
+    // 0 : org.umd.logging.Logger.logMethod
+    // 1 : org.umd.logging.Logger.logMethod(Entry|Exit)
+    String cname = elts[2].getClassName();
+    String mname = elts[2].getMethodName();
+    log("Method " + io, cname, mname, args);
+  }
+  
+  public static void logMethodEntry(Object... args) {
+    logMethod(">", args);
+  }
+  
+  public static void logMethodExit(Object... args) {
+    logMethod("<", args);
+  }
+  
+  public static void logAPIEntry(String cname, String mname, Object... args) {
+    log("Api >", cname, mname, args);
+  }
+  
+  public static void logAPIExit(String cname, String mname, Object... args) {
+    log("Api <", cname, mname, args);
+  }
 
-	private static String saveIcon(MenuItem mitem){
-  	Date now = new Date();
+  private static String saveIcon(MenuItem mitem){
+    Date now = new Date();
     SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
 
     String dateString = "";
-		try{
-			// getLocationOnScreen
-			dateString = sdfr.format(now);
-		} catch (Throwable e) {
-    	// Several error may come out with file handling or OOM
-    	e.printStackTrace();
-  		return "";
-		}
-		try {
-    	// image naming and path  to include sd card  appending name you choose for file
-    	String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
+    try{
+      // getLocationOnScreen
+      dateString = sdfr.format(now);
+    } catch (Throwable e) {
+      // Several error may come out with file handling or OOM
+      e.printStackTrace();
+      return "";
+    }
+    try {
+      // image naming and path  to include sd card  appending name you choose for file
+      String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
 
-    	Drawable drawable = mitem.getIcon();
-    	Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
+      Drawable drawable = mitem.getIcon();
+      Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
 
-	    Canvas canvas = new Canvas(bitmap);
-	    drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
-	    drawable.draw(canvas);
+      Canvas canvas = new Canvas(bitmap);
+      drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+      drawable.draw(canvas);
 
-    	File imageFile = new File(mPath);
+      File imageFile = new File(mPath);
 
-    	FileOutputStream outputStream = new FileOutputStream(imageFile);
-    	int quality = 90;
-    	bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
-    	outputStream.flush();
-    	outputStream.close();
-		} catch (Throwable e) {
-    	// Several error may come out with file handling or OOM
-  		e.printStackTrace();
-  		return "";
-		}
-		return dateString;
-	}
+      FileOutputStream outputStream = new FileOutputStream(imageFile);
+      int quality = 90;
+      bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
+      outputStream.flush();
+      outputStream.close();
+    } catch (Throwable e) {
+      // Several error may come out with file handling or OOM
+      e.printStackTrace();
+      return "";
+    }
+    return dateString;
+  }
 
-	private static String takeScreenshot(Activity act, Dialog diag) {
-  	Date now = new Date();
+  private static String takeScreenshot(Activity act, Dialog diag) {
+    Date now = new Date();
     SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
 
     String dateString = "";
-		try{
-			// getLocationOnScreen
-			dateString = sdfr.format(now);
-		} catch (Throwable e) {
-    	// Several error may come out with file handling or OOM
-    	e.printStackTrace();
-  		return "";
-		}
-		try {
-    	// image naming and path  to include sd card  appending name you choose for file
-    	String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
+    try{
+      // getLocationOnScreen
+      dateString = sdfr.format(now);
+    } catch (Throwable e) {
+      // Several error may come out with file handling or OOM
+      e.printStackTrace();
+      return "";
+    }
+    try {
+      // image naming and path  to include sd card  appending name you choose for file
+      String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
 
-    	// create bitmap screen capture
-    	View v1;
-    	if(act != null){
-    		v1 = act.getWindow().getDecorView().getRootView();
-    	}else{
-    		v1 = diag.getWindow().getDecorView().getRootView();
-    	}
-    	v1.setDrawingCacheEnabled(true);
-    	Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
-    	v1.setDrawingCacheEnabled(false);
+      // create bitmap screen capture
+      View v1;
+      if(act != null){
+        v1 = act.getWindow().getDecorView().getRootView();
+      }else{
+        v1 = diag.getWindow().getDecorView().getRootView();
+      }
+      v1.setDrawingCacheEnabled(true);
+      Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
+      v1.setDrawingCacheEnabled(false);
 
-    	File imageFile = new File(mPath);
+      File imageFile = new File(mPath);
 
-    	FileOutputStream outputStream = new FileOutputStream(imageFile);
-    	int quality = 90;
-    	bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
-    	outputStream.flush();
-    	outputStream.close();
-		} catch (Throwable e) {
-	    // Several error may come out with file handling or OOM
-    	e.printStackTrace();
-  		return "";
-		}
-		return dateString;
-	}
-	
+      FileOutputStream outputStream = new FileOutputStream(imageFile);
+      int quality = 90;
+      bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
+      outputStream.flush();
+      outputStream.close();
+    } catch (Throwable e) {
+      // Several error may come out with file handling or OOM
+      e.printStackTrace();
+      return "";
+    }
+    return dateString;
+  }
+  
 }
