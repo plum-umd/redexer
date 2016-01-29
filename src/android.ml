@@ -64,6 +64,9 @@ struct
   let service = pkg^"Service"
   let application = pkg^"Application"
 
+  let fragment = pkg^"Fragment"
+  let v4fragment = adr^"support.v4.app.Fragment"
+
   let lst_act = pkg^"ListActivity"
   let tab_act = pkg^"TabActivity"
 

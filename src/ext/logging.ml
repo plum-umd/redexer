@@ -101,7 +101,7 @@ let descr_to_class =
     (L.tl (L.map J.to_type_descr J.shorties)) (* to remove void *)
     (L.tl (JL.wrappers ())) (* to remove java.lang.Void *)
 
-let act_comps = [App.activity; App.lst_act; App.tab_act; Apr.activity]
+let act_comps = [App.activity; App.lst_act; App.tab_act; Apr.activity; App.fragment; App.v4fragment ]
 
 let act_trans = App.lifecycle_act
 
@@ -369,8 +369,13 @@ class virtual logger (dx: D.dex) =
   and get_v_of descr cid =
     fst (D.get_the_mtd_shorty dx cid JL.v_of ("L"^descr))
   in
-  let v_of_map = SM.mapi get_v_of c_map 
-  in
+  let v_of_map = SM.mapi get_v_of c_map in
+
+  let uri_ids = L.map (fun x -> D.find_ty_str dx x) ["Landroid/net/Uri;";
+                                                     "Ljava/net/Uri;";
+                                                     "[Landroid/net/Uri;";
+                                                     "[Ljava/net/Uri;"] in
+
   let auto_boxing (r: int) (ty: D.link) : I.instr =
     let tname = D.get_ty_str dx ty in
     (* below will raise an exception unless primitive type *)
@@ -406,8 +411,8 @@ class virtual logger (dx: D.dex) =
     (* to avoid the Logger class as well as libraries *)
     skip_cls <- U.begins_with cname logging || is_library cname;
     skip_cls <- skip_cls || self#skip_class cname;
-    let yesno = if skip_cls then "skipping" else "logging" in
-    Log.i (Pf.sprintf "%s class: %s" yesno cname)
+    let yesno = if skip_cls then "Skipping log" else "Log" in
+    Log.i (Pf.sprintf "%s of class: %s" yesno cname)
 
   val mutable mid = D.no_idx
   (* to determine supercall in constructors *)
@@ -432,7 +437,9 @@ class virtual logger (dx: D.dex) =
     (* to skip constructors and synthetic methods (static blocks) *)
     log_entry <- not has_monitor && (self#log_entry emtd full);
     if log_entry then
-      Log.i (Pf.sprintf "logging entry of: %s" full);
+      Log.i ("Log of method body: "^full)
+    else
+      Log.i ("Skipping log of method body: "^full);
     (* else 
       Log.i (Pf.sprintf "skipping entry of: %s" full); *)
     let mit = D.get_mit dx mid in
@@ -542,14 +549,15 @@ class virtual logger (dx: D.dex) =
           let mname = D.get_mtd_name dx mid in
           let full = D.get_mtd_full_name dx mid in
           let do_logging = self#log_call full in
-          if (not do_logging) then
-            ()
-            (* (Log.i ("skipping log of method call "^ full)) *)
+
+          let mit = D.get_mit dx mid in
+          let argv_ids = D.get_argv dx mit in
+          if (not do_logging && not (L.exists (fun y -> (L.exists (fun x -> (D.ty_comp dx x y) = 0) argv_ids)) uri_ids)) then
+              (Log.i ("Skipping log of method call "^ full))
           else
           (
-            Log.i ("log of method call "^ full);
-            let vx::vy::vz::[] = vxyz 0
-            and mit = D.get_mit dx mid in
+            Log.i ("Log of method call: "^ full);
+            let vx::vy::vz::[] = vxyz 0 in
             let ent_cursor = M.get_cursor cur_citm ins in
             let ext_cursor = M.next ent_cursor in
             let str_lname = D.of_idx (D.find_str dx lname)
@@ -692,35 +700,6 @@ class configurable_logger json (dx: D.dex) =
 (* Log entries only for some key methods (such as .onCreate()) that we
    care about. *)
 class log_transition_entries (dx: D.dex) =
-  let calls =
-    ["onClick";
-     "onFocusChange";
-     "onGenericMotion";
-     "onHover";
-     "onKey";
-     "onLongClick";
-     "onSystemUiVisibilityChange";
-     "onCheckedChanged";
-     "onTouch";
-     "isChecked";
-     "onTouchEvent";
-     "onItemClick";
-     "onListItemClick";
-     "onInterceptTouchEvent";
-     "onOptionsItemSelected";
-     "onMenuItemSelected";
-     "onKeyDown";
-     "onKeyLongPress";
-     "onKeyMultiple";
-     "onKeyUp";
-     "onMenuItemClick";
-     "onResume";
-     "onPause";
-     "onStart";
-     "onDestroy";
-     "onCreate";
-     "onBackPressed"]
-  in
   let passoc = function `Assoc x -> x | _ -> failwith "JSON parse error: expected object" in
   let plist = function `List x -> x | _ -> failwith "JSON parse error: expected array" in
   let pstring = function `String x -> x | _ -> failwith "JSON parse error: expected string" in
@@ -732,26 +711,40 @@ class log_transition_entries (dx: D.dex) =
                  | _ -> ((x ^ "\\|") ^ (concat_regexp xs))
   in
 
-  let whitelist_regex_strings =
+  let whitelist_calls_regex_strings =
     let method_calls = L.assoc "method-entries" (passoc config) in
     let entries = plist (L.assoc "whitelist" (passoc method_calls)) in
     concat_regexp (L.map (function `String s -> s | _ -> failwith "unexpected json") entries)
   in
-  let white_regexps = U.parse_regexp whitelist_regex_strings in
+  let whitelist_calls_regexps = U.parse_regexp whitelist_calls_regex_strings in
 
-  let blacklist_regex_strings =
+  let blacklist_calls_regex_strings =
     let method_calls = L.assoc "method-entries" (passoc config) in
     let entries = plist (L.assoc "blacklist" (passoc method_calls)) in
     concat_regexp (L.map (function `String s -> s | _ -> failwith "unexpected json") entries)
   in
-  let black_regexps = U.parse_regexp blacklist_regex_strings in
+  let blacklist_calls_regexps = U.parse_regexp blacklist_calls_regex_strings in
 
-  let blacklisted_classes =
+  let whitelist_methods_regex_strings =
+    let methods = L.assoc "user-methods" (passoc config) in
+    let entries = plist (L.assoc "whitelist" (passoc methods)) in
+    concat_regexp (L.map (function `String s -> s | _ -> failwith "unexpected json") entries)
+  in
+  let whitelist_methods_regexps = U.parse_regexp whitelist_methods_regex_strings in
+
+  let blacklist_methods_regex_strings =
+    let methods = L.assoc "user-methods" (passoc config) in
+    let entries = plist (L.assoc "blacklist" (passoc methods)) in
+    concat_regexp (L.map (function `String s -> s | _ -> failwith "unexpected json") entries)
+  in
+  let blacklist_methods_regexps = U.parse_regexp blacklist_methods_regex_strings in
+
+  let blacklisted_classes_regex_strings =
     let classes = L.assoc "classes" (passoc config) in
     let entries = plist (L.assoc "blacklist" (passoc classes)) in
     concat_regexp (L.map (function `String s -> s | _ -> failwith "unexpected json") entries)
   in
-  let blacklisted_classes_regexps = U.parse_regexp blacklisted_classes in
+  let blacklisted_classes_regexps = U.parse_regexp blacklisted_classes_regex_strings in
 
   object (self)
     inherit logger dx
@@ -763,11 +756,11 @@ class log_transition_entries (dx: D.dex) =
       not (L.mem mname [J.init; J.clinit; J.hashCode]
            || D.is_synthetic emtd.D.m_access_flag)
       && 
-      L.exists (fun x -> U.ends_with mname x) calls
-        
+      (U.matches mname whitelist_methods_regexps) && (not (U.matches mname blacklist_methods_regexps))
+
     (* *)
     method log_call mname = 
-      (U.matches mname white_regexps) && (not (U.matches mname black_regexps))
+      (U.matches mname whitelist_calls_regexps) && (not (U.matches mname blacklist_calls_regexps))
   end
 
 (***********************************************************************)
