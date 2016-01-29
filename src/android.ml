@@ -161,6 +161,9 @@ struct
   let pkg = adr^"os."
   let bundle = pkg^"Bundle"
   let iitf = pkg^"IInterface"
+  let asynctask = pkg^"AsyncTask"
+                        
+  let onPreExecute = "onPreExecute"
 
   let clazz () = L.map J.to_java_ty [bundle]
 end

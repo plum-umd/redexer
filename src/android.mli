@@ -218,9 +218,14 @@ sig
   (** [android.os.Bundle] *)
   val bundle : string
 
+  (** [android.os.AsyncTask *)
+  val asynctask : string
+
   (** [android.os.IInterface] *)
   val iitf : string
 
+  (** [onPreExecute] *)
+  val onPreExecute : string
 end
 
 module Preference :

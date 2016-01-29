@@ -202,6 +202,11 @@ let add_transition (dx: D.dex) : unit =
     L.iter (insrt_void_intent cid) [App.onRebind]
   in
   L.iter per_srv [App.service];
+  let asynctask _ = 
+    let cid = M.new_class dx Aos.asynctask D.pub in
+    insrt_void_no_arg cid Aos.onPreExecute
+  in
+  asynctask ();
   (* then add super() into those overriable methods *)
   V.iter (new trans_adder dx)
 
