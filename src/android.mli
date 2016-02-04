@@ -232,6 +232,9 @@ sig
 
   (** [onPreExecute] *)
   val onPreExecute : string
+                       
+  (** [AsyncTask] methods to be logged *)
+  val task_methods : string list
 end
 
 module Preference :

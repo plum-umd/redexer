@@ -110,8 +110,9 @@ let srv_trans = App.lifecycle_srv
 (* from component to transition: { Activity => [onCreate; ...], ... } *)
 let comp_to_tran =
   let srv_map = SM.add App.service srv_trans SM.empty in
-  L.fold_left2 (fun acc comp trans -> SM.add comp trans acc) srv_map
-    act_comps (U.repeat act_trans (L.length act_comps) [])
+  let act_maps = L.fold_left2 (fun acc comp trans -> SM.add comp trans acc) srv_map
+                              act_comps (U.repeat act_trans (L.length act_comps) []) in
+  SM.add Aos.asynctask Aos.task_methods act_maps
 
 let (@@) cl1 cl2 = CL.append cl1 cl2
 

@@ -168,6 +168,8 @@ struct
                         
   let onPreExecute = "onPreExecute"
 
+  let task_methods = [onPreExecute]
+
   let clazz () = L.map J.to_java_ty [bundle]
 end
 
