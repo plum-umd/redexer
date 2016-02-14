@@ -101,6 +101,9 @@ sig
   (** [onOptionsItemSelected] *)
   val onOptionsItemSelected : string
 
+  (** [onBackPressed] *)
+  val onBackPressed : string
+
   (** [setContentView] *)
   val set_view : string
 

@@ -101,7 +101,7 @@ let descr_to_class =
     (L.tl (L.map J.to_type_descr J.shorties)) (* to remove void *)
     (L.tl (JL.wrappers ())) (* to remove java.lang.Void *)
 
-let act_comps = [App.activity; App.lst_act; App.tab_act; Apr.activity; App.fragment; App.v4fragment ]
+let act_comps = [App.activity; App.lst_act; App.tab_act; Apr.activity; App.fragment (*; App.v4fragmen*) ]
 
 let act_trans = App.lifecycle_act
 
@@ -191,7 +191,7 @@ let add_transition (dx: D.dex) : unit =
     (* Activity.onCreate *)
     let _ = M.new_sig dx cid App.onCreate J.v [Aos.bundle] in
     (* anything else, e.g., onStart, onResume, etc. *)
-    L.iter (insrt_void_no_arg cid) (L.tl act_trans)
+    L.iter (insrt_void_no_arg cid) [App.onCreate; App.onDestroy; App.onResume; App.onPause; App.onBackPressed];
   in
   L.iter per_act act_comps;
   (* Service family *)

@@ -84,6 +84,8 @@ struct
   let onCreateOptionsMenu   = "onCreateOptionsMenu"
   let onOptionsItemSelected = "onOptionsItemSelected"
 
+  let onBackPressed = "onBackPressed"
+
   let set_view = "setContentView"
   let find_view = "findViewById"
   let query = "managedQuery"
