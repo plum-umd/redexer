@@ -4,7 +4,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:1.2.3'
+        classpath 'com.android.tools.build:gradle:1.5.0'
     }
 }
 
@@ -15,9 +15,9 @@ allprojects {
 }
 
 // copy classes.dex to data/
-task copyDex (dependsOn: 'app:dexDebug', type: Copy) {
+task copyDex ( type: Copy) {
     def redexer = ".."
-    from "app/build/intermediates/dex/debug"
+    from "app/build/intermediates/transforms/dex/debug/folders/1000/1f/main"
     into "$redexer/data"
     rename { String filename ->
         filename.replace("classes", "logging")

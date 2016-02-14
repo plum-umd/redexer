@@ -38,16 +38,20 @@
 package org.umd.logging;
 
 import android.util.Log;
+
 import java.lang.Throwable;
 import java.lang.Thread;
 import java.lang.StackTraceElement;
 import java.lang.StringBuilder;
+
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.HashSet;
+
 import java.text.SimpleDateFormat;
+
 import java.io.FileOutputStream;
 import java.io.File;
 
@@ -60,12 +64,19 @@ import android.app.Dialog;
 
 import android.view.MenuItem;
 import android.view.View;
+
 import android.net.Uri;
+
 import android.os.Environment;
+import android.os.AsyncTask;
+
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
+import android.graphics.Paint;
+import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.Canvas;
-import android.os.AsyncTask;
+
 import org.umd.logging.FragmentMapper;
 
 public class Logger {
@@ -77,7 +88,7 @@ public class Logger {
     return WRAPPER_TYPES.contains(clazz);
   }
   
-  static String join(Iterable<Object> args, String delimiter) {
+  static String join(Iterable<Object> args, String delimiter, String mname) {
     StringBuilder buf = new StringBuilder();
     Iterator<Object> iter = args.iterator();
     int argCount = 0;
@@ -88,26 +99,32 @@ public class Logger {
         s_arg = "null";
       } else if (isWrapperType(arg.getClass())) {
         s_arg = arg.toString();
+      //Check if first argument is a string
       } else if (arg.getClass() == String.class) {
         s_arg = "\"" + ((String)arg).replace("\n","\\n") + "\"";
+      //Check if it a class object
       } else if (arg.getClass() == Class.class) {
         s_arg = ((Class)arg).getName();
       //Check if first argument is an activity
       }else if(argCount == 0 && arg instanceof Activity){
         s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<activity=true>";
+        if(mname.equals("onBackPressed")){
+          String file = takeScreenshot((Activity)arg, null, "back button");
+          s_arg += "<file=" + file + ">";
+        }
       //Check if first argument is a fragment
       }else if(argCount == 0 && FragmentMapper.getInstance().isFragment(arg.getClass())){
         s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<fragment=true>";
       //Check if first argument is an asynctask object
       }else if(argCount == 0 && arg instanceof AsyncTask){
         s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<atask=true>";
-      //Annotate all of the arguments
+      //Try to annotate all of the arguments
       }else{
         s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
         if(arg instanceof View){
           if(argCount == 0 || argCount == 1){
             try{
-              String file = takeScreenshot(((Activity)((View)arg).getContext()),null);
+              String file = takeScreenshot(((Activity)((View)arg).getContext()),null,"");
               s_arg += "<file=" + file + ">";
               int[] location = new int[2];
               ((View)arg).getLocationOnScreen(location);
@@ -119,6 +136,8 @@ public class Logger {
               System.out.println(e.getMessage());
             }
           }
+          
+          //TextView and specific subclasses
           if(arg instanceof TextView){
             s_arg += "<text=" + ((TextView)arg).getText() + ">";
             if(arg instanceof RadioButton){
@@ -127,54 +146,40 @@ public class Logger {
               s_arg += "<value=" + ((CheckBox)arg).isChecked() + ">";
             }
           }
+
           try{
             s_arg += "<id=" + ((View)arg).getId() + ">"; //This is unique per app
             s_arg += "<imagename=" + ((View)arg).getResources().getResourceEntryName(((View)arg).getId()) + ">";
-          //s_arg += "<tmp2=" + ((View)arg).getResources().getResourceName(((View)arg).getId()) + ">";
-          //s_arg += "<tmp3=" + ((View)arg).getResources().getResourcePackageName(((View)arg).getId()) + ">";
-          //s_arg += "<tmp4=" + ((View)arg).getResources().getResourceTypeName(((View)arg).getId()) + ">";
-          //s_arg += "<tmp5=" + ((View)arg).getResources().getString(((View)arg).getId()) + ">";
-          /*try{
-            String name = ((View)arg).getResources().getResourceName(((View)arg).getId());
-            String type = ((View)arg).getResources().getResourceTypeName(((View)arg).getId());
-            String packagen = ((View)arg).getResources().getResourcePackageName(((View)arg).getId());
-            int resid = ((View)arg).getResources().getInteger(((View)arg).getId());
-            s_arg += "<tmp6=" + ((View)arg).getResources().getXml(resid).getText() + ">";*/
           }catch(Exception e){
               System.out.println(e.getMessage());
           }
         }
+
+        //Extract the URI
         if(arg instanceof Uri){
           s_arg += "<URI=" + ((Uri)arg).toString() + ">";
         }
+
         if(arg instanceof MenuItem){
           s_arg += "<id=" + ((MenuItem)arg).getItemId() + ">";
           s_arg += "<menuname=" + ((MenuItem)arg).getTitleCondensed() + ">";
-            String fname = saveIcon((MenuItem)arg);
-            if(fname != ""){
-              s_arg += "<iconfile=" + fname + ">";
-            }
+          String fname = saveIcon((MenuItem)arg);
+          if(fname != ""){
+            s_arg += "<iconfile=" + fname + ">";
+          }
         }
+
+        //Take image of Dialog
         if(arg instanceof Dialog){
           if(argCount == 0 || argCount == 1){
-            String file = takeScreenshot(null,(Dialog)arg);
-            if(file != ""){
-              s_arg += "<file=" + file + ">";
-              int width = ((Dialog)arg).getWindow().getDecorView().getWidth();
-              int height = ((Dialog)arg).getWindow().getDecorView().getHeight();
-              int x = (int)((Dialog)arg).getWindow().getDecorView().getX();
-              int y = (int)((Dialog)arg).getWindow().getDecorView().getY();
-              s_arg += "<x=" + String.valueOf(x) + ">";
-              s_arg += "<y=" + String.valueOf(y) + ">";
-              s_arg += "<width=" + String.valueOf(width) + ">";
-              s_arg += "<height=" + String.valueOf(height) + ">";
-            }
+            s_arg += processDialog((Dialog)arg);
           }
         }
         if(arg instanceof Thread){
           s_arg += "<thread=" + ((Thread)arg).getId() + ">";
         }
       }
+
       buf.append(s_arg);
       if (!iter.hasNext())
         break;
@@ -193,7 +198,7 @@ public class Logger {
   }
   
   static void log(String io, String cname, String mname, Object... args) {
-    String s_args = join(Arrays.asList(args), ", ");
+    String s_args = join(Arrays.asList(args), ", ", mname);
     long threadId = Thread.currentThread().getId();
     String msg = io + " " + threadId + " " + ofJavaTy(cname) + "." + mname + "(" + s_args + ")";
     Log.i(tag, msg);
@@ -222,6 +227,23 @@ public class Logger {
   
   public static void logAPIExit(String cname, String mname, Object... args) {
     log("Api <", cname, mname, args);
+  }
+
+  private static String processDialog(Dialog dialog){
+    String file = takeScreenshot(null, dialog, "");
+    String s_arg = "";
+    if(file != ""){
+      s_arg += "<file=" + file + ">";
+      int width = dialog.getWindow().getDecorView().getWidth();
+      int height = dialog.getWindow().getDecorView().getHeight();
+      int x = (int)dialog.getWindow().getDecorView().getX();
+      int y = (int)dialog.getWindow().getDecorView().getY();
+      s_arg += "<x=" + String.valueOf(x) + ">";
+      s_arg += "<y=" + String.valueOf(y) + ">";
+      s_arg += "<width=" + String.valueOf(width) + ">";
+      s_arg += "<height=" + String.valueOf(height) + ">";
+    }
+    return s_arg;
   }
 
   private static String saveIcon(MenuItem mitem){
@@ -263,7 +285,7 @@ public class Logger {
     return dateString;
   }
 
-  private static String takeScreenshot(Activity act, Dialog diag) {
+  private static String takeScreenshot(Activity act, Dialog diag, String addon_text) {
     Date now = new Date();
     SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
 
@@ -290,6 +312,9 @@ public class Logger {
       v1.setDrawingCacheEnabled(true);
       Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
       v1.setDrawingCacheEnabled(false);
+      if(!addon_text.equals("")){
+        bitmap = drawText(addon_text, bitmap);
+      }
 
       File imageFile = new File(mPath);
 
@@ -304,6 +329,38 @@ public class Logger {
       return "";
     }
     return dateString;
+  }
+
+  private static Bitmap drawText(String text, Bitmap bitmap){
+    android.graphics.Bitmap.Config bitmapConfig =
+      bitmap.getConfig();
+    // set default bitmap config if none
+    if(bitmapConfig == null) {
+      bitmapConfig = android.graphics.Bitmap.Config.ARGB_8888;
+    }
+    // resource bitmaps are imutable, 
+    // so we need to convert it to mutable one
+    bitmap = bitmap.copy(bitmapConfig, true);
+    
+    Canvas canvas = new Canvas(bitmap);
+    // new antialised Paint
+    Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    // text color - #3D3D3D
+    paint.setColor(Color.rgb(61, 61, 61));
+    // text size in pixels
+    paint.setTextSize((int) (14 * 5));
+    // text shadow
+    paint.setShadowLayer(1f, 0f, 1f, Color.WHITE);
+    
+    // draw text to the Canvas center
+    Rect bounds = new Rect();
+    paint.getTextBounds(text, 0, text.length(), bounds);
+    int x = (bitmap.getWidth() - bounds.width())/2;
+    int y = (bitmap.getHeight() + bounds.height())/2;
+    
+    canvas.drawText(text, x, y, paint);
+    
+    return bitmap;
   }
   
 }

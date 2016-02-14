@@ -1,5 +1,5 @@
 #!/bin/bash
-gradle copyDex
+gradle build
 
 status=$?
 if [ $status -eq 0 ];
