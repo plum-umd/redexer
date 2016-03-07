@@ -377,6 +377,9 @@ class virtual logger (dx: D.dex) =
                                                      "[Landroid/net/Uri;";
                                                      "[Ljava/net/Uri;"] in
 
+  let url_ids = L.map (fun x -> D.find_ty_str dx x) ["Ljava/net/URL;";
+                                                     "[Ljava/net/URL;"] in
+
   let auto_boxing (r: int) (ty: D.link) : I.instr =
     let tname = D.get_ty_str dx ty in
     (* below will raise an exception unless primitive type *)
@@ -553,7 +556,10 @@ class virtual logger (dx: D.dex) =
 
           let mit = D.get_mit dx mid in
           let argv_ids = D.get_argv dx mit in
-          if (not do_logging && not (L.exists (fun y -> (L.exists (fun x -> (D.ty_comp dx x y) = 0) argv_ids)) uri_ids)) then
+          
+          (* This can be optimized *)
+          if (not do_logging && not (L.exists (fun y -> (L.exists (fun x -> (D.ty_comp dx x y) = 0) argv_ids)) uri_ids)
+              && not (L.exists (fun y -> (L.exists (fun x -> (D.ty_comp dx x y) = 0) argv_ids)) url_ids)) then
               (Log.i ("Skipping log of method call "^ full))
           else
           (
