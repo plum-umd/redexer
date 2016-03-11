@@ -50,6 +50,8 @@ import java.util.Iterator;
 import java.util.Set;
 import java.util.HashSet;
 
+import java.net.URL;
+
 import java.text.SimpleDateFormat;
 
 import java.io.FileOutputStream;
@@ -158,6 +160,11 @@ public class Logger {
         //Extract the URI
         if(arg instanceof Uri){
           s_arg += "<URI=" + ((Uri)arg).toString() + ">";
+        }
+
+        //Extract the URL
+        if(arg instanceof URL){
+          s_arg += "<URL=" + ((URL)arg).toString() + ">";
         }
 
         if(arg instanceof MenuItem){
