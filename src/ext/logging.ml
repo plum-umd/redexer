@@ -741,15 +741,17 @@ class log_transition_entries (dx: D.dex) =
     method skip_class cname =
       U.matches cname blacklisted_classes_regexps
         
-    method log_entry emtd mname = 
+    method log_entry emtd mname =
       not (L.mem mname [J.init; J.clinit; J.hashCode]
            || D.is_synthetic emtd.D.m_access_flag)
       && 
-      (U.matches mname whitelist_methods_regexps) && (not (U.matches mname blacklist_methods_regexps))
+      (U.matches mname whitelist_methods_regexps)
+      && (not (U.matches mname blacklist_methods_regexps))
 
     (* *)
     method log_call mname = 
-      (U.matches mname whitelist_calls_regexps) && (not (U.matches mname blacklist_calls_regexps))
+      (U.matches mname whitelist_calls_regexps) 
+      && (not (U.matches mname blacklist_calls_regexps))
   end
 
 (***********************************************************************)
