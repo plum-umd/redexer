@@ -686,18 +686,6 @@ class fine_logger (dx: D.dex) =
     method log_call _ = false
   end
 
-(* Configuration based logger, uses the JSON configuration file to
-   make decisions about what will be logged. *)
-class configurable_logger json (dx: D.dex) = 
-  object (self)
-    inherit default_logger dx
-    method skip_class _ = false
-    method log_entry emtd mname = 
-      not (L.mem mname [J.init; J.clinit; J.hashCode]
-           || D.is_synthetic emtd.D.m_access_flag)
-    method log_call _ = false
-  end
-
 (* Log entries only for some key methods (such as .onCreate()) that we
    care about. *)
 class log_transition_entries (dx: D.dex) =
