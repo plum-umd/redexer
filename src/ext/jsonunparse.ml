@@ -189,6 +189,12 @@ let p_class (d : D.dex) (c : D.class_def_item) : string * json =
       | _ -> `Null in
   let cdata =
     try Some (snd (D.get_cdata d c.D.c_class_id)) with | _ -> None in
+  let interfaces = 
+    try 
+      L.map (fun id -> (`String (D.get_ty_str d id)))
+        @@ D.get_ty_lst d c.D.interfaces
+    with _ -> []
+  in
   let pfield (link, (fid : D.field_id_item)) : json =
     `Assoc
      ["name", `String (get_str d fid.D.f_name_id);
@@ -205,6 +211,7 @@ let p_class (d : D.dex) (c : D.class_def_item) : string * json =
        ["name", `String class_name;
 	"access-flags", `Int c.D.c_access_flag;
 	"superclass", `String (get_ty_str d c.D.superclass);
+        "interfaces", `List (interfaces);
 	"class-id", `Int (D.of_idx c.D.c_class_id);
 	"source-file", source_file;
 	"static-fields", `List (L.map pfield fields)])
