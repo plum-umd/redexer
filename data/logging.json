@@ -38,7 +38,7 @@
 			".*;->onDestroy",
 			".*;->onCreate",
 			".*;->onBackPressed",
-			".*;->start",
+			".*;->start$",
 			".*;->execute",
 			".*;->doInBackground",
 			".*;->onPreExecute",
@@ -51,7 +51,7 @@
 			"Landroid/database/sqlite/SQLiteDatabase;->query"
 		],
 		"whitelist": [
-                        ".*->start",
+                        ".*->start$",
 			"Lsymdroid",
 			".*;->isChecked",
 			"Landroid/accessibilityservice/UiTestAutomationBridge;->disconnect",
