@@ -82,6 +82,7 @@ import android.graphics.Canvas;
 import org.umd.logging.FragmentMapper;
 
 public class Logger {
+  private static Activity current_activity = null;
   final static String tag = Logger.class.getPackage().getName();
   static final Set<Class> WRAPPER_TYPES = new HashSet(Arrays.asList(
                                     Boolean.class, Character.class, Byte.class, Short.class, Integer.class,
@@ -111,8 +112,10 @@ public class Logger {
       }else if(argCount == 0 && arg instanceof Activity){
         s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<activity=true>";
         if(mname.equals("onBackPressed")){
-          String file = takeScreenshot((Activity)arg, null, "back button");
+          String file = takeScreenshot(null, "back button");
           s_arg += "<file=" + file + ">";
+        }else if(mname.equals("onResume")){
+          current_activity = (Activity)arg;
         }
       //Check if first argument is a fragment
       }else if(argCount == 0 && FragmentMapper.getInstance().isFragment(arg.getClass())){
@@ -126,7 +129,7 @@ public class Logger {
         if(arg instanceof View){
           if(argCount == 0 || argCount == 1){
             try{
-              String file = takeScreenshot(((Activity)((View)arg).getContext()),null,"");
+              String file = takeScreenshot(null,"");
               s_arg += "<file=" + file + ">";
               int[] location = new int[2];
               ((View)arg).getLocationOnScreen(location);
@@ -135,7 +138,7 @@ public class Logger {
               s_arg += "<width=" + String.valueOf(((View)arg).getWidth()) + ">";
               s_arg += "<height=" + String.valueOf(((View)arg).getHeight()) + ">";
             }catch(Exception e){
-              System.out.println(e.getMessage());
+              ;//System.out.println(e.getMessage());
             }
           }
           
@@ -153,7 +156,7 @@ public class Logger {
             s_arg += "<id=" + ((View)arg).getId() + ">"; //This is unique per app
             s_arg += "<imagename=" + ((View)arg).getResources().getResourceEntryName(((View)arg).getId()) + ">";
           }catch(Exception e){
-              System.out.println(e.getMessage());
+            ;//System.out.println(e.getMessage());
           }
         }
 
@@ -173,6 +176,12 @@ public class Logger {
           String fname = saveIcon((MenuItem)arg);
           if(fname != ""){
             s_arg += "<iconfile=" + fname + ">";
+          }
+          try{
+            String file = takeScreenshot(null,"");
+            s_arg += "<file=" + file + ">";
+          }catch(Exception e){
+            ;//System.out.println(e.getMessage());
           }
         }
 
@@ -237,7 +246,7 @@ public class Logger {
   }
 
   private static String processDialog(Dialog dialog){
-    String file = takeScreenshot(null, dialog, "");
+    String file = takeScreenshot(dialog, "");
     String s_arg = "";
     if(file != ""){
       s_arg += "<file=" + file + ">";
@@ -263,7 +272,7 @@ public class Logger {
       dateString = sdfr.format(now);
     } catch (Throwable e) {
       // Several error may come out with file handling or OOM
-      e.printStackTrace();
+      ;//e.printStackTrace();
       return "";
     }
     try {
@@ -286,13 +295,13 @@ public class Logger {
       outputStream.close();
     } catch (Throwable e) {
       // Several error may come out with file handling or OOM
-      e.printStackTrace();
+      ;//e.printStackTrace();
       return "";
     }
     return dateString;
   }
 
-  private static String takeScreenshot(Activity act, Dialog diag, String addon_text) {
+  private static String takeScreenshot(Dialog diag, String addon_text) {
     Date now = new Date();
     SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
 
@@ -302,7 +311,7 @@ public class Logger {
       dateString = sdfr.format(now);
     } catch (Throwable e) {
       // Several error may come out with file handling or OOM
-      e.printStackTrace();
+      ;//e.printStackTrace();
       return "";
     }
     try {
@@ -311,11 +320,14 @@ public class Logger {
 
       // create bitmap screen capture
       View v1;
-      if(act != null){
-        v1 = act.getWindow().getDecorView().getRootView();
-      }else{
+      if(diag != null){
         v1 = diag.getWindow().getDecorView().getRootView();
+      }else if(current_activity != null){
+        v1 = current_activity.getWindow().getDecorView().getRootView();
+      }else{
+        return "";
       }
+
       v1.setDrawingCacheEnabled(true);
       Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
       v1.setDrawingCacheEnabled(false);
@@ -332,7 +344,7 @@ public class Logger {
       outputStream.close();
     } catch (Throwable e) {
       // Several error may come out with file handling or OOM
-      e.printStackTrace();
+      ;//e.printStackTrace();
       return "";
     }
     return dateString;
