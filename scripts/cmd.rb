@@ -52,7 +52,7 @@ cmds = [
   "exported", "permissions", "sdk", "launcher",
   "activity", "service", "provider", "receiver",
   "custom_views", "fragments", "buttons",
-  "hello", "logging", "logging_ui", "directed"
+  "hello", "logging", "logging_ui", "directed", "remove_permissions"
 ]
 
 cmd = ""
@@ -61,6 +61,7 @@ sdk = nil
 mtd = nil
 lib = nil
 to = nil
+perms = []
 detail = :none
 outputdir = nil
 
@@ -98,6 +99,9 @@ option_parser = OptionParser.new do |opts|
   end
   opts.on("--opt-dex options", "options for redexer binary") do |o|
     Dex.opt = o
+  end
+  opts.on("--perms permissions", "comma-separated list of permissions") do |p|
+    perms = p.split(',')
   end
   opts.on_tail("-h", "--help", "show this message") do
     puts opts
@@ -150,13 +154,13 @@ def dex_succ?(apk, cmd)
   true
 end
 
-def rewrite_and_install(apk,fn,to,res)
+def finish_repackaging(apk,fn,to,res)
   if not apk.succ
     puts apk.out
     close(apk)
     raise "rewriting dex failed"
   end
-  apk.add_permission
+  #apk.add_permission
   if to
     apk.repack(to)
   else
@@ -293,13 +297,17 @@ when "custom_views", "fragments", "buttons"
   end
 when "logging", "logging_ui"
   apk.send(cmd.to_sym,detail)
-  rewrite_and_install(apk,fn,to,RES)
+  finish_repackaging(apk,fn,to,RES)
 when "directed"
   apk.directed
-  rewrite_and_install(apk,fn,to,RES)
+  finish_repackaging(apk,fn,to,RES)
 when "hello"
   Dex.hello
   system("mv -f classes.dex #{RES}") if dex_succ?(apk, cmd)
+when "remove_permissions"
+  apk.remove_permissions(perms)
+  finish_repackaging(apk,fn,to,RES)
 end
+
 
 close(apk)

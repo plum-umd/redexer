@@ -86,11 +86,11 @@ class Apk
   end
 
   TOOL = File.join(HOME, "tools")
-  APKT = File.join(TOOL, "apktool.jar")
+  APKT = "../tools/apktool.jar"
 
   def unpack
     if @manifest == nil
-      runcmd("java -Djava.awt.headless=true -jar #{cygpath(APKT)} d -f --no-src --keep-broken-res -o #{cygpath(@dir)} #{cygpath(@apk)}")
+      runcmd("java -jar #{APKT} d -f --no-src --keep-broken-res -o #{cygpath(@dir)} #{cygpath(@apk)}")
       if @succ
         @manifest = Manifest.new(xml)
         org_in_manifest()
@@ -162,10 +162,14 @@ class Apk
     system("rm -rf #{@dir}")
   end
 
+  def manifest_path
+    File.join(@dir, "AndroidManifest.xml")
+  end
+
   PERMISSION = "\t<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>"
   MANIFEST_START = "<manifest.*>"
   def add_permission()
-    file_path = File.join(@dir, "AndroidManifest.xml")
+    file_path = manifest_path
     if not (File.readlines(file_path).grep(/#{PERMISSION}/).size > 0)
       temp_file = Tempfile.new(@dir)
       begin
@@ -179,6 +183,11 @@ class Apk
         temp_file.delete
       end
     end
+  end
+
+  def remove_permissions(permissions)
+    permissions.each { |x| @manifest.remove_permission(x) }
+    @manifest.save_to(manifest_path())
   end
   
   def launcher
@@ -222,6 +231,7 @@ class Apk
 private
 
   def runcmd(cmd)
+    puts cmd
     @out = "" if not @out
     @out << cmd + "\n"
     @out << `#{cmd} 2>&1`

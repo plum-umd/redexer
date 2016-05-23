@@ -193,6 +193,15 @@ class Manifest
 
   PERM = "uses-permission"
 
+  def remove_permission(p)
+    @doc.xpath(ROOT + "/" + PERM).each do |perm|
+      if (lookup_name(perm) == p) then
+        puts "removing #{perm}"
+        perm.unlink()
+      end
+    end
+  end
+  
   def permissions
     perms = Array.new
     permissions = @doc.xpath(ROOT + "/" + PERM)
