@@ -86,7 +86,7 @@ class Apk
   end
 
   TOOL = File.join(HOME, "tools")
-  APKT = "../tools/apktool.jar"
+  APKT = File.join(TOOL, "apktool.jar")
 
   def unpack
     if @manifest == nil
