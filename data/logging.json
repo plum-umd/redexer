@@ -43,7 +43,8 @@
 			".*;->doInBackground",
 			".*;->onPreExecute",
 			".*;->onPostExecute",
-			".*;->executeOnExecutor"
+			".*;->executeOnExecutor",
+            ".*;->onReceive"
 		]
 	},
 	"method-entries": {
@@ -51,9 +52,17 @@
 			"Landroid/database/sqlite/SQLiteDatabase;->query"
 		],
 		"whitelist": [
-                        ".*->start$",
+            ".*->start$",
 			"Lsymdroid",
 			".*;->isChecked",
+            "Landroid/content/Context;->startActivity",
+            "Landroid/content/Context;->sendBroadcast",
+            "Landroid/content/Context;->startActivity",
+            "Landroid/content/Context;->startActivityForResult",
+            "Landroid/content/Context;->sendBroadcast",
+            "Landroid/content/Context;->sendOrderedBroadcast",
+            "Landroid/content/Context;->startService",
+            "Landroid/content/Context;->bindBroadcast",
 			"Landroid/accessibilityservice/UiTestAutomationBridge;->disconnect",
 			"Landroid/accounts/AccountManager[^/]*;->doWork",
 			"Landroid/accounts/AccountManager[^/]*;->onReceive",

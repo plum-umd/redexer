@@ -64,6 +64,9 @@ import android.widget.TextView;
 import android.app.Activity;
 import android.app.Dialog;
 
+import android.content.Intent;
+import android.content.ComponentName;
+
 import android.view.MenuItem;
 import android.view.View;
 
@@ -193,6 +196,14 @@ public class Logger {
         }
         if(arg instanceof Thread){
           s_arg += "<thread=" + ((Thread)arg).getId() + ">";
+        }
+        if(arg instanceof Intent){
+          s_arg += "<action=" + ((Intent)arg).getAction() + ">";
+          s_arg += "<data=" + ((Intent)arg).getDataString() + ">";
+          s_arg += "<package=" + ((Intent)arg).getPackage() + ">";
+          s_arg += "<component=" + ((ComponentName)((Intent)arg).getComponent()).flattenToShortString() +">";
+          s_arg += "<type=" + ((Intent)arg).getType() + ">";
+          s_arg += "<filter_hashcode=" + ((Intent)arg).filterHashCode() + ">";
         }
       }
 

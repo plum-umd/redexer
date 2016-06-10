@@ -40,7 +40,8 @@ class Dex
 
 
   QUIET = "2>/dev/null"
-  TOO = "2>&1"
+  #TOO = "2>&1"
+  TOO = ""
 
   DEX = File.join(HOME, "classes.dex")
   @@level = :default
@@ -90,6 +91,7 @@ class Dex
     when :fine
       str = "-logging-detail"
     end
+    puts "#{REDEXER} #{opt} #{dex_name} -logging #{str} #{TOO}"
     self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging #{str} #{TOO}")
   end
 
