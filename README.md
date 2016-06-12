@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/plum-umd/redexer.svg?branch=master)](https://travis-ci.org/plum-umd/redexer)
+
 # redexer
 
 Redexer is a reengineering tool that manipulates Android app binaries.
