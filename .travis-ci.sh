@@ -1,10 +1,6 @@
 # Edit this for your own project dependencies
 OPAM_DEPENDS="sha str unix ppx_deriving.std ppx_deriving_yojson yojson"
-
-case "$OCAML_VERSION,$OPAM_VERSION" in
-4.01.0,1.1.0) ppa=avsm/ocaml41+opam11 ;;
-*) echo Unknown $OCAML_VERSION,$OPAM_VERSION; exit 1 ;;
-esac
+ppa=avsm/ocam421+opam12
 
 echo "yes" | sudo add-apt-repository ppa:$ppa
 sudo apt-get update -qq
