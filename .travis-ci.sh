@@ -1,6 +1,6 @@
 # Edit this for your own project dependencies
 OPAM_DEPENDS="sha str unix ppx_deriving.std ppx_deriving_yojson yojson"
-ppa=avsm/ocam421+opam12
+ppa=avsm/ocaml42+opam120
 
 echo "yes" | sudo add-apt-repository ppa:$ppa
 sudo apt-get update -qq
