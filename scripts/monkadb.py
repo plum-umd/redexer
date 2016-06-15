@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 def execute_all(cmd_list):
     for cmd in cmd_list:
         os.system("adb shell log \"System > 0 " + sys.argv[2] + ".systemIntent(" + cmd + ")\n\"")
-        os.system("adb shell am broadcast -a " + cmd)
+        os.system("adb shell am broadcast -a " + cmd + " --el \"umd_Intent_key\" " + str(int(round(time.time()*1000000))))
 #time.sleep(1)
 
 action_dict = dict()
@@ -44,17 +44,13 @@ for app in root.findall('application'):
 
 unhandled_actions = []
 
-logfile = open(sys.argv[3], 'a')
-
 for action in matches:
     if action in action_dict:
         print action
-        execute_all(action_dict[action], logfile)
+        execute_all(action_dict[action])
         time.sleep(5)
     else:
         unhandled_actions.append(action)
-
-logfile.close()
 
 if unhandled_actions:
     print("These actions were not handled:")

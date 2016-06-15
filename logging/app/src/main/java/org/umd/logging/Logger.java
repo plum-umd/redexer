@@ -74,6 +74,7 @@ import android.net.Uri;
 
 import android.os.Environment;
 import android.os.AsyncTask;
+import android.os.Bundle;
 
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
@@ -92,6 +93,18 @@ public class Logger {
                                     Long.class, Float.class, Double.class, Void.class));
   static boolean isWrapperType(Class clazz) {
     return WRAPPER_TYPES.contains(clazz);
+  }
+    
+  static String getExtraString(Bundle bundle){
+      String bundleStr = "";
+      for (String key : bundle.keySet()) {
+          Object value = bundle.get(key);
+          bundleStr += String.format("<%s=%s>", key, value.toString());
+      }
+      if(bundleStr.equals("")){
+          bundleStr = "<extras=NONE>";
+      }
+      return bundleStr;
   }
   
   static String join(Iterable<Object> args, String delimiter, String mname) {
@@ -204,6 +217,19 @@ public class Logger {
           s_arg += "<component=" + ((ComponentName)((Intent)arg).getComponent()).flattenToShortString() +">";
           s_arg += "<type=" + ((Intent)arg).getType() + ">";
           s_arg += "<filter_hashcode=" + ((Intent)arg).filterHashCode() + ">";
+          Bundle bundle = ((Intent)arg).getExtras();
+          if(bundle != null){
+              if(!bundle.keySet().contains("umd_Intent_key")){
+                  ((Intent)arg).putExtra("umd_Intent_key",System.currentTimeMillis());
+                  bundle = ((Intent)arg).getExtras();
+              }
+              s_arg += getExtraString(bundle);
+          }
+          else{
+              ((Intent)arg).putExtra("umd_Intent_key",System.currentTimeMillis());
+              s_arg += getExtraString(((Intent)arg).getExtras());
+          }
+          
         }
       }
 
