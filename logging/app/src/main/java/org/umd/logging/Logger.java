@@ -214,7 +214,11 @@ public class Logger {
           s_arg += "<action=" + ((Intent)arg).getAction() + ">";
           s_arg += "<data=" + ((Intent)arg).getDataString() + ">";
           s_arg += "<package=" + ((Intent)arg).getPackage() + ">";
-          s_arg += "<component=" + ((ComponentName)((Intent)arg).getComponent()).flattenToShortString() +">";
+          ComponentName comp_name = (ComponentName)((Intent)arg).getComponent();
+          if(comp_name != null)
+              s_arg += "<component=" + ((ComponentName)((Intent)arg).getComponent()).flattenToShortString() +">";
+          else
+              s_arg += "<component=null>";
           s_arg += "<type=" + ((Intent)arg).getType() + ">";
           s_arg += "<filter_hashcode=" + ((Intent)arg).filterHashCode() + ">";
           Bundle bundle = ((Intent)arg).getExtras();
