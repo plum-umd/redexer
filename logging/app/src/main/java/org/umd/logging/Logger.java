@@ -99,7 +99,11 @@ public class Logger {
       String bundleStr = "";
       for (String key : bundle.keySet()) {
           Object value = bundle.get(key);
-          bundleStr += String.format("<%s=%s>", key, value.toString().replace("\n"," ").replace(",",""));
+          String value_str = "None";
+          if(value != null){
+              value.toString().replace("\n"," ").replace(",","");
+          }
+          bundleStr += String.format("<%s=%s>", key, value_str);
       }
       if(bundleStr.equals("")){
           bundleStr = "<extras=NONE>";
