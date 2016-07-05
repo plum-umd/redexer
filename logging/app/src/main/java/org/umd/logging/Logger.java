@@ -99,7 +99,7 @@ public class Logger {
       String bundleStr = "";
       for (String key : bundle.keySet()) {
           Object value = bundle.get(key);
-          bundleStr += String.format("<%s=%s>", key, value.toString());
+          bundleStr += String.format("<%s=%s>", key, value.toString().replace("\n"," ").replace(",",""));
       }
       if(bundleStr.equals("")){
           bundleStr = "<extras=NONE>";
@@ -210,7 +210,7 @@ public class Logger {
         if(arg instanceof Thread){
           s_arg += "<thread=" + ((Thread)arg).getId() + ">";
         }
-        if(arg instanceof Intent){
+        if(arg instanceof Intent && ((Intent)arg).getAction()!="android.intent.action.VIEW" && ((Intent)arg).getAction()!="android.intent.action.MAIN"){
           s_arg += "<action=" + ((Intent)arg).getAction() + ">";
           s_arg += "<data=" + ((Intent)arg).getDataString() + ">";
           s_arg += "<package=" + ((Intent)arg).getPackage() + ">";
