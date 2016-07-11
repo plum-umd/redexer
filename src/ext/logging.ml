@@ -191,7 +191,7 @@ let add_transition (dx: D.dex) : unit =
     (* Activity.onCreate *)
     let _ = M.new_sig dx cid App.onCreate J.v [Aos.bundle] in
     (* anything else, e.g., onStart, onResume, etc. *)
-    L.iter (insrt_void_no_arg cid) [App.onCreate; App.onDestroy; App.onResume; App.onPause; App.onBackPressed];
+    L.iter (insrt_void_no_arg cid) [App.onCreate; App.onStart; App.onStop; App.onDestroy; App.onResume; App.onPause; App.onBackPressed];
   in
   L.iter per_act act_comps;
   (* Service family *)
@@ -767,7 +767,7 @@ class log_transition_entries (dx: D.dex) =
 (* modify *)
 let modify (dx: D.dex) : unit =
   (* add non-overriden transition methods *)
-  St.time "transition" add_transition dx;
+  (*St.time "transition" add_transition dx;*)
   let logging = (new log_transition_entries dx) in
   (* log API uses and entry/exit of all methods, except for Logger itself *)
   St.time "instrument" V.iter (logging : logger :> V.visitor  );

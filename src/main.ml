@@ -98,13 +98,15 @@ let dump_json (tx : D.dex) : unit =
 	  ) ()
 
 let lib = ref "data/logging.dex"
+let onlyprotos = ref false
 
 let combine (tx: D.dex) : unit =
  try (
     let chan' = open_in_bin !lib in
     let libdx = St.time "parse" P.parse chan' in
     close_in chan';
-    St.time "dump" (Dp.dump !dex) (St.time "merge" (Cm.combine libdx) tx)
+    St.time "dump" (Dp.dump !dex) (St.time "merge" (fun _ -> 
+                                             Cm.combine libdx tx ~only_prototypes:!onlyprotos) ())
   )
   with End_of_file -> prerr_endline "EOF"
 
@@ -206,7 +208,8 @@ try (
   let liblog = P.parse chan in
   close_in chan;
   (* merge the external dex file *)
-  let cx = St.time "merge" (Cm.combine liblog) tx in
+  let cx = St.time "merge" 
+                   (fun _ -> Cm.combine liblog tx ~only_prototypes:!onlyprotos) () in
   (* seed new addresses for modification *)
   Md.seed_addr cx.D.header.D.file_size;
   (* modify target dex accordingly *)
@@ -236,10 +239,6 @@ try (
 with End_of_file -> prerr_endline "EOF"
 | D.Wrong_dex msg -> prerr_endline msg
                        
-(* Extract regular expressions from a file *)
-(*let log_regex f : Lgg.detail = ()*)
-  (*Lgg.Regex (U.read_lines (open_in f))*)
-    
 (***********************************************************************)
 (* Arguments                                                           *)
 (***********************************************************************)
@@ -297,6 +296,8 @@ let arg_specs = A.align
 
     ("-lib",     A.Set_string lib,  " library dex name (default: "^(!lib)^")");
     ("-combine", A.Unit do_combine, " combine two dex files");
+    ("-onlyprotos", A.Set onlyprotos, 
+     " when combining files, only include prototypes, not implementations (useful for multidex)");
 
     ("-cls",  A.Set_string cls, " target class name");
     ("-mtd",  A.Set_string mtd, " target method name");

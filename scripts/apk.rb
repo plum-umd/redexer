@@ -81,6 +81,14 @@ class Apk
     File.join(@dir, "classes.dex")
   end
 
+  def dexes 
+    Dir.glob(File.join(@dir, "*.dex"))
+  end
+  
+  def multidex 
+    dexes.length > 1
+  end
+
   def xml
     File.join(@dir, "AndroidManifest.xml")
   end
@@ -104,9 +112,35 @@ class Apk
   end
 
   def logging(detail)
-    Dex.logging(dex,detail,dex)
-    @out << Dex.out
-    @succ = Dex.succ
+    if dexes.length > 1 then
+      dxs = dexes 
+      multi = true
+    else 
+      dxs = [dex]
+      multi = false
+    end
+    dxs.each do |dex|
+      @out << "rewriting #{dex}\n"
+      Dex.logging(dex,detail,multi,dex)
+      @out << Dex.out
+      @succ = @succ && Dex.succ
+      if (not @succ) then return end
+    end
+    if multi then
+      nums = dexes.map do |s| 
+        s = s.match(/classes(\d+).dex/)
+        if s == nil 
+        then nil
+        else Integer(s.captures[0])
+        end
+      end
+      nums.select! { |s| s }
+      max = nums.max || 1
+      file = File.join(@dir, "classes" + (max + 1).to_s + ".dex")
+      logging = File.join(HOME,"data/logging.dex")
+      @out << "multi-dex setup. Moving logging file to #{file}\n"
+      `cp #{logging} #{file}`
+    end
   end
   
   DAT = File.join(HOME, "data")
