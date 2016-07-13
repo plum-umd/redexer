@@ -80,7 +80,6 @@ let sft_idx (shift: int) l : D.link =
 (* combine: D.dex -> D.dex -> bool -> D.dex *)
 let rec combine (lx: D.dex) (tx: D.dex) ~only_prototypes : D.dex =
   let dx = D.empty_dex ()
-  and only_prototypes = true
   and sft = {
     str_sz = DA.length lx.D.d_string_ids;
     typ_sz = DA.length lx.D.d_type_ids;
