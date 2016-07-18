@@ -10909,7 +10909,11 @@
 			"Ljava/net/URLConnection;->connect",
 			"Ljava/net/URLConnection;->getInputStream",
 			"Lorg/apache/http/impl/client/DefaultHttpClient;-><init>",
-			"Lorg/apache/http/impl/client/DefaultHttpClient;->execute"
+			"Lorg/apache/http/impl/client/DefaultHttpClient;->execute",
+            "Ljava/io/FileReader;-><init>",
+            "Ljava/io/FileWriter;-><init>",
+            "Ljava/io/FileOutputStream;-><init>",
+            "Ljava/io/FileInputStream;-><init>"
 		]
 	}
 }

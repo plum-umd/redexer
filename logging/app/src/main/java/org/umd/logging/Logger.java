@@ -56,6 +56,7 @@ import java.text.SimpleDateFormat;
 
 import java.io.FileOutputStream;
 import java.io.File;
+import java.io.FileDescriptor;
 
 import android.widget.CheckBox;
 import android.widget.RadioButton;
@@ -271,7 +272,28 @@ public class Logger {
     // 1 : org.umd.logging.Logger.logMethod(Entry|Exit)
     String cname = elts[2].getClassName();
     String mname = elts[2].getMethodName();
-    log("Method " + io, cname, mname, args);
+    Boolean cont = true;
+    if(cname.contains("java/io/File")){
+        cont = false;
+        File sdcard = Environment.getExternalStorageDirectory();
+        String sdcard_path = sdcard.getAbsolutePath();
+        if(args[0] != null){
+            Object arg = args[0];
+            if(arg instanceof File){
+                if(((File)arg).getAbsolutePath().contains(sdcard_path)){
+                    cont = true;
+                }
+            }
+            else if(arg instanceof String){
+                if(((String)arg).contains(sdcard_path)){
+                    cont = true;
+                }
+            }
+        }
+    }
+    if(cont){
+        log("Method " + io, cname, mname, args);
+    }
   }
   
   public static void logMethodEntry(Object... args) {
