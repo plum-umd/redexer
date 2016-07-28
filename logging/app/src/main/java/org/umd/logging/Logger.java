@@ -215,6 +215,11 @@ public class Logger {
         if(arg instanceof Thread){
           s_arg += "<thread=" + ((Thread)arg).getId() + ">";
         }
+        if(arg instanceof File){
+          File sdcard = Environment.getExternalStorageDirectory();
+          String sdcard_path = sdcard.getAbsolutePath();
+          s_arg += "<file_path=" + ((File)arg).getAbsolutePath() + ">";
+        }
         if(arg instanceof Intent && ((Intent)arg).getAction()!="android.intent.action.VIEW" && ((Intent)arg).getAction()!="android.intent.action.MAIN"){
           s_arg += "<action=" + ((Intent)arg).getAction() + ">";
           s_arg += "<data=" + ((Intent)arg).getDataString() + ">";
@@ -272,28 +277,8 @@ public class Logger {
     // 1 : org.umd.logging.Logger.logMethod(Entry|Exit)
     String cname = elts[2].getClassName();
     String mname = elts[2].getMethodName();
-    Boolean cont = true;
-    if(cname.contains("java/io/File")){
-        cont = false;
-        File sdcard = Environment.getExternalStorageDirectory();
-        String sdcard_path = sdcard.getAbsolutePath();
-        if(args[0] != null){
-            Object arg = args[0];
-            if(arg instanceof File){
-                if(((File)arg).getAbsolutePath().contains(sdcard_path)){
-                    cont = true;
-                }
-            }
-            else if(arg instanceof String){
-                if(((String)arg).contains(sdcard_path)){
-                    cont = true;
-                }
-            }
-        }
-    }
-    if(cont){
-        log("Method " + io, cname, mname, args);
-    }
+    
+    log("Method " + io, cname, mname, args);
   }
   
   public static void logMethodEntry(Object... args) {
@@ -305,11 +290,53 @@ public class Logger {
   }
   
   public static void logAPIEntry(String cname, String mname, Object... args) {
-    log("Api >", cname, mname, args);
+    Boolean cont = true;
+    if(cname.contains("java/io/File")){
+        cont = false;
+        File sdcard = Environment.getExternalStorageDirectory();
+        String sdcard_path = sdcard.getAbsolutePath();
+        if(args[0] != null){
+            Object arg = args[0];
+            if(arg instanceof File){
+                if(((File)arg).getAbsolutePath().startsWith(sdcard_path)){
+                    cont = true;
+                }
+            }
+            else if(arg instanceof String){
+                if(((String)arg).startsWith(sdcard_path)){
+                    cont = true;
+                }
+            }
+        }
+    }
+    if(cont){
+        log("Api >", cname, mname, args);
+    }
   }
   
   public static void logAPIExit(String cname, String mname, Object... args) {
-    log("Api <", cname, mname, args);
+    Boolean cont = true;
+    if(cname.contains("java/io/File")){
+        cont = false;
+        File sdcard = Environment.getExternalStorageDirectory();
+        String sdcard_path = sdcard.getAbsolutePath();
+        if(args[0] != null){
+            Object arg = args[0];
+            if(arg instanceof File){
+                if(((File)arg).getAbsolutePath().startsWith(sdcard_path)){
+                    cont = true;
+                }
+            }
+            else if(arg instanceof String){
+                if(((String)arg).startsWith(sdcard_path)){
+                    cont = true;
+                }
+            }
+        }
+    }
+    if(cont){
+        log("Api <", cname, mname, args);
+    }
   }
 
   private static String processDialog(Dialog dialog){
