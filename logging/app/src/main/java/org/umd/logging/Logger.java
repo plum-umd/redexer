@@ -295,8 +295,9 @@ public class Logger {
         cont = false;
         File sdcard = Environment.getExternalStorageDirectory();
         String sdcard_path = sdcard.getAbsolutePath();
-        if(args[0] != null){
-            Object arg = args[0];
+         Iterator<Object> iter = Arrays.asList(args).iterator();
+        while (iter.hasNext()) {
+            Object arg = iter.next();
             if(arg instanceof File){
                 if(((File)arg).getAbsolutePath().startsWith(sdcard_path)){
                     cont = true;
@@ -305,6 +306,30 @@ public class Logger {
             else if(arg instanceof String){
                 if(((String)arg).startsWith(sdcard_path)){
                     cont = true;
+                }
+            }
+        }
+    }
+    if(mname.contains("startActivityForResult")){
+        cont = false;
+        Iterator<Object> iter = Arrays.asList(args).iterator();
+        while (iter.hasNext()) {
+            Object arg = iter.next();
+            if(arg instanceof Intent){
+                if(((Intent)arg).getAction()=="android.intent.action.GET_CONTENT"){
+                    Bundle bundle = ((Intent)arg).getExtras();
+                    if(bundle != null){
+                        if(!bundle.keySet().contains("android.intent.extra.LOCAL_ONLY")){
+                            mname = mname + "CONTENT";
+                            cont = true;
+                            break;
+                        }
+                    }
+                }
+                else if(((Intent)arg).getAction()=="android.intent.action.IMAGE_CAPTURE"){
+                    mname = mname + "CAMERA";
+                    cont = true;
+                    break;
                 }
             }
         }
@@ -320,8 +345,9 @@ public class Logger {
         cont = false;
         File sdcard = Environment.getExternalStorageDirectory();
         String sdcard_path = sdcard.getAbsolutePath();
-        if(args[0] != null){
-            Object arg = args[0];
+        Iterator<Object> iter = Arrays.asList(args).iterator();
+        while (iter.hasNext()) {
+            Object arg = iter.next();
             if(arg instanceof File){
                 if(((File)arg).getAbsolutePath().startsWith(sdcard_path)){
                     cont = true;
@@ -330,6 +356,30 @@ public class Logger {
             else if(arg instanceof String){
                 if(((String)arg).startsWith(sdcard_path)){
                     cont = true;
+                }
+            }
+        }
+    }
+    if(mname.contains("startActivityForResult")){
+        cont = false;
+        Iterator<Object> iter = Arrays.asList(args).iterator();
+        while (iter.hasNext()) {
+            Object arg = iter.next();
+            if(arg instanceof Intent){
+                if(((Intent)arg).getAction()=="android.intent.action.GET_CONTENT"){
+                    Bundle bundle = ((Intent)arg).getExtras();
+                    if(bundle != null){
+                        if(!bundle.keySet().contains("android.intent.extra.LOCAL_ONLY")){
+                            mname = mname + "CONTENT";
+                            cont = true;
+                            break;
+                        }
+                    }
+                }
+                else if(((Intent)arg).getAction()=="android.intent.action.IMAGE_CAPTURE"){
+                    mname = mname + "CAMERA";
+                    cont = true;
+                    break;
                 }
             }
         }
