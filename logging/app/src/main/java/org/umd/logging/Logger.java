@@ -277,7 +277,6 @@ public class Logger {
     // 1 : org.umd.logging.Logger.logMethod(Entry|Exit)
     String cname = elts[2].getClassName();
     String mname = elts[2].getMethodName();
-    
     log("Method " + io, cname, mname, args);
   }
   
@@ -326,7 +325,7 @@ public class Logger {
                         }
                     }
                 }
-                else if(((Intent)arg).getAction()=="android.intent.action.IMAGE_CAPTURE"){
+                else if(((Intent)arg).getAction()=="android.media.action.IMAGE_CAPTURE"){
                     mname = mname + "CAMERA";
                     cont = true;
                     break;
@@ -376,7 +375,7 @@ public class Logger {
                         }
                     }
                 }
-                else if(((Intent)arg).getAction()=="android.intent.action.IMAGE_CAPTURE"){
+                else if(((Intent)arg).getAction()=="android.media.action.IMAGE_CAPTURE"){
                     mname = mname + "CAMERA";
                     cont = true;
                     break;
