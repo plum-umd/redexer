@@ -175,6 +175,7 @@ object
   method finish () : unit =
     (* 2x : super(); return-*; *)
     Log.i ("# of method overriding(s): "^(Log.of_i (!override_cnt * 2)))
+
 end
 
 let add_transition (dx: D.dex) : unit =
@@ -190,22 +191,23 @@ let add_transition (dx: D.dex) : unit =
     (* Activity.onCreate *)
     let _ = M.new_sig dx cid App.onCreate J.v [Aos.bundle] in
     (* anything else, e.g., onStart, onResume, etc. *)
-    L.iter (insrt_void_no_arg cid) [App.onStart; App.onStop; App.onDestroy;
-				    App.onResume; App.onPause];
+    L.iter (insrt_void_no_arg cid) [App.onCreate; App.onDestroy; App.onStart; App.onStop; App.onResume; App.onPause; App.onBackPressed];
   in
   L.iter per_act act_comps;
   (* Service family *)
   let per_srv (comp: string) : unit =
     let cid = M.new_class dx comp D.pub in
     (* Service.(onCreate | onDestroy) *)
-    L.iter (insrt_void_no_arg cid) [App.onCreate; App.onDestroy;];
+    L.iter (insrt_void_no_arg cid) [App.onCreate; App.onDestroy; App.onResume; App.onPause];
     (* Service.onRebind *)
     L.iter (insrt_void_intent cid) [App.onRebind]
   in
   L.iter per_srv [App.service];
-  (* Asynctask *)
-  let cid = M.new_class dx Aos.asynctask D.pub in
-  insrt_void_no_arg cid Aos.onPreExecute;
+  let asynctask _ = 
+    let cid = M.new_class dx Aos.asynctask D.pub in
+    insrt_void_no_arg cid Aos.onPreExecute
+  in
+  asynctask ();
   (* then add super() into those overriable methods *)
   V.iter (new trans_adder dx)
 
@@ -414,7 +416,7 @@ class virtual logger (dx: D.dex) =
     skip_cls <- U.begins_with cname logging || is_library cname;
     skip_cls <- skip_cls || self#skip_class cname;
     let yesno = if skip_cls then "Skipping log" else "Log" in
-    Log.d (Pf.sprintf "%s of class: %s" yesno cname)
+    Log.i (Pf.sprintf "%s of class: %s" yesno cname)
 
   val mutable mid = D.no_idx
   (* to determine supercall in constructors *)
@@ -439,9 +441,9 @@ class virtual logger (dx: D.dex) =
     (* to skip constructors and synthetic methods (static blocks) *)
     log_entry <- not has_monitor && (self#log_entry emtd full);
     if log_entry then
-      Log.d ("Log of method body: "^full)
+      Log.i ("Log of method body: "^full)
     else
-      Log.d ("Skipping log of method body: "^full);
+      Log.i ("Skipping log of method body: "^full);
     (* else 
       Log.i (Pf.sprintf "skipping entry of: %s" full); *)
     let mit = D.get_mit dx mid in
@@ -454,6 +456,7 @@ class virtual logger (dx: D.dex) =
   (* to log API usage *)
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
+    Log.d (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
     cur_citm <- citm;
     (* to secure at least three registers for logging *)
     (* 3 is minimum, but 5 here to expand invoke-* operands *)
@@ -557,10 +560,10 @@ class virtual logger (dx: D.dex) =
           (* This can be optimized *)
           if (not do_logging && not (L.exists (fun y -> (L.exists (fun x -> (D.ty_comp dx x y) = 0) argv_ids)) uri_ids)
               && not (L.exists (fun y -> (L.exists (fun x -> (D.ty_comp dx x y) = 0) argv_ids)) url_ids)) then
-            (Log.d ("Skipping log of method call "^ full))
+              (Log.i ("Skipping log of method call "^ full))
           else
           (
-            Log.d ("Log of method call: "^ full);
+            Log.i ("Log of method call: "^ full);
             let vx::vy::vz::[] = vxyz 0 in
             let ent_cursor = M.get_cursor cur_citm ins in
             let ext_cursor = M.next ent_cursor in
@@ -639,15 +642,9 @@ class virtual logger (dx: D.dex) =
               (arr_i + 1, if J.is_wide tname then L.tl tl else tl)
             in
             let params = L.map I.of_reg (I.get_argv (op, opr)) in
-            (* Handle case for static methods that have no
-            parameters. *)
-            let copy_argv_instrs = match params with 
-              | [] -> CL.empty
-              | _  -> fst (L.fold_left copy_argv (CL.empty, (0, params)) argv)
-            in
             let ent_insns = CL.toList (
               CL.fromList [ins0; ins1]
-              @@ copy_argv_instrs
+              @@ fst (L.fold_left copy_argv (CL.empty, (0, params)) argv)
               @@ CL.fromList [ins2; ins3; ins4]
             ) in
             (* if the API is <init>, that instance is not yet initialized! *)
@@ -768,9 +765,9 @@ class log_transition_entries (dx: D.dex) =
 (***********************************************************************)
 
 (* modify *)
-let modify (dx: D.dex) : unit = 
+let modify (dx: D.dex) : unit =
   (* add non-overriden transition methods *)
-  St.time "transition" add_transition dx;
+  (*St.time "transition" add_transition dx;*)
   let logging = (new log_transition_entries dx) in
   (* log API uses and entry/exit of all methods, except for Logger itself *)
   St.time "instrument" V.iter (logging : logger :> V.visitor  );

@@ -38,16 +38,12 @@
 
 (** This module provides a function for merging two DEX binaries. *)
 
-(** combine two DEX binaries 
-    
-    combine {d1} {d2} {p} appends all of the sections of the dex file
-    in {d1} to {d2}, returning the resulting dex file.
+(** {1 Combiner} *)
 
-    If passed the {only_prototypes} flag, the combiner will omit
- including class definitions, and only include strings, type, and
- prototype definitions. It will leave out fields and class
- definitions.
-
+(** Combine [d1] [d2] [p] appends all of the sections of the dex file
+    in [d1] to [d2], returning the resulting dex file. If passed the
+    only_prototypes flag, the combiner will omit including class
+    definitions, and only include strings, type, and prototypes.
  *)
 
 val combine : Dex.dex -> Dex.dex -> only_prototypes:bool -> Dex.dex
