@@ -208,7 +208,7 @@ try (
   let liblog = P.parse chan in
   close_in chan;
   (* merge the external dex file *)
-  let cx = St.time "merge" 
+  let cx = tx in (*St.time "merge" 
                    (fun _ -> Cm.combine liblog tx ~only_prototypes:!onlyprotos) () in
   (* seed new addresses for modification *)
   Md.seed_addr cx.D.header.D.file_size;
@@ -219,7 +219,7 @@ try (
   let ch = open_in rnm' in
   let res = U.read_lines ch in
   close_in ch;
-  St.time "rename" (Md.rename_cls cx) res;
+  St.time "rename" (Md.rename_cls cx) res;*)
   (* finally, dump the rewritten dex *)
   St.time "dump" (Dp.dump !dex) cx
 )

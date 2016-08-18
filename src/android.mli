@@ -227,7 +227,7 @@ sig
   (** [android.os.Bundle] *)
   val bundle : string
 
-  (** [android.os.AsyncTask *)
+  (** [android.os.AsyncTask] *)
   val asynctask : string
 
   (** [android.os.IInterface] *)
