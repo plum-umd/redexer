@@ -315,7 +315,8 @@ public class Logger {
         while (iter.hasNext()) {
             Object arg = iter.next();
             if(arg instanceof Intent){
-                if(((Intent)arg).getAction()=="android.intent.action.GET_CONTENT"){
+                String intent_action =((Intent)arg).getAction();
+                if(intent_action=="android.intent.action.GET_CONTENT" || intent_action =="android.intent.action.PICK"){
                     Bundle bundle = ((Intent)arg).getExtras();
                     if(bundle != null){
                         if(!bundle.keySet().contains("android.intent.extra.LOCAL_ONLY")){
@@ -325,7 +326,7 @@ public class Logger {
                         }
                     }
                 }
-                else if(((Intent)arg).getAction()=="android.media.action.IMAGE_CAPTURE"){
+                else if(intent_action=="android.media.action.IMAGE_CAPTURE"){
                     mname = mname + "CAMERA";
                     cont = true;
                     break;
@@ -365,7 +366,8 @@ public class Logger {
         while (iter.hasNext()) {
             Object arg = iter.next();
             if(arg instanceof Intent){
-                if(((Intent)arg).getAction()=="android.intent.action.GET_CONTENT"){
+                String intent_action =((Intent)arg).getAction();
+                if(intent_action=="android.intent.action.GET_CONTENT" || intent_action=="android.intent.action.PICK"){
                     Bundle bundle = ((Intent)arg).getExtras();
                     if(bundle != null){
                         if(!bundle.keySet().contains("android.intent.extra.LOCAL_ONLY")){
@@ -375,7 +377,7 @@ public class Logger {
                         }
                     }
                 }
-                else if(((Intent)arg).getAction()=="android.media.action.IMAGE_CAPTURE"){
+                else if(intent_action=="android.media.action.IMAGE_CAPTURE"){
                     mname = mname + "CAMERA";
                     cont = true;
                     break;
