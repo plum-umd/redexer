@@ -55,6 +55,7 @@ variables are set correctly as follows:
    - str
    - ppx_deriving
    - ppx_deriving_yojson
+   - yojson
 
 * Android SDK (or sources)
 
