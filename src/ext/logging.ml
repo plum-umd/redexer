@@ -767,8 +767,12 @@ class log_transition_entries (dx: D.dex) =
 (* modify *)
 let modify (dx: D.dex) : unit =
   (* add non-overriden transition methods *)
+  let logging = match !detail with 
+    | Default -> new log_transition_entries dx
+    | Fine    -> new fine_logger dx
+    | Regex _ -> failwith "regex flag for logger not implement quite yet"
+  in
   St.time "transition" add_transition dx;
-  let logging = (new log_transition_entries dx) in
   (* log API uses and entry/exit of all methods, except for Logger itself *)
   St.time "instrument" V.iter (logging : logger :> V.visitor  );
   St.time "expand-opr" M.expand_opr dx

@@ -11,7 +11,7 @@ debug: main.d.byte
 
 # auxiliary targets
 doc:
-	ocamlbuild redexer.docdir/index.html
+	ocamlbuild -use-ocamlfind redexer.docdir/index.html
 	mkdir -p docs
 	rm -rf docs/api
 	mv redexer.docdir docs/api
