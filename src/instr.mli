@@ -396,6 +396,10 @@ val new_obj : int -> int -> instr
  generate a new [OP_NEW_ARRAY] {!instr} *)
 val new_arr : int -> int -> int -> instr
 
+(** for a given set of source registers and type, 
+ generate a new [OP_FILLED_ARRAY] {!instr} *)
+val new_filled_arr : int list -> int -> instr
+
 (** for a given {!offset},
  generate a new [OP_GOTO]-kind {!instr} *)
 val new_goto : int -> offset -> instr

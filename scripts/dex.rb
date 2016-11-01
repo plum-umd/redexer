@@ -82,16 +82,23 @@ class Dex
   
   LOGREGEXES = File.join(DAT, "logging-regexes.txt")
 
-  def self.logging(dex_name=DEX, detail=:none, *out_name)
+  def self.logging(dex_name=DEX, detail=:none, multi=:false, *out_name)
     opt = self.out_opt(out_name)
     str = ""
+    
+    # If multi-dex setup, only rewrite each dex file with prototypes,
+    # not class definitions.
+    if (multi) then 
+      str += "-onlyprotos "
+    end
+    
     case detail
     when :regex
       str = "-logging-regex #{LOGREGEXES}"
     when :fine
       str = "-logging-detail"
     end
-    puts "#{REDEXER} #{opt} #{dex_name} -logging #{str} #{TOO}"
+    
     self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging #{str} #{TOO}")
   end
 

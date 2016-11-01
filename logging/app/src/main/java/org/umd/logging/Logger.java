@@ -56,6 +56,7 @@ import java.text.SimpleDateFormat;
 
 import java.io.FileOutputStream;
 import java.io.File;
+import java.io.FileDescriptor;
 
 import android.widget.CheckBox;
 import android.widget.RadioButton;
@@ -214,6 +215,11 @@ public class Logger {
         if(arg instanceof Thread){
           s_arg += "<thread=" + ((Thread)arg).getId() + ">";
         }
+        if(arg instanceof File){
+          File sdcard = Environment.getExternalStorageDirectory();
+          String sdcard_path = sdcard.getAbsolutePath();
+          s_arg += "<file_path=" + ((File)arg).getAbsolutePath() + ">";
+        }
         if(arg instanceof Intent && ((Intent)arg).getAction()!="android.intent.action.VIEW" && ((Intent)arg).getAction()!="android.intent.action.MAIN"){
           s_arg += "<action=" + ((Intent)arg).getAction() + ">";
           s_arg += "<data=" + ((Intent)arg).getDataString() + ">";
@@ -262,7 +268,7 @@ public class Logger {
     String s_args = join(Arrays.asList(args), ", ", mname);
     long threadId = Thread.currentThread().getId();
     String msg = io + " " + threadId + " " + ofJavaTy(cname) + "." + mname + "(" + s_args + ")";
-    Log.i(tag, msg);
+    Log.i(tag, msg.replaceAll("\n"," "));
   }
   
   static void logMethod(String io, Object... args) {
@@ -283,11 +289,105 @@ public class Logger {
   }
   
   public static void logAPIEntry(String cname, String mname, Object... args) {
-    log("Api >", cname, mname, args);
+    Boolean cont = true;
+    if(cname.contains("java/io/File")){
+        cont = false;
+        File sdcard = Environment.getExternalStorageDirectory();
+        String sdcard_path = sdcard.getAbsolutePath();
+         Iterator<Object> iter = Arrays.asList(args).iterator();
+        while (iter.hasNext()) {
+            Object arg = iter.next();
+            if(arg instanceof File){
+                if(((File)arg).getAbsolutePath().startsWith(sdcard_path)){
+                    cont = true;
+                }
+            }
+            else if(arg instanceof String){
+                if(((String)arg).startsWith(sdcard_path)){
+                    cont = true;
+                }
+            }
+        }
+    }
+    if(mname.contains("startActivityForResult")){
+        cont = false;
+        Iterator<Object> iter = Arrays.asList(args).iterator();
+        while (iter.hasNext()) {
+            Object arg = iter.next();
+            if(arg instanceof Intent){
+                String intent_action =((Intent)arg).getAction();
+                if(intent_action=="android.intent.action.GET_CONTENT" || intent_action =="android.intent.action.PICK"){
+                    Bundle bundle = ((Intent)arg).getExtras();
+                    if(bundle != null){
+                        if(!bundle.keySet().contains("android.intent.extra.LOCAL_ONLY")){
+                            mname = mname + "CONTENT";
+                            cont = true;
+                            break;
+                        }
+                    }
+                }
+                else if(intent_action=="android.media.action.IMAGE_CAPTURE"){
+                    mname = mname + "CAMERA";
+                    cont = true;
+                    break;
+                }
+            }
+        }
+    }
+    if(cont){
+        log("Api >", cname, mname, args);
+    }
   }
   
   public static void logAPIExit(String cname, String mname, Object... args) {
-    log("Api <", cname, mname, args);
+    Boolean cont = true;
+    if(cname.contains("java/io/File")){
+        cont = false;
+        File sdcard = Environment.getExternalStorageDirectory();
+        String sdcard_path = sdcard.getAbsolutePath();
+        Iterator<Object> iter = Arrays.asList(args).iterator();
+        while (iter.hasNext()) {
+            Object arg = iter.next();
+            if(arg instanceof File){
+                if(((File)arg).getAbsolutePath().startsWith(sdcard_path)){
+                    cont = true;
+                }
+            }
+            else if(arg instanceof String){
+                if(((String)arg).startsWith(sdcard_path)){
+                    cont = true;
+                }
+            }
+        }
+    }
+    if(mname.contains("startActivityForResult")){
+        cont = false;
+        Iterator<Object> iter = Arrays.asList(args).iterator();
+        while (iter.hasNext()) {
+            Object arg = iter.next();
+            if(arg instanceof Intent){
+                String intent_action =((Intent)arg).getAction();
+                if(intent_action=="android.intent.action.GET_CONTENT" || intent_action=="android.intent.action.PICK"){
+                    Bundle bundle = ((Intent)arg).getExtras();
+                    if(bundle != null){
+                        if(!bundle.keySet().contains("android.intent.extra.LOCAL_ONLY")){
+                            mname = mname + "CONTENT";
+                            cont = true;
+                            break;
+                        }
+                    }
+                }
+                else if(intent_action=="android.media.action.IMAGE_CAPTURE"){
+                    mname = mname + "CAMERA";
+                    cont = true;
+                    break;
+                }
+            }
+        }
+    }
+    if(cont){
+        log("Api <", cname, mname, args);
+    }
   }
 
   private static String processDialog(Dialog dialog){
@@ -345,55 +445,59 @@ public class Logger {
     }
     return dateString;
   }
-
-  private static String takeScreenshot(Dialog diag, String addon_text) {
-    Date now = new Date();
-    SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
-
-    String dateString = "";
-    try{
-      // getLocationOnScreen
-      dateString = sdfr.format(now);
-    } catch (Throwable e) {
-      // Several error may come out with file handling or OOM
-      ;//e.printStackTrace();
-      return "";
-    }
-    try {
-      // image naming and path  to include sd card  appending name you choose for file
-      String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
-
-      // create bitmap screen capture
-      View v1;
-      if(diag != null){
-        v1 = diag.getWindow().getDecorView().getRootView();
-      }else if(current_activity != null){
-        v1 = current_activity.getWindow().getDecorView().getRootView();
-      }else{
-        return "";
-      }
-
-      v1.setDrawingCacheEnabled(true);
-      Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
-      v1.setDrawingCacheEnabled(false);
-      if(!addon_text.equals("")){
-        bitmap = drawText(addon_text, bitmap);
-      }
-
-      File imageFile = new File(mPath);
-
-      FileOutputStream outputStream = new FileOutputStream(imageFile);
-      int quality = 90;
-      bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
-      outputStream.flush();
-      outputStream.close();
-    } catch (Throwable e) {
-      // Several error may come out with file handling or OOM
-      ;//e.printStackTrace();
-      return "";
-    }
-    return dateString;
+  
+  private static String takeScreenshot(Dialog diag, String addon_text){
+    return "";
   }
+
+//  private static String takeScreenshot(Dialog diag, String addon_text) {
+//    Date now = new Date();
+//    SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
+//
+//    String dateString = "";
+//    try{
+//      // getLocationOnScreen
+//      dateString = sdfr.format(now);
+//    } catch (Throwable e) {
+//      // Several error may come out with file handling or OOM
+//      ;//e.printStackTrace();
+//      return "";
+//    }
+//    try {
+//      // image naming and path  to include sd card  appending name you choose for file
+//      String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
+//
+//      // create bitmap screen capture
+//      View v1;
+//      if(diag != null){
+//        v1 = diag.getWindow().getDecorView().getRootView();
+//      }else if(current_activity != null){
+//        v1 = current_activity.getWindow().getDecorView().getRootView();
+//      }else{
+//        return "";
+//      }
+//
+//      v1.setDrawingCacheEnabled(true);
+//      Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
+//      v1.setDrawingCacheEnabled(false);
+//      if(!addon_text.equals("")){
+//        bitmap = drawText(addon_text, bitmap);
+//      }
+//
+//      File imageFile = new File(mPath);
+//
+//      FileOutputStream outputStream = new FileOutputStream(imageFile);
+//      int quality = 90;
+//      bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
+//      outputStream.flush();
+//      outputStream.close();
+//    } catch (Throwable e) {
+//      // Several error may come out with file handling or OOM
+//      ;//e.printStackTrace();
+//      return "";
+//    }
+//    return dateString;
+//  }
 
   private static Bitmap drawText(String text, Bitmap bitmap){
     android.graphics.Bitmap.Config bitmapConfig =
