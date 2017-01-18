@@ -202,28 +202,30 @@ let act = ref "activity.txt"
 
 let instrument_logging (tx: D.dex) : unit =
   let rnm = !dat^"/rename" in
-try (
-  (* parse logging library *)
-  let chan = open_in_bin !lib in
-  let liblog = P.parse chan in
-  close_in chan;
-  (* merge the external dex file *)
-  let cx = tx in (*St.time "merge" 
-                   (fun _ -> Cm.combine liblog tx ~only_prototypes:!onlyprotos) () in
-  (* seed new addresses for modification *)
-  Md.seed_addr cx.D.header.D.file_size;
-  (* modify target dex accordingly *)
-  St.time "logging" Lgg.modify cx;
-  (* rename specific classes *)
-  let rnm' = rnm ^ "." ^ "cls" in
-  let ch = open_in rnm' in
-  let res = U.read_lines ch in
-  close_in ch;
-  St.time "rename" (Md.rename_cls cx) res;*)
-  (* finally, dump the rewritten dex *)
-  St.time "dump" (Dp.dump !dex) cx
-)
-with End_of_file -> prerr_endline "EOF"
+  try begin
+      (* parse logging library *)
+      let chan = open_in_bin !lib in
+      let liblog = P.parse chan in
+      close_in chan;
+      (* merge the external dex file *)
+      let cx = St.time "merge"
+                       (fun _ -> Cm.combine liblog tx
+                                            ~only_prototypes:!onlyprotos) ()
+      in
+      (* seed new addresses for modification *)
+      Md.seed_addr cx.D.header.D.file_size;
+      (* modify target dex accordingly *)
+      St.time "logging" Lgg.modify cx;
+      (* rename specific classes *)
+      let rnm' = rnm ^ "." ^ "cls" in
+      let ch = open_in rnm' in
+      let res = U.read_lines ch in
+      close_in ch;
+      St.time "rename" (Md.rename_cls cx) res;
+      (* finally, dump the rewritten dex *)
+      St.time "dump" (Dp.dump !dex) cx
+    end
+  with End_of_file -> prerr_endline "EOF"
 
 let rewrite_directed (tx: D.dex) : unit =
   let apis = !dat^"/directed.txt" in
@@ -321,7 +323,7 @@ let arg_specs = A.align
      " instrument logging feature into the given dex");
     (*("-logging-regex", A.String (fun f -> Lgg.detail := log_regex f),
      " log methods with regular expressions drawn from a file");*)
-    ("-logging-detail", A.Unit (fun () -> Lgg.detail := Fine),
+    ("-logging-detail", A.Unit (fun () -> Lgg.detail := Lgg.Fine),
      " logging more methods (default: false)");
 
     ("-directed", A.Unit do_directed,

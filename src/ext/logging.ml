@@ -457,7 +457,7 @@ class virtual logger (dx: D.dex) =
   (* to log API usage *)
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
-    Log.i (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
+    Log.d (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
     cur_citm <- citm;
     (* to secure at least three registers for logging *)
     (* 3 is minimum, but 5 here to expand invoke-* operands *)
@@ -510,7 +510,6 @@ class virtual logger (dx: D.dex) =
         and ins2 = I.new_invoke call_stt [vx; D.of_idx m_ent_mid]
         and copy_argv (acc, (arr_i, r_i)) ty =
           let tname = D.get_ty_str dx ty in
-          Pf.printf "Traversing type: %s\n" tname;
           let ins_c = I.new_const vy arr_i
           and ins_a =
             try
@@ -562,7 +561,7 @@ class virtual logger (dx: D.dex) =
           
           (* This can be optimized *)
           if (not do_logging) then
-               Log.i ("Skipping log of method call "^ full)
+               Log.d ("Skipping log of method call "^ full)
           else
           (
             Log.d ("Log of method call: "^ full);
