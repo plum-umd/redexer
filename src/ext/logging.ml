@@ -43,6 +43,7 @@ module DA = DynArray
 module U = Util
 
 module I  = Instr
+module Cf = Ctrlflow
 module D  = Dex
 module J  = Java
 module JL = Java.Lang
@@ -76,6 +77,7 @@ let stt_rnge = I.op_to_hx I.OP_INVOKE_STATIC_RANGE
 
 let logging = "Lorg/umd/logging"
 let logger = logging^"/Logger;"
+let logBBEnter = "logBasicBlockEntry"
 let logMEnt = "logMethodEntry"
 let logMExt = "logMethodExit"
 let logAEnt = "logAPIEntry"
@@ -554,11 +556,13 @@ class virtual logger (dx: D.dex) =
           let mname = D.get_mtd_name dx mid in
           let full = D.get_mtd_full_name dx mid in
           (* Automatically reject javalang clases, since they are
-           *used* in our logging code *)
+           *used* in our logging code
+           * XXX, Kris 1/18/17: why does it matter that these not be logged, since
+           we already skip methods from our logging library? I'm
+           commenting this out for now.  *)
           let do_logging = is_not_javalang full && self#log_call full in
           let mit = D.get_mit dx mid in
           let argv_ids = D.get_argv dx mit in
-          
           (* This can be optimized *)
           if (not do_logging) then
                Log.d ("Skipping log of method call "^ full)
@@ -687,10 +691,35 @@ class default_logger (dx: D.dex) =
   end
 
 (* Fine grained logging behavior: instrument as many method entries
-   and calls as possible. *)
+   and calls as possible.
+
+   Other things being instrument:
+     - Branch points
+
+ *)
 class fine_logger (dx: D.dex) =
+  let logger_cid = D.get_cid dx logger in
+  let m_bbenter, _ = D.get_the_mtd dx logger_cid logBBEnter in
   object (self)
-    inherit logger dx
+    inherit logger dx as super
+
+    (* Visit a code item: first instrument the entry and exit by
+       calling the super method, but then also identify all basic
+       blocks and instrument those too. *)
+    method v_citm citm = 
+      super#v_citm citm;
+      let cfg_mod : Cf.cfg_module = 
+        Cf.to_module dx (St.time "cfg" (Cf.make_cfg dx) citm)
+      in
+      let module CF = (val cfg_mod : Cf.CTRLFLOW with type st = D.link) in
+      let instrs = L.filter (fun x -> L.length (CF.pred x) > 1) CF.all in
+      let cursors = L.map (M.get_cursor citm) instrs in
+      let instrument_bbentry cursor = 
+        let ins = I.new_invoke stt_rnge [1; D.of_idx m_bbenter] in
+        ignore (M.insrt_ins dx citm cursor ins)
+      in
+      L.iter instrument_bbentry cursors
+                               
     method skip_class c = false
     method log_entry emtd mname = 
       not ((L.exists (fun x -> U.ends_with mname x) [J.init; J.clinit; J.hashCode])

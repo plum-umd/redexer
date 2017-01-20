@@ -279,6 +279,12 @@ public class Logger {
     String mname = elts[2].getMethodName();
     log("Method " + io, cname, mname, args);
   }
+
+  public static void logBasicBlockEntry(int arg) {
+    long threadId = Thread.currentThread().getId();
+    String msg = threadId + "BasicBlock " + arg;
+    Log.i(tag, msg);
+  }
   
   public static void logMethodEntry(Object... args) {
     logMethod(">", args);
