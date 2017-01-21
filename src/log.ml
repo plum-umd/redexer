@@ -48,7 +48,7 @@ type log_level =
   | LOG_INFO
   | LOG_WARN
 
-let level = ref LOG_INFO
+let level = ref LOG_WARN
 
 (* set_level : string -> unit *)
 let set_level (lv: string) : unit =

@@ -285,6 +285,38 @@ public class Logger {
     String msg = threadId + "BasicBlock " + arg;
     Log.i(tag, msg);
   }
+
+  public static String objToString(Object obj) {
+    String arg;
+    if (obj == null) {
+      arg = "null";
+    } else if (isWrapperType(obj.getClass())) {
+      arg = obj.toString();
+      //Check if first objument is a string
+    } else if (obj.getClass() == String.class) {
+      arg = "\"" + ((String)obj).replace("\n","\\n") + "\"";
+      //Check if it a class object
+    } else if (obj.getClass() == Class.class) {
+      arg = ((Class)obj).getName();
+      //Check if first objument is an activity
+    } else {
+      arg = "<unknown>";
+    }
+    return arg;
+  }
+
+  public static void logInstanceFieldOp(Object self, Object dest) {
+    long threadId = Thread.currentThread().getId();
+    String msg = threadId + " InstanceFieldOp (" + objToString(self) 
+      + ", " + objToString(dest) + ")";
+    Log.i(tag, msg);
+  }
+
+  public static void logStaticFieldOp(Object thing) {
+    long threadId = Thread.currentThread().getId();
+    String msg = threadId + " StaticFieldOp (" + objToString(thing) + ")";
+    Log.i(tag, msg);
+  }
   
   public static void logMethodEntry(Object... args) {
     logMethod(">", args);

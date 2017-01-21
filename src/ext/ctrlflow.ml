@@ -335,6 +335,13 @@ let get_last_inss (g: cfg) pdom : D.link list =
   let last_bbs = L.filter (fun bb -> ipdom pdom bb = e) g.(e).pred in
   L.map (fun bb -> U.get_last g.(bb).insns) last_bbs
 
+(* get_bb_entries : cfg -> Dex.link list *)
+let get_bb_entries (g: cfg) : D.link list = 
+  let is : D.link list = Array.fold_left (fun acc hd -> 
+                             match hd.insns with []    -> acc 
+                                               | h::_  -> h::acc) [] g in
+  L.rev is
+
 (***********************************************************************)
 (* Control-flow Module for Data-flow Analysis                          *)
 (***********************************************************************)

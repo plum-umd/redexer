@@ -78,6 +78,8 @@ let stt_rnge = I.op_to_hx I.OP_INVOKE_STATIC_RANGE
 let logging = "Lorg/umd/logging"
 let logger = logging^"/Logger;"
 let logBBEnter = "logBasicBlockEntry"
+let logStatFldOp = "logStaticFieldOp"
+let logInstFldOp = "logInstanceFieldOp"
 let logMEnt = "logMethodEntry"
 let logMExt = "logMethodExit"
 let logAEnt = "logAPIEntry"
@@ -532,7 +534,6 @@ class virtual logger (dx: D.dex) =
           ) in
         let _ = M.insrt_insns_before_start dx citm ent_insns in
         in_out_cnt := !in_out_cnt + (L.length ent_insns);
-
         M.update_reg_usage dx citm
        with D.No_return -> ())
       
@@ -669,7 +670,7 @@ class virtual logger (dx: D.dex) =
           )
         )
       )
-      | _ -> ()
+      | _ -> ()         
     )
 
   method finish () : unit =
@@ -698,8 +699,10 @@ class default_logger (dx: D.dex) =
 
  *)
 class fine_logger (dx: D.dex) =
-  let logger_cid = D.get_cid dx logger in
-  let m_bbenter, _ = D.get_the_mtd dx logger_cid logBBEnter in
+  let logger_cid      = D.get_cid dx logger in
+  let m_bbenter, _    = D.get_the_mtd dx logger_cid logBBEnter in
+  let m_logstfld, _   = D.get_the_mtd dx logger_cid logStatFldOp in
+  let m_loginstfld, _ = D.get_the_mtd dx logger_cid logInstFldOp in
   object (self)
     inherit logger dx as super
 
@@ -708,17 +711,41 @@ class fine_logger (dx: D.dex) =
        blocks and instrument those too. *)
     method v_citm citm = 
       super#v_citm citm;
-      let cfg_mod : Cf.cfg_module = 
-        Cf.to_module dx (St.time "cfg" (Cf.make_cfg dx) citm)
+      let cfg = (St.time "cfg" (Cf.make_cfg dx) citm) in
+      let instrs = Cf.get_bb_entries cfg in
+      let cursors = L.map (fun x -> (M.get_cursor citm x), x) instrs in
+      (* Instrument basic block entries *)
+      let instrument_bbentry i (cursor,link) = 
+        (* The instructions to really add to the method.. *)
+        (* The number of instructions we add. Update when inss changes *)
+        let numinsns = 2 in
+        let index = D.of_off link + numinsns * i in
+        let ins0 = I.new_const 0 index in
+        let ins1 = I.new_invoke call_stt [0; D.of_idx m_bbenter] in
+        let inss = [ins0; ins1] in
+        let rec advance i c = match i with 
+          | 0 -> c
+          | n -> advance (i-1) (M.next c)
+        in
+        ignore (M.insrt_insns_under_off dx citm (advance (numinsns * i) cursor) inss)
       in
-      let module CF = (val cfg_mod : Cf.CTRLFLOW with type st = D.link) in
-      let instrs = L.filter (fun x -> L.length (CF.pred x) > 1) CF.all in
-      let cursors = L.map (M.get_cursor citm) instrs in
-      let instrument_bbentry cursor = 
-        let ins = I.new_invoke stt_rnge [1; D.of_idx m_bbenter] in
-        ignore (M.insrt_ins dx citm cursor ins)
-      in
-      L.iter instrument_bbentry cursors
+      L.iteri instrument_bbentry cursors
+
+    method v_ins ins : unit = 
+      super#v_ins ins;
+      if D.is_ins dx ins then begin
+          let op, opr = D.get_ins dx ins in
+          match op with 
+          | I.OP_IGET_OBJECT -> 
+             let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
+             let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) r1 0 in
+             let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) r2 1 in
+             let ins2 = I.new_invoke call_stt [0; 1; D.of_idx m_loginstfld] in
+             let inss = [ins0; ins1; ins2] in
+             let cursor = M.get_cursor cur_citm ins in
+             ignore (M.insrt_insns_over_off dx cur_citm cursor inss)
+          | _ -> ()
+        end
                                
     method skip_class c = false
     method log_entry emtd mname = 
