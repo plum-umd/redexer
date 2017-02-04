@@ -722,156 +722,77 @@ class fine_logger (dx: D.dex) =
     val mutable cur_mname = ""
     val mutable selected = false
     val mutable cur_citm = D.empty_citm ()
+    val mutable skip = false
 
     method v_cdef (cdef: D.class_def_item) : unit =
       super#v_cdef cdef;
       let cid = cdef.D.c_class_id in
       cur_cname <- D.get_ty_str dx cid
 
+    (* Visit a method, decide whether or not to skip it (we skip synthetic methods) *)
     method v_emtd (emtd: D.encoded_method) : unit =
       super#v_emtd emtd;
       let cur_mid = emtd.D.method_idx in
       cur_mname <- D.get_mtd_name dx cur_mid;
-      Printf.printf "%s %s\n" cur_cname cur_mname;
-      selected <- 
+
+      (*Printf.printf "%s %s\n" cur_cname cur_mname;*)
+      (*selected <- 
         cur_cname = "Landroid/support/graphics/drawable/PathParser;"
-        && cur_mname = "getFloats"
+        && cur_mname = "getFloats"*)
 
     (* Visit a code item: first instrument the entry and exit by
        calling the super method, but then also identify all basic
        blocks and instrument those too. *)
     method v_citm citm = 
       super#v_citm citm;
-      let cfg = (St.time "cfg" (Cf.make_cfg dx) citm) in
-      let instrs = Cf.get_bb_entries cfg in
-      if selected then (
-        Printf.printf "%s" "hello1\n";
-        Unparse.print_method dx citm;
-        Cf.cfg2dot dx (Cf.make_cfg dx citm))
-      else ();
-      let cursors = L.map (fun x -> (M.get_cursor citm x), x) instrs in
-      (* Instrument basic block entries *)
-      let instrument_bbentry i (cursor,link) = 
-        (* The instructions to really add to the method.. *)
-        (* The number of instructions we add. Update when inss changes *)
-        let numinsns = 2 in
-        let index = D.of_off link + numinsns * i in
-        let ins0 = I.new_const 0 index in
-        let ins1 = I.new_invoke call_stt [0; D.of_idx m_bbenter] in
-        let inss = [ins0; ins1] in
-        let rec advance i c = match i with 
-          | 0 -> c
-          | n -> advance (i-1) (M.next c)
+      if log_entry then 
+        let cfg = (St.time "cfg" (Cf.make_cfg dx) citm) in
+        let instrs = Cf.get_bb_entries cfg in
+        if selected then (
+          Printf.printf "%s" "hello1\n";
+          Unparse.print_method dx citm;
+          Cf.cfg2dot dx (Cf.make_cfg dx citm))
+        else ();
+        let cursors = L.map (fun x -> (M.get_cursor citm x), x) instrs in
+        (* Instrument basic block entries *)
+        let instrument_bbentry i (cursor,link) = 
+          (* The instructions to really add to the method.. *)
+          (* The number of instructions we add. Update when inss changes *)
+          let numinsns = 2 in
+          let index = D.of_off link + numinsns * i in
+          let ins0 = I.new_const 0 index in
+          let ins1 = I.new_invoke call_stt [0; D.of_idx m_bbenter] in
+          let inss = [ins0; ins1] in
+          let rec advance i c = match i with 
+            | 0 -> c
+            | n -> advance (i-1) (M.next c)
+          in
+          let op, opr = D.get_ins dx link in
+          begin
+            (* Some instructions have to be the beginnings of a basic block *)
+            match op with 
+            | I.OP_MOVE_EXCEPTION
+            | I.OP_MOVE_RESULT
+            | I.OP_MOVE_RESULT_WIDE
+            | I.OP_MOVE_RESULT_OBJECT ->
+               ignore (M.insrt_insns_under_off dx citm (advance (numinsns * i) (M.next cursor)) inss)
+               (*Printf.printf "%s\n" "herein3"*)
+            | _ ->
+               ignore (M.insrt_insns_under_off dx citm (advance (numinsns * i) cursor) inss)
+          end
+            (*Printf.printf "%s\n" "hereas3");*)
+        (*if selected then (
+          Unparse.print_method dx citm;
+          Printf.printf "%x %s\n" index "here2\n";
+          Cf.cfg2dot dx (Cf.make_cfg dx citm))
+        else ()*)
         in
-        let op, opr = D.get_ins dx link in
-        begin
-          (* Some instructions have to be the beginnings of a basic block *)
-          match op with 
-          | I.OP_MOVE_EXCEPTION
-          | OP_MOVE_RESULT
-          | OP_MOVE_RESULT_WIDE
-          | OP_MOVE_RESULT_OBJECT ->
-             (M.insrt_insns_under_off dx citm (advance (numinsns * i) (M.next cursor)) inss;
-              Printf.printf "%s\n" "herein3")
-          | _ ->
-             ignore (M.insrt_insns_under_off dx citm (advance (numinsns * i) cursor) inss)
-        end;
-        (*Printf.printf "%s\n" "hereas3");*)
-        if selected then (
-          Unparse.print_method dx citm;
-          Printf.printf "%x %s\n" index "here2\n";
-          Cf.cfg2dot dx (Cf.make_cfg dx citm))
-        else ()
-      in
-      L.iteri instrument_bbentry cursors
-
-(*    (* Visit a code item: first instrument the entry and exit by
-       calling the super method, but then also identify all basic
-       blocks and instrument those too. *)
-    method v_citm citm = 
-      super#v_citm citm;
-      cur_citm <- citm;
-      if selected then begin
-          Printf.printf "%s\n" "here\n";
-          Unparse.print_method dx citm;
-          Cf.cfg2dot dx (Cf.make_cfg dx citm)
-        end
-      else ();
-      let cfg = (St.time "cfg" (Cf.make_cfg dx) citm) in
-      let instrs = Cf.get_bb_entries cfg in
-      (* Instrument basic block entries *)
-      let instrument_bbentry i link = 
-        let cursor = M.get_cursor citm link in
-        (* The instructions to really add to the method.. *)
-        let index = D.of_off link in
-        let ins0 = I.new_const 0 index in
-        let ins1 = I.new_invoke call_stt [0; D.of_idx m_bbenter] in
-        let inss = [ins0; ins1] in
-        let op, opr = D.get_ins dx link in
-        if (op = I.OP_MOVE_EXCEPTION) then
-          ignore (M.insrt_insns_over_off dx citm cursor inss)
-        else(
-          ignore (M.insrt_insns_over_off dx citm cursor inss);
-          Printf.printf "%s\n" "hereas3");
-        if selected then (
-          Unparse.print_method dx citm;
-          Printf.printf "%x %s\n" index "here2\n";
-          Cf.cfg2dot dx (Cf.make_cfg dx citm))
-        else ()
-      in
-      L.iteri instrument_bbentry instrs;
-      if selected then
-        (Printf.printf "%s" "here3\n";
-        Cf.cfg2dot dx (Cf.make_cfg dx citm))
+        L.iteri instrument_bbentry cursors
       else
-        () 
- *)
-
-
-(*    (* Visit a code item: first instrument the entry and exit by
-       calling the super method, but then also identify all basic
-       blocks and instrument those too. *)
-    method v_citm citm = 
-      super#v_citm citm;
-      cur_citm <- citm;
-      if selected then begin
-          Printf.printf "%s\n" "here\n";
-          Unparse.print_method dx citm;
-          Cf.cfg2dot dx (Cf.make_cfg dx citm)
-        end
-      else ();
-      let cfg = (St.time "cfg" (Cf.make_cfg dx) citm) in
-      let instrs = Cf.get_bb_entries cfg in
-      (* Instrument basic block entries *)
-      let instrument_bbentry i link = 
-        let cursor = M.get_cursor citm link in
-        (* The instructions to really add to the method.. *)
-        let index = D.of_off link in
-        let ins0 = I.new_const 0 index in
-        let ins1 = I.new_invoke call_stt [0; D.of_idx m_bbenter] in
-        let inss = [ins0; ins1] in
-        let op, opr = D.get_ins dx link in
-        if (op = I.OP_MOVE_EXCEPTION) then
-          ignore (M.insrt_insns_over_off dx citm cursor inss)
-        else(
-          ignore (M.insrt_insns_over_off dx citm cursor inss);
-          Printf.printf "%s\n" "hereas3");
-        if selected then (
-          Unparse.print_method dx citm;
-          Printf.printf "%x %s\n" index "here2\n";
-          Cf.cfg2dot dx (Cf.make_cfg dx citm))
-        else ()
-      in
-      L.iteri instrument_bbentry instrs;
-      if selected then
-        (Printf.printf "%s" "here3\n";
-        Cf.cfg2dot dx (Cf.make_cfg dx citm))
-      else
-        () 
- *)
+        ()
+          
     method v_ins ins : unit = 
       super#v_ins ins
-
       (*if D.is_ins dx ins then begin
           let op, opr = D.get_ins dx ins in
           match op with 
@@ -885,7 +806,7 @@ class fine_logger (dx: D.dex) =
              ignore (M.insrt_insns_over_off dx cur_citm cursor inss)
           | _ -> ()
         end *)
-                               
+                  
     method skip_class c = false
     method log_entry emtd mname = 
       not ((L.exists (fun x -> U.ends_with mname x) [J.init; J.clinit; J.hashCode])
