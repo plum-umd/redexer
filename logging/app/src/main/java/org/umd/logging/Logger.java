@@ -282,7 +282,7 @@ public class Logger {
 
   public static void logBasicBlockEntry(int arg) {
     long threadId = Thread.currentThread().getId();
-    String msg = threadId + "BasicBlock " + arg;
+    String msg = threadId + " BasicBlock " + arg;
     Log.i(tag, msg);
   }
 

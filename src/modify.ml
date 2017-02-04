@@ -567,6 +567,18 @@ let insrt_insns_over_off dx (citm: D.code_item) cur (insns: I.instr list) =
   (* insert the remaining instructions from the previous cursor *)
   insrt_insns dx citm nxt_cur rest
 
+(*(*
+                                              +---------+
+                                       off -> |  instr  |
+                                              +---------+
+         +---------+                          |  added  |
+  off -> |  instr  |         ==>              | snippet |
+         +---------+                          +---------+
+*)
+(* insrt_insns_after_off : D.dex -> D.code_item -> cursor -> I.instr list -> cursor *)
+let insrt_insns_after_off dx (citm: D.code_item) cur (insns: I.instr list) = 
+ *)  
+
 (* insrt_insns_before_start : D.dex -> D.code_item -> I.instr list -> cursor *)
 let insrt_insns_before_start dx (citm: D.code_item) (insns: I.instr list) =
   let cur = get_fst_cursor () in
@@ -1189,14 +1201,27 @@ object
   (* to keep track of parameters types *)
   val mutable cur_mid = D.no_idx
   val mutable is_static = false
+  val mutable mname = ""
+  val mutable cname = ""
+
+  method v_cdef cdef = 
+    cname <- D.get_ty_str dx cdef.D.c_class_id
+
   method v_emtd (emtd: D.encoded_method) : unit =
     cur_mid   <- emtd.D.method_idx;
-    is_static <- D.is_static emtd.D.m_access_flag
+    is_static <- D.is_static emtd.D.m_access_flag;
+    mname <- D.get_mtd_name dx cur_mid;
+    Printf.printf "opr %s %s\n" cname mname;
 
   (* to update goto instructions whose offset would be truncated
     due to aggressive instrumentations *)
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
+    if (cname = "Landroid/support/v4/app/FragmentHostCallback;"
+        && mname = "onStartIntentSenderFromFragment") then 
+      (Printf.printf "%s" "oprhello\n";
+       Unparse.print_method dx citm;
+       Cf.cfg2dot dx (Cf.make_cfg dx citm));
     cur_citm <- citm
                   
   method v_ins (ins: D.link) : unit =

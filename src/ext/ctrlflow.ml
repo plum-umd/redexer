@@ -89,6 +89,9 @@ let is_changed bef aft : bool =
 let rec make_cfg (dx: D.dex) (citm: D.code_item) : cfg =
   let inss = L.filter (D.is_ins dx) (DA.to_list citm.D.insns) in
   let leaders = calc_leaders dx citm.D.tries inss in
+  L.iter (fun x -> 
+      let link = D.of_off x in
+      Printf.printf "leader %x\n" link) leaders;
   let spl = split leaders inss
   and toBB b = { kind = NORM; insns = b; pred = []; succ = []; } in
   let bbs = L.map toBB spl
@@ -105,7 +108,8 @@ and calc_leaders (dx: D.dex) (tries: D.try_item list) inss : D.link list =
       let op, opr = D.get_ins dx ins1 in
       let hx = I.op_to_hx op in
       if 0x0d = hx then (* move-exception: start pt. of exception *)
-        iter (OS.add ins1 acc) tl
+        (Printf.printf "exception %x\n" (D.of_off ins1);
+        iter (OS.add ins1 acc) tl)
       else if L.mem hx (U.range 0x0e 0x11 [0x27]) then (* return or throw *)
       (
         let acc' =

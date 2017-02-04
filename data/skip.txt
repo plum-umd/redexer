@@ -5,8 +5,6 @@ org.jboss
 org.json
 org.slf4j
 oauth.signpost
-android.annotation
-android.support
 com.android.vending
 com.google
 com.ebay
