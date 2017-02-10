@@ -792,20 +792,20 @@ class fine_logger (dx: D.dex) =
         ()
           
     method v_ins ins : unit = 
-      super#v_ins ins
-      (*if D.is_ins dx ins then begin
+      super#v_ins ins;
+      if D.is_ins dx ins then begin
           let op, opr = D.get_ins dx ins in
           match op with 
           | I.OP_IGET_OBJECT -> 
              let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
-             let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) r1 0 in
-             let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) r2 1 in
+             let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r1 in
+             let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 1 r2 in
              let ins2 = I.new_invoke call_stt [0; 1; D.of_idx m_loginstfld] in
              let inss = [ins0; ins1; ins2] in
              let cursor = M.get_cursor cur_citm ins in
              ignore (M.insrt_insns_over_off dx cur_citm cursor inss)
           | _ -> ()
-        end *)
+        end 
                   
     method skip_class c = false
     method log_entry emtd mname = 

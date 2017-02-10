@@ -300,7 +300,7 @@ public class Logger {
       arg = ((Class)obj).getName();
       //Check if first objument is an activity
     } else {
-      arg = "<unknown>";
+      arg = obj.getClass().getName() + "@" + System.identityHashCode(obj);
     }
     return arg;
   }
