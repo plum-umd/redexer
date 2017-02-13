@@ -675,17 +675,6 @@ end
 
 (* Different possible logger implementations. *)
 
-(* Default logging behavior. *)
-class default_logger (dx: D.dex) =
-  object (self)
-    inherit logger dx
-    method skip_class _ = false
-    method log_entry emtd mname = 
-      not (L.mem mname [J.init; J.clinit; J.hashCode]
-           || D.is_synthetic emtd.D.m_access_flag)
-    method log_call _ = false
-  end
-
 (* Fine grained logging behavior: instrument as many method entries
    and calls as possible. *)
 class fine_logger (dx: D.dex) =
@@ -776,7 +765,6 @@ let modify (dx: D.dex) : unit =
   let logging = match !detail with 
     | Default -> new log_transition_entries dx
     | Fine    -> new fine_logger dx
-    | Regex _ -> failwith "regex flag for logger not implement quite yet"
   in
   (*St.time "transition" add_transition dx;*)
   (* log API uses and entry/exit of all methods, except for Logger itself *)
