@@ -49,6 +49,12 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Member;
 
 import java.net.URL;
 
@@ -57,6 +63,7 @@ import java.text.SimpleDateFormat;
 import java.io.FileOutputStream;
 import java.io.File;
 import java.io.FileDescriptor;
+import java.io.BufferedOutputStream;
 
 import android.widget.CheckBox;
 import android.widget.RadioButton;
@@ -76,6 +83,8 @@ import android.net.Uri;
 import android.os.Environment;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Parcel;
+import android.os.Parcelable;
 
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
@@ -83,6 +92,8 @@ import android.graphics.Paint;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.Canvas;
+
+import android.support.v4.util.ArrayMap;
 
 import org.umd.logging.FragmentMapper;
 
@@ -142,11 +153,49 @@ public class Logger {
       }else if(argCount == 0 && FragmentMapper.getInstance().isFragment(arg.getClass())){
         s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<fragment=true>";
       //Check if first argument is an asynctask object
+      
       }else if(argCount == 0 && arg instanceof AsyncTask){
         s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<atask=true>";
+        if(arg.getClass().getName().contains("com.facebook")){
+                Class c = arg.getClass();
+                try{
+                    Log.i(tag, "Class Name: " + c.getName());
+                    for(Field f : c.getDeclaredFields()){
+                        Log.i(tag,"Request type: " + f.getType().getName());
+                        if(f.getType().getName().contains("com.facebook")){
+                            f.setAccessible(true);
+                            Object request_batch = f.get(arg);
+                            if(request_batch != null){
+                                Class request_batch_c = request_batch.getClass();
+                                Log.i(tag, "RequestBatch Class Name: " + request_batch_c.getName());
+                                for(Field request_batch_f : request_batch_c.getDeclaredFields()){
+                                    Log.i(tag, "RequestBatch Declared Field Type: " + request_batch_f.getType().getName());
+                                    if(request_batch_f.getType().getName().contains("java.util.List")){
+                                        request_batch_f.setAccessible(true);
+                                        ArrayList<Object> request_list = (ArrayList<Object>)request_batch_f.get(request_batch);
+                                        if(request_list.size() > 0 && request_list.get(0).getClass().getName().contains("com.facebook")){
+                                            for(Object request : request_list){
+                                                Log.i(tag,"RequestBatch toString(): " + request.toString());
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+//                            s_arg += "<parameters=" + parameters + ">";
+                           }
+                        }
+                    }
+                } catch(IllegalAccessException e){
+                    Log.i(tag, "AccessException: " + e.getMessage());
+                }
+        }
       //Try to annotate all of the arguments
       }else{
         s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
+        
+//        if(arg instanceof String && mname.contains("FACEBOOK")){
+//            s_arg += "<value" + argCount + "=" + arg + ">";
+//        }
         if(arg instanceof View){
           if(argCount == 0 || argCount == 1){
             try{
@@ -232,7 +281,30 @@ public class Logger {
           s_arg += "<type=" + ((Intent)arg).getType() + ">";
           s_arg += "<filter_hashcode=" + ((Intent)arg).filterHashCode() + ">";
           Bundle bundle = ((Intent)arg).getExtras();
-          if(bundle != null){
+          if(mname.contains("FACEBOOK")){
+            Bundle parcelable_1 = (Bundle)bundle.get("com.facebook.LoginFragment:Request");
+            Parcelable parcelable = parcelable_1.getParcelable("request");
+            if(parcelable != null){
+                Parcel parcel = Parcel.obtain();
+                parcel.setDataSize(1000000);
+                parcelable.writeToParcel(parcel,0);
+                ArrayList<String> permissions = new ArrayList<String>();
+                String loginBehavior = parcel.readString();
+                parcel.readStringList(permissions);
+                String perm_list = "";
+                for (String perm : permissions){
+                    perm_list = perm_list + "|" + perm;
+                }
+                String defaultAudience = parcel.readString();
+                String appID = parcel.readString();
+                String authID = parcel.readString();
+                byte isRequest = parcel.readByte();
+                String deviceRedirectUri = parcel.readString();
+                
+                s_arg += "<extras=loginBehavior:" + loginBehavior + ",permissions:" + perm_list + ",defaultAudience:" + defaultAudience + ",appID:" + appID + ",authID:" + authID + ",isRequest:" + isRequest + ",deviceRedirectUri:" + deviceRedirectUri;
+            }
+          }
+          else if(bundle != null){
               if(!bundle.keySet().contains("umd_Intent_key")){
                   ((Intent)arg).putExtra("umd_Intent_key",System.currentTimeMillis());
                   bundle = ((Intent)arg).getExtras();
@@ -294,7 +366,7 @@ public class Logger {
         cont = false;
         File sdcard = Environment.getExternalStorageDirectory();
         String sdcard_path = sdcard.getAbsolutePath();
-         Iterator<Object> iter = Arrays.asList(args).iterator();
+        Iterator<Object> iter = Arrays.asList(args).iterator();
         while (iter.hasNext()) {
             Object arg = iter.next();
             if(arg instanceof File){
@@ -309,6 +381,23 @@ public class Logger {
             }
         }
     }
+//    if(cname.contains("java/io/OutputStream") && mname.contains("write")){
+//        //cont = false;
+//        Log.i(tag, "OutputStream write----");
+//        Iterator<Object> iter = Arrays.asList(args).iterator();
+//        while (iter.hasNext()) {
+//            Log.i(tag, "Output line: ---");
+//            Object arg = iter.next();
+//            if(arg instanceof BufferedOutputStream){
+//                Log.i(tag, "arg type = " + arg.getClass().getName());
+//                BufferedOutputStream bytes = (BufferedOutputStream)arg;
+//                Log.i(tag, "BufferedOutputStream: " + bytes.toString());
+//            } else if(arg instanceof byte[]){
+//                String s = new String((byte[])arg);
+//                Log.i(tag, "Byte Stream: " + s);
+//            }
+//        }
+//    }
     if(mname.contains("startActivityForResult")){
         cont = false;
         Iterator<Object> iter = Arrays.asList(args).iterator();
@@ -331,8 +420,88 @@ public class Logger {
                     cont = true;
                     break;
                 }
+                else {
+                    Bundle bundle = ((Intent)arg).getExtras();
+                    Bundle parcelable_1 = (Bundle)bundle.get("com.facebook.LoginFragment:Request");
+                    if(parcelable_1 != null){
+                        mname = mname + "FACEBOOK";
+                        cont = true;
+                    }
+                }
             }
         }
+    }
+//    if(mname.contains("putString")){
+//        cont = false;
+//        ArrayList<Object> arg_list = (ArrayList<Object>)Arrays.asList(args);
+//        if(arg_list.get(0) instanceof Bundle && ((String)arg_list.get(1)).contains("fields")){
+//                cont = true;
+//                mname = mname + "FACEBOOK";
+//        }
+//    }
+    
+    if(mname.contains("executeOnExecutor")){
+        Log.i(tag, "executeOnExecutor happened");
+        cont = false;
+        Iterator<Object> iter = Arrays.asList(args).iterator();
+        while (iter.hasNext()) {
+            Object arg = iter.next();
+            Log.i(tag,"insideExecutorLoop");
+            if(arg instanceof AsyncTask && arg.getClass().getName().contains("com.facebook")){
+                cont = true;
+                mname = mname + "FACEBOOK";
+            }
+        }
+    }
+    if(mname.contains("build") && cname.contains("GoogleApiClient")){
+    	cont = false;
+	try{
+		Object builder = (ArrayList<Object>)Arrays.asList(args).get(0);
+		Class c = builder.getClass();
+		Field apiMap_f = c.getField("zzagn");
+		ArrayMap apiMap = (ArrayMap)apiMap_f.get(builder);
+		ArrayList<String> apis = new ArrayList<String>();
+		for(Object key : apiMap.keySet()){
+			Class key_c = key.getClass();
+			Field api_f = key_c.getField("mName");
+			apis.add((String)api_f.get(key));
+		}
+		log("Api >", cname, mname, apis);
+	} catch(IllegalAccessException|NoSuchFieldException e){
+		Log.i(tag, "Exception: " + e.getMessage());
+	}
+    }
+    if(mname.contains("query") && cname.contains("Api")){
+	cont = false;
+	try{
+		Object query = (ArrayList<Object>)Arrays.asList(args).get(2);
+		Class query_c = query.getClass();
+		Field logicalFilter_f = query_c.getField("zzatV");
+		Object logicalFilter = logicalFilter_f.get(query);
+		Class logicalFilter_c = logicalFilter.getClass();
+		Field filterList_f = logicalFilter_c.getField("zzaua");
+		List<Object> filterList = (List<Object>)filterList_f.get(logicalFilter);
+		ArrayList<String> filters = new ArrayList<String>();
+		for(Object filter : filterList){
+			Class filter_c = filter.getClass();
+			Field operator_f = filter_c.getField("zzaug");
+			Object operator = operator_f.get(filter);
+			Class operator_c = operator.getClass();
+			Field tag_f = operator_c.getField("mTag");
+			String tag = (String)tag_f.get(operator);
+		
+			Field metadatabundle_f = filter_c.getField("zzauh");
+			Object metadatabundle = metadatabundle_f.get(filter);
+			Class metadatabundle_c = metadatabundle.getClass();
+			Field bundle_f = metadatabundle_c.getField("zzasQ");
+			Bundle bundle = (Bundle)bundle_f.get(metadatabundle);
+			String bundle_text = bundle.toString();
+			filters.add("Operator: " + tag + ", Filter: " + bundle_text); 
+		}
+		log("Api >", cname, mname, filters);
+	} catch(IllegalAccessException|NoSuchFieldException e){
+		Log.i(tag, "Exception: " + e.getMessage());
+	}
     }
     if(cont){
         log("Api >", cname, mname, args);
@@ -381,6 +550,14 @@ public class Logger {
                     mname = mname + "CAMERA";
                     cont = true;
                     break;
+                }
+                else {
+                    Bundle bundle = ((Intent)arg).getExtras();
+                    Bundle parcelable_1 = (Bundle)bundle.get("com.facebook.LoginFragment:Request");
+                    if(parcelable_1 != null){
+                        mname = mname + "FACEBOOK";
+                        cont = true;
+                    }
                 }
             }
         }
