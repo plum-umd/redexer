@@ -23,6 +23,3 @@ android {
         abortOnError false
     }
 }
-dependencies {
-    compile 'com.android.support:support-v4:+'
-}

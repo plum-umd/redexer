@@ -51,6 +51,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -92,8 +93,6 @@ import android.graphics.Paint;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.graphics.Canvas;
-
-import android.support.v4.util.ArrayMap;
 
 import org.umd.logging.FragmentMapper;
 
@@ -282,12 +281,12 @@ public class Logger {
           s_arg += "<filter_hashcode=" + ((Intent)arg).filterHashCode() + ">";
           Bundle bundle = ((Intent)arg).getExtras();
           if(mname.contains("FACEBOOK")){
-            Bundle parcelable_1 = (Bundle)bundle.get("com.facebook.LoginFragment:Request");
-            Parcelable parcelable = parcelable_1.getParcelable("request");
+//            Bundle parcelable_1 = (Bundle)bundle.get("com.facebook.LoginFragment:Request");
+            Parcelable parcelable = bundle.getParcelable("request");
             if(parcelable != null){
                 Parcel parcel = Parcel.obtain();
-                parcel.setDataSize(1000000);
                 parcelable.writeToParcel(parcel,0);
+                parcel.setDataPosition(0);
                 ArrayList<String> permissions = new ArrayList<String>();
                 String loginBehavior = parcel.readString();
                 parcel.readStringList(permissions);
@@ -295,13 +294,14 @@ public class Logger {
                 for (String perm : permissions){
                     perm_list = perm_list + "|" + perm;
                 }
+                perm_list = perm_list.substring(1);
                 String defaultAudience = parcel.readString();
                 String appID = parcel.readString();
                 String authID = parcel.readString();
                 byte isRequest = parcel.readByte();
                 String deviceRedirectUri = parcel.readString();
                 
-                s_arg += "<extras=loginBehavior:" + loginBehavior + ",permissions:" + perm_list + ",defaultAudience:" + defaultAudience + ",appID:" + appID + ",authID:" + authID + ",isRequest:" + isRequest + ",deviceRedirectUri:" + deviceRedirectUri;
+                s_arg += "<extras=loginBehavior:" + loginBehavior + ",permissions:" + perm_list + ",defaultAudience:" + defaultAudience + ",appID:" + appID + ",authID:" + authID + ",isRequest:" + isRequest + ",deviceRedirectUri:" + deviceRedirectUri + ">";
             }
           }
           else if(bundle != null){
@@ -420,13 +420,9 @@ public class Logger {
                     cont = true;
                     break;
                 }
-                else {
-                    Bundle bundle = ((Intent)arg).getExtras();
-                    Bundle parcelable_1 = (Bundle)bundle.get("com.facebook.LoginFragment:Request");
-                    if(parcelable_1 != null){
-                        mname = mname + "FACEBOOK";
-                        cont = true;
-                    }
+                else if(intent_action=="NATIVE_WITH_FALLBACK"){
+                    mname = mname + "FACEBOOK";
+                    cont = true;
                 }
             }
         }
@@ -459,7 +455,7 @@ public class Logger {
 		Object builder = (ArrayList<Object>)Arrays.asList(args).get(0);
 		Class c = builder.getClass();
 		Field apiMap_f = c.getField("zzagn");
-		ArrayMap apiMap = (ArrayMap)apiMap_f.get(builder);
+		Map apiMap = (Map)apiMap_f.get(builder);
 		ArrayList<String> apis = new ArrayList<String>();
 		for(Object key : apiMap.keySet()){
 			Class key_c = key.getClass();
@@ -551,13 +547,9 @@ public class Logger {
                     cont = true;
                     break;
                 }
-                else {
-                    Bundle bundle = ((Intent)arg).getExtras();
-                    Bundle parcelable_1 = (Bundle)bundle.get("com.facebook.LoginFragment:Request");
-                    if(parcelable_1 != null){
-                        mname = mname + "FACEBOOK";
-                        cont = true;
-                    }
+                else if(intent_action=="NATIVE_WITH_FALLBACK"){
+                    mname = mname + "FACEBOOK";
+                    cont = true;
                 }
             }
         }
