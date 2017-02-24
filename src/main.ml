@@ -321,8 +321,6 @@ let arg_specs = A.align
 
     ("-logging",  A.Unit do_logging,
      " instrument logging feature into the given dex");
-    ("-logging-regex", A.String (fun f -> Lgg.detail := log_regex f),
-     " log methods with regular expressions drawn from a file");
     ("-logging-detail", A.Unit (fun () -> Lgg.detail := Lgg.Fine),
      " logging more methods (default: false)");
 
