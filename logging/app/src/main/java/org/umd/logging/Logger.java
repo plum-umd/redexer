@@ -155,38 +155,37 @@ public class Logger {
       
       }else if(argCount == 0 && arg instanceof AsyncTask){
         s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<atask=true>";
-        if(arg.getClass().getName().contains("com.facebook")){
-                Class c = arg.getClass();
-                try{
-                    Log.i(tag, "Class Name: " + c.getName());
-                    for(Field f : c.getDeclaredFields()){
-                        Log.i(tag,"Request type: " + f.getType().getName());
-                        if(f.getType().getName().contains("com.facebook")){
-                            f.setAccessible(true);
-                            Object request_batch = f.get(arg);
-                            if(request_batch != null){
-                                Class request_batch_c = request_batch.getClass();
-                                Log.i(tag, "RequestBatch Class Name: " + request_batch_c.getName());
-                                for(Field request_batch_f : request_batch_c.getDeclaredFields()){
-                                    Log.i(tag, "RequestBatch Declared Field Type: " + request_batch_f.getType().getName());
-                                    if(request_batch_f.getType().getName().contains("java.util.List")){
-                                        request_batch_f.setAccessible(true);
-                                        ArrayList<Object> request_list = (ArrayList<Object>)request_batch_f.get(request_batch);
-                                        if(request_list.size() > 0 && request_list.get(0).getClass().getName().contains("com.facebook")){
-                                            for(Object request : request_list){
-                                                Log.i(tag,"RequestBatch toString(): " + request.toString());
-                                            }
-                                            break;
-                                        }
-                                    }
-                                }
-//                            s_arg += "<parameters=" + parameters + ">";
-                           }
+      }else if(arg.getClass().getName().equals("com.facebook.GraphRequestBatch") && mname.contains("execute")){
+        Class request_batch_c = arg.getClass();
+        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
+        try{
+            //Log.i(tag, "RequestBatch Class Name: " + request_batch_c.getName());
+            for(Field request_batch_f : request_batch_c.getDeclaredFields()){
+                //Log.i(tag, "RequestBatch Declared Field Type: " + request_batch_f.getType().getName());
+                if(request_batch_f.getType().getName().contains("java.util.List")){
+                    request_batch_f.setAccessible(true);
+                    ArrayList<Object> request_list = (ArrayList<Object>)request_batch_f.get(arg);
+                    if(request_list.size() > 0 && request_list.get(0).getClass().getName().equals("com.facebook.GraphRequest")){
+                        for(Object request : request_list){
+                            Class request_c = request.getClass();
+                            Field httpMethod_f = request_c.getDeclaredField("httpMethod");
+                            httpMethod_f.setAccessible(true);
+                            String httpMethod = (String)httpMethod_f.get(request).toString();
+                            Field graphPath_f = request_c.getDeclaredField("graphPath");
+                            graphPath_f.setAccessible(true);
+                            String graphPath = (String)graphPath_f.get(request);
+                            Field parameters_f = request_c.getDeclaredField("parameters");
+                            parameters_f.setAccessible(true);
+                            Bundle parameters = (Bundle)parameters_f.get(request);
+                            s_arg = s_arg + "<httpMethod=" + httpMethod + "><graphPath=" + graphPath + "><fields=" + parameters.getString("fields").replace(',','|') + ">";
+                            //Log.i(tag,"RequestBatch toString(): " + request.toString());
                         }
+                        break;
                     }
-                } catch(IllegalAccessException e){
-                    Log.i(tag, "AccessException: " + e.getMessage());
                 }
+            }
+        } catch(IllegalAccessException|NoSuchFieldException e){
+            Log.i(tag, "AccessException: " + e.getMessage());
         }
       //Try to annotate all of the arguments
       }else{
@@ -301,7 +300,7 @@ public class Logger {
                 byte isRequest = parcel.readByte();
                 String deviceRedirectUri = parcel.readString();
                 
-                s_arg += "<extras=loginBehavior:" + loginBehavior + ",permissions:" + perm_list + ",defaultAudience:" + defaultAudience + ",appID:" + appID + ",authID:" + authID + ",isRequest:" + isRequest + ",deviceRedirectUri:" + deviceRedirectUri + ">";
+                s_arg += "<loginBehavior=" + loginBehavior + "><permissions=" + perm_list + "><defaultAudience=" + defaultAudience + "><appID=" + appID + "><authID=" + authID + "><isRequest=" + isRequest + "><deviceRedirectUri=" + deviceRedirectUri + ">";
             }
           }
           else if(bundle != null){
@@ -381,23 +380,6 @@ public class Logger {
             }
         }
     }
-//    if(cname.contains("java/io/OutputStream") && mname.contains("write")){
-//        //cont = false;
-//        Log.i(tag, "OutputStream write----");
-//        Iterator<Object> iter = Arrays.asList(args).iterator();
-//        while (iter.hasNext()) {
-//            Log.i(tag, "Output line: ---");
-//            Object arg = iter.next();
-//            if(arg instanceof BufferedOutputStream){
-//                Log.i(tag, "arg type = " + arg.getClass().getName());
-//                BufferedOutputStream bytes = (BufferedOutputStream)arg;
-//                Log.i(tag, "BufferedOutputStream: " + bytes.toString());
-//            } else if(arg instanceof byte[]){
-//                String s = new String((byte[])arg);
-//                Log.i(tag, "Byte Stream: " + s);
-//            }
-//        }
-//    }
     if(mname.contains("startActivityForResult")){
         cont = false;
         Iterator<Object> iter = Arrays.asList(args).iterator();
@@ -427,29 +409,7 @@ public class Logger {
             }
         }
     }
-//    if(mname.contains("putString")){
-//        cont = false;
-//        ArrayList<Object> arg_list = (ArrayList<Object>)Arrays.asList(args);
-//        if(arg_list.get(0) instanceof Bundle && ((String)arg_list.get(1)).contains("fields")){
-//                cont = true;
-//                mname = mname + "FACEBOOK";
-//        }
-//    }
-    
-    if(mname.contains("executeOnExecutor")){
-        Log.i(tag, "executeOnExecutor happened");
-        cont = false;
-        Iterator<Object> iter = Arrays.asList(args).iterator();
-        while (iter.hasNext()) {
-            Object arg = iter.next();
-            Log.i(tag,"insideExecutorLoop");
-            if(arg instanceof AsyncTask && arg.getClass().getName().contains("com.facebook")){
-                cont = true;
-                mname = mname + "FACEBOOK";
-            }
-        }
-    }
-    if(mname.contains("build") && cname.contains("GoogleApiClient")){
+    if(mname.contains("build") && cname.contains("com.google.android.gms.common.api.GoogleApiClient")){
     	cont = false;
 	try{
 		Object builder = (ArrayList<Object>)Arrays.asList(args).get(0);
@@ -467,7 +427,7 @@ public class Logger {
 		Log.i(tag, "Exception: " + e.getMessage());
 	}
     }
-    if(mname.contains("query") && cname.contains("Api")){
+    if(mname.contains("query") && cname.contains("Api") && cname.contains("com.google.android.gms")){
 	cont = false;
 	try{
 		Object query = (ArrayList<Object>)Arrays.asList(args).get(2);
