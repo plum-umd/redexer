@@ -734,6 +734,9 @@ class fine_logger (dx: D.dex) =
       super#v_emtd emtd;
       let cur_mid = emtd.D.method_idx in
       cur_mname <- D.get_mtd_name dx cur_mid;
+      skip_mtd <-
+        not (L.mem mname [J.init; J.clinit; J.hashCode]
+             || D.is_synthetic emtd.D.m_access_flag)
 
       (*Printf.printf "%s %s\n" cur_cname cur_mname;*)
       (*selected <- 
@@ -775,19 +778,15 @@ class fine_logger (dx: D.dex) =
             | I.OP_MOVE_RESULT
             | I.OP_MOVE_RESULT_WIDE
             | I.OP_MOVE_RESULT_OBJECT ->
-               ignore (M.insrt_insns_under_off dx citm (advance (numinsns * i) (M.next cursor)) inss)
-               (*Printf.printf "%s\n" "herein3"*)
+               ignore (M.insrt_insns_under_off 
+                         dx citm (advance (numinsns * i) (M.next cursor)) inss)
             | _ ->
-               ignore (M.insrt_insns_under_off dx citm (advance (numinsns * i) cursor) inss)
-          end
-            (*Printf.printf "%s\n" "hereas3");*)
-        (*if selected then (
-          Unparse.print_method dx citm;
-          Printf.printf "%x %s\n" index "here2\n";
-          Cf.cfg2dot dx (Cf.make_cfg dx citm))
-        else ()*)
+               ignore (M.insrt_insns_under_off
+                         dx citm (advance (numinsns * i) cursor) inss)
+          end;
         in
-        L.iteri instrument_bbentry cursors
+        L.iteri instrument_bbentry cursors;
+        M.update_reg_usage dx citm;
       else
         ()
           
@@ -795,17 +794,20 @@ class fine_logger (dx: D.dex) =
       super#v_ins ins;
       if D.is_ins dx ins then begin
           let op, opr = D.get_ins dx ins in
-          match op with 
-          | I.OP_IGET_OBJECT -> 
-             let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
-             let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r1 in
-             let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 1 r2 in
-             let ins2 = I.new_invoke call_stt [0; 1; D.of_idx m_loginstfld] in
-             let inss = [ins0; ins1; ins2] in
-             let cursor = M.get_cursor cur_citm ins in
-             ignore (M.insrt_insns_over_off dx cur_citm cursor inss)
-          | _ -> ()
-        end 
+          begin 
+            match op with 
+            | I.OP_IGET_OBJECT -> 
+               let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
+               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r1 in
+               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 1 r2 in
+               let ins2 = I.new_invoke call_stt [0; 1; D.of_idx m_loginstfld] in
+               let inss = [ins0; ins1; ins2] in
+               let cursor = M.get_cursor cur_citm ins in
+               ignore (M.insrt_insns_over_off dx cur_citm cursor inss)
+            | _ -> ();
+          end;
+          M.update_reg_usage dx cur_citm
+        end
                   
     method skip_class c = false
     method log_entry emtd mname = 
