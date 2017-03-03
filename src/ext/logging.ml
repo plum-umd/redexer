@@ -735,9 +735,13 @@ class fine_logger (dx: D.dex) =
       let cur_mid = emtd.D.method_idx in
       cur_mname <- D.get_mtd_name dx cur_mid;
       skip_mtd <-
-        not (L.mem mname [J.init; J.clinit; J.hashCode]
-             || D.is_synthetic emtd.D.m_access_flag)
-
+        let has_monitor =
+          emtd.D.code_off <> D.no_off &&
+            has_monitors dx (snd (D.get_citm dx cid mid))
+        in
+        (has_monitor
+         || L.mem mname [J.init; J.clinit; J.hashCode]
+         || D.is_synthetic emtd.D.m_access_flag)
       (*Printf.printf "%s %s\n" cur_cname cur_mname;*)
       (*selected <- 
         cur_cname = "Landroid/support/graphics/drawable/PathParser;"
