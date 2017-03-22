@@ -6,6 +6,7 @@ org.json
 org.slf4j
 oauth.signpost
 com.android.vending
+android.support
 com.google
 com.ebay
 twitter4j

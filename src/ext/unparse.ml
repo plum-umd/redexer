@@ -434,6 +434,10 @@ let print_method (dx : D.dex) (mtd: D.code_item) : unit =
     if D.is_ins dx ins then
     (
       let op, opr = D.get_ins dx ins in
+      (match ins with 
+       | Off i32 -> 
+          pp "%x: " (I32.to_int i32)
+       | _ -> ());
       print_ins op opr; pp "\n"
     )
   in
@@ -441,7 +445,16 @@ let print_method (dx : D.dex) (mtd: D.code_item) : unit =
   pp "[Instructions:\n";
   DA.iter dump_instr mtd.D.insns;
   pp "]\n"
-  
+
+(* XXX *)
+let dumpit dx = 
+  let cls = D.get_cid dx "Lcom/example/android/camera2basic/Camera2BasicFragment;" in
+  let (mid,_) = D.get_the_mtd dx cls "createCameraPreviewSession" in
+  let (_,citm) = D.get_citm dx cls mid in
+  Printf.printf "createCameraPreviewSession:\n";
+  print_method dx citm;
+  Printf.printf "\n"
+
 (***********************************************************************)
 (* Info. gathering                                                     *)
 (***********************************************************************)

@@ -80,6 +80,14 @@ let logger = logging^"/Logger;"
 let logBBEnter = "logBasicBlockEntry"
 let logStatFldOp = "logStaticFieldOp"
 let logInstFldOp = "logInstanceFieldOp"
+let logInstFldIntGet = "logInstaceFieldIntGet"
+let logInstFldBoolGet = "logInstaceFieldBoolGet"
+let logAGet = "logAGet"
+let logAGetBool = "logAGetBoolean"
+let logAGetObj = "logAGetObj"
+let logSGet = "logSGet"
+let logSGetBool = "logSGetBoolean"
+let logSGetObj = "logSGetObj"
 let logMEnt = "logMethodEntry"
 let logMExt = "logMethodExit"
 let logAEnt = "logAPIEntry"
@@ -418,7 +426,7 @@ class virtual logger (dx: D.dex) =
     skip_cls <- U.begins_with cname logging; (*|| is_library cname;*)
     skip_cls <- skip_cls || self#skip_class cname;
     let yesno = if skip_cls then "Skipping log" else "Log" in
-    Log.d (Pf.sprintf "%s of class: %s" yesno cname)
+    Log.i (Pf.sprintf "%s of class: %s" yesno cname)
 
   val mutable mid = D.no_idx
   (* to determine supercall in constructors *)
@@ -429,11 +437,13 @@ class virtual logger (dx: D.dex) =
   val mutable rety = D.no_idx
   val mutable is_void = false
   val mutable log_entry = false
+  val mutable cur_emtd = None
 
   (* Visits method entries, attempts to insert logging code. *)
   method v_emtd (emtd: D.encoded_method) : unit =
     mid <- emtd.D.method_idx;
     mname <- D.get_mtd_name dx mid;
+    cur_emtd <- Some emtd;
     (* TODO: what happens if an exception raised in a synchronized block? *)
     let has_monitor =
       emtd.D.code_off <> D.no_off &&
@@ -446,9 +456,9 @@ class virtual logger (dx: D.dex) =
                    (try ignore (D.get_data_item dx emtd.D.code_off); true
                     with _ -> false);
     if log_entry then
-      Log.d ("Log of method body: "^full)
+      Log.i ("Log of method body: "^full)
     else
-      Log.d ("Skipping log of method body: "^full);
+      Log.i ("Skipping log of method body: "^full);
     let mit = D.get_mit dx mid in
     argv <- D.get_argv dx mit;
     if not (D.is_static emtd.D.m_access_flag) then
@@ -459,7 +469,7 @@ class virtual logger (dx: D.dex) =
   (* to log API usage *)
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
-    Log.d (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
+    Log.i (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
     cur_citm <- citm;
     (* to secure at least three registers for logging *)
     (* 3 is minimum, but 5 here to expand invoke-* operands *)
@@ -469,41 +479,47 @@ class virtual logger (dx: D.dex) =
     (* to calc the last ins correctly, do this part first *)
     if log_entry then 
       (try 
-        let vr =
-          if is_void then this else
-            let op, opr = M.get_last_ins dx citm in
-            match op, opr with
-            | I.OP_RETURN,        I.OPR_REGISTER r :: []
-            | I.OP_RETURN_WIDE,   I.OPR_REGISTER r :: []
-            | I.OP_RETURN_OBJECT, I.OPR_REGISTER r :: [] -> r
-            | I.OP_THROW, I.OPR_REGISTER r :: [] -> rety <- thrw; r
-            | _, _ -> raise (D.Wrong_match "is_void")
-        in
-        let vx::vy::vz::[] = vxyz 0 in
-        let ins0 = I.new_const vx (if is_void then 0 else 1)
-        and ins1 = I.new_arr vx vx (D.of_idx objs)
-        and ins2 = I.new_invoke stt_rnge [vx; vx; D.of_idx m_ext_mid]
-        and copy_ret vr vx =
-          let ins_c = I.new_const vy 0
-          and ins_a =
-            try
-              let ins_a1 = auto_boxing vr rety
-              and ins_a2 = I.new_move_result mv_r_obj vz
-              and ins_a3 = I.new_arr_op aput_obj [vz; vx; vy] in
-              [ins_a1; ins_a2; ins_a3]
-            with Not_found ->
-              [I.new_arr_op aput_obj [vr; vx; vy]]
+        let per_exit_instr instr_link = 
+          let vr =
+            if is_void then this else
+              let op, opr = D.get_ins dx instr_link in
+              match op, opr with
+              | I.OP_RETURN,        I.OPR_REGISTER r :: []
+              | I.OP_RETURN_WIDE,   I.OPR_REGISTER r :: []
+              | I.OP_RETURN_OBJECT, I.OPR_REGISTER r :: [] -> r
+              | I.OP_THROW, I.OPR_REGISTER r :: [] -> rety <- thrw; r
+              | _, _ -> raise (D.Wrong_match "is_void")
           in
-          CL.fromList (ins_c::ins_a)
+          let vx::vy::vz::[] = vxyz 0 in
+          let ins0 = I.new_const vx (if is_void then 0 else 1)
+          and ins1 = I.new_arr vx vx (D.of_idx objs)
+          and ins2 = I.new_invoke stt_rnge [vx; vx; D.of_idx m_ext_mid]
+          and copy_ret vr vx =
+            let ins_c = I.new_const vy 0
+            and ins_a =
+              try
+                let ins_a1 = auto_boxing vr rety
+                and ins_a2 = I.new_move_result mv_r_obj vz
+                and ins_a3 = I.new_arr_op aput_obj [vz; vx; vy] in
+                [ins_a1; ins_a2; ins_a3]
+              with Not_found ->
+                [I.new_arr_op aput_obj [vr; vx; vy]]
+            in
+            CL.fromList (ins_c::ins_a)
+          in
+          let ext_insns = 
+            CL.toList (
+                CL.fromList [ins0; ins1]
+                @@ (if is_void then CL.empty else copy_ret vr vx)
+                @@ CL.single ins2)
+          in
+          let cursor = M.get_cursor citm instr_link in
+          M.insrt_insns_under_off dx citm cursor ext_insns;
+          in_out_cnt := !in_out_cnt + (L.length ext_insns);
         in
-        let ext_insns = CL.toList (
-            CL.fromList [ins0; ins1]
-            @@ (if is_void then CL.empty else copy_ret vr vx)
-            @@ CL.single ins2
-          ) in
-        let _ = M.insrt_insns_before_end dx citm ext_insns in
-        in_out_cnt := !in_out_cnt + (L.length ext_insns);
-
+        let last_links = M.get_last_links dx citm in
+        L.iter per_exit_instr last_links;
+        
         (* code snippet for method entries *)
         let vx::vy::vz::[] = vxyz 0 in
         let argn = citm.D.ins_size in
@@ -545,14 +561,24 @@ class virtual logger (dx: D.dex) =
       (
         let mid = D.opr2idx (U.get_last opr) in
         let cid = D.get_cid_from_mid dx mid in
-        try ignore (D.get_citm dx cid mid)
-        (* means that method will be loaded at run-time, i.e., libraries *)
-        with D.Wrong_dex _ ->
+        let mname = D.get_mtd_name dx mid in
+        let instrument_instr = 
+          try 
+            ignore (D.get_citm dx cid mid);
+            let emtd = D.get_emtd dx cid mid in
+            (* Log constructors *)
+            (L.mem mname [J.init; J.clinit; J.hashCode])
+            (* XXX MAJOR HACK *)
+            || U.begins_with (D.get_ty_str dx cid) "Landroid/support"
+          with D.Wrong_dex _ ->
+            (* means that method will be loaded at run-time, i.e., libraries *)
+            true 
+        in
+        if instrument_instr then
         (
           let sid = D.get_superclass dx cid in
           let lid = if sid = D.no_idx then cid else sid in
           let lname = D.get_ty_str dx lid in
-          let mname = D.get_mtd_name dx mid in
           let full = D.get_mtd_full_name dx mid in
           (* Automatically reject javalang clases, since they are
            *used* in our logging code
@@ -564,10 +590,10 @@ class virtual logger (dx: D.dex) =
           let argv_ids = D.get_argv dx mit in
           (* This can be optimized *)
           if (not do_logging) then
-               Log.d ("Skipping log of method call "^ full)
+               Log.i ("Skipping log of method call "^ full)
           else
           (
-            Log.d ("Log of method call: "^ full);
+            Log.i ("Log of method call: "^ full);
             let vx::vy::vz::[] = vxyz 0 in
             let ent_cursor = M.get_cursor cur_citm ins in
             let ext_cursor = M.next ent_cursor in
@@ -685,7 +711,7 @@ class default_logger (dx: D.dex) =
     method skip_class _ = false
     method log_entry emtd mname = 
       not (L.mem mname [J.init; J.clinit; J.hashCode]
-           || D.is_synthetic emtd.D.m_access_flag)
+          || D.is_synthetic emtd.D.m_access_flag)
     method log_call _ = false
   end
 
@@ -711,10 +737,19 @@ class default_logger (dx: D.dex) =
 
  *)
 class fine_logger (dx: D.dex) =
-  let logger_cid      = D.get_cid dx logger in
-  let m_bbenter, _    = D.get_the_mtd dx logger_cid logBBEnter in
-  let m_logstfld, _   = D.get_the_mtd dx logger_cid logStatFldOp in
-  let m_loginstfld, _ = D.get_the_mtd dx logger_cid logInstFldOp in
+  let logger_cid       = D.get_cid dx logger in
+  let m_bbenter, _     = D.get_the_mtd dx logger_cid logBBEnter in
+  let m_logstfld, _    = D.get_the_mtd dx logger_cid logStatFldOp in
+  let m_loginstfld, _  = D.get_the_mtd dx logger_cid logInstFldOp in
+  let m_loginstfldiget, _ = D.get_the_mtd dx logger_cid logInstFldIntGet in
+  let m_loginstfldbget, _ = D.get_the_mtd dx logger_cid logInstFldBoolGet in
+  let m_logaget, _     = D.get_the_mtd dx logger_cid logAGet in
+  let m_logagetobj, _  = D.get_the_mtd dx logger_cid logAGetObj in
+  let m_logagetbool, _ = D.get_the_mtd dx logger_cid logAGetBool in
+  let m_logsget, _     = D.get_the_mtd dx logger_cid logSGet in
+  let m_logsoget, _    = D.get_the_mtd dx logger_cid logSGetObj in
+  let m_logsgetbool, _ = D.get_the_mtd dx logger_cid logSGetBool in
+
   object (self)
     inherit logger dx as super
 
@@ -729,7 +764,7 @@ class fine_logger (dx: D.dex) =
       let cid = cdef.D.c_class_id in
       cur_cname <- D.get_ty_str dx cid
 
-    (* Visit a method, decide whether or not to skip it (we skip synthetic methods) *)
+    (* Visit a method, decide whether or not to skip it *)
     method v_emtd (emtd: D.encoded_method) : unit =
       super#v_emtd emtd;
       let cur_mid = emtd.D.method_idx in
@@ -739,13 +774,8 @@ class fine_logger (dx: D.dex) =
           emtd.D.code_off <> D.no_off &&
             has_monitors dx (snd (D.get_citm dx cid mid))
         in
-        (has_monitor
-         || L.mem mname [J.init; J.clinit; J.hashCode]
-         || D.is_synthetic emtd.D.m_access_flag)
-      (*Printf.printf "%s %s\n" cur_cname cur_mname;*)
-      (*selected <- 
-        cur_cname = "Landroid/support/graphics/drawable/PathParser;"
-        && cur_mname = "getFloats"*)
+        (has_monitor)
+          || (L.mem mname [J.init; J.clinit; J.hashCode]);
 
     (* Visit a code item: first instrument the entry and exit by
        calling the super method, but then also identify all basic
@@ -755,11 +785,6 @@ class fine_logger (dx: D.dex) =
       if log_entry then 
         let cfg = (St.time "cfg" (Cf.make_cfg dx) citm) in
         let instrs = Cf.get_bb_entries cfg in
-        if selected then (
-          Printf.printf "%s" "hello1\n";
-          Unparse.print_method dx citm;
-          Cf.cfg2dot dx (Cf.make_cfg dx citm))
-        else ();
         let cursors = L.map (fun x -> (M.get_cursor citm x), x) instrs in
         (* Instrument basic block entries *)
         let instrument_bbentry i (cursor,link) = 
@@ -794,29 +819,85 @@ class fine_logger (dx: D.dex) =
       else
         ()
           
+    (* 
+       - Log method calls (via `super` call) 
+       - Log field reads
+     *)
     method v_ins ins : unit = 
       super#v_ins ins;
       if D.is_ins dx ins then begin
           let op, opr = D.get_ins dx ins in
+          let instrument (ins0,ins1,mtd) = 
+            let ins2   = I.new_invoke call_stt [0; 1; D.of_idx mtd] in
+            let inss   = [ins0] in
+            let inss'  = [ins1; ins2] in
+            let cursor = M.get_cursor cur_citm ins in
+            let cursor' = M.insrt_insns_under_off dx cur_citm cursor inss in
+            M.insrt_insns_over_off  dx cur_citm cursor' inss';
+            M.update_reg_usage dx cur_citm
+          in
+          let instrument_st (ins0,mtd) = 
+            let ins2 = I.new_invoke call_stt [0; D.of_idx mtd] in
+            let inss = [ins0; ins2] in
+            let cursor = M.get_cursor cur_citm ins in
+            M.insrt_insns_over_off dx cur_citm cursor inss;
+            M.update_reg_usage dx cur_citm
+          in
           begin 
             match op with 
+            | OP_SGET ->
+               let (I.OPR_REGISTER r1 :: _) = opr in
+               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 0 r1 in
+               instrument_st (ins0,m_logsget)
+            | OP_SGET_BOOLEAN ->
+               let (I.OPR_REGISTER r1 :: _) = opr in
+               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 0 r1 in
+               instrument_st (ins0,m_logsgetbool)
+            |  OP_SGET_OBJECT ->
+               let (I.OPR_REGISTER r1 :: _) = opr in
+               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r1 in
+               instrument_st (ins0,m_logsoget)
+  (* | OP_SGET_BYTE                  (\* 0x64 *\) *)
+  (* | OP_SGET_CHAR                  (\* 0x65 *\) *)
+  (* | OP_SGET_SHORT                 (\* 0x66 *\) *)
+            | I.OP_AGET_OBJECT -> 
+               let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
+               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in
+               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 1 r1 in
+               instrument (ins0,ins1,m_logagetobj)
+            | I.OP_AGET_BOOLEAN -> 
+               let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
+               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in
+               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 1 r1 in
+               instrument (ins0,ins1,m_logagetbool)
+            | I.OP_AGET ->
+               let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
+               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in
+               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 1 r1 in
+               instrument (ins0,ins1,m_logaget)
             | I.OP_IGET_OBJECT -> 
                let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
-               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r1 in
-               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 1 r2 in
-               let ins2 = I.new_invoke call_stt [0; 1; D.of_idx m_loginstfld] in
-               let inss = [ins0; ins1; ins2] in
-               let cursor = M.get_cursor cur_citm ins in
-               ignore (M.insrt_insns_over_off dx cur_citm cursor inss)
-            | _ -> ();
-          end;
-          M.update_reg_usage dx cur_citm
+               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in
+               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 1 r1 in
+               instrument (ins0,ins1,m_loginstfld)
+            | I.OP_IGET_BOOLEAN -> 
+               let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
+               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in
+               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 1 r1 in
+               instrument (ins0,ins1,m_loginstfldbget)
+            | I.OP_IGET ->
+               let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
+               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in
+               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 1 r1 in
+               instrument (ins0,ins1,m_loginstfldiget)
+            | _ -> ()
+          end
         end
                   
     method skip_class c = false
     method log_entry emtd mname = 
-      not ((L.exists (fun x -> U.ends_with mname x) [J.init; J.clinit; J.hashCode])
-           || D.is_synthetic emtd.D.m_access_flag)
+      not (L.exists (fun x -> U.ends_with mname x) [J.init; J.clinit; J.hashCode])
+          
     method log_call _ = true
   end
 

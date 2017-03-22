@@ -122,7 +122,7 @@ public class Logger {
       if (arg == null) {
         s_arg = "null";
       } else if (isWrapperType(arg.getClass())) {
-        s_arg = arg.toString();
+        s_arg = System.identityHashCode(arg) + "&" + arg.toString();
       //Check if first argument is a string
       } else if (arg.getClass() == String.class) {
         s_arg = "\"" + ((String)arg).replace("\n","\\n") + "\"";
@@ -305,6 +305,59 @@ public class Logger {
     return arg;
   }
 
+  public static void logSGet(int val) {
+    long threadId = Thread.currentThread().getId();
+    String msg = threadId + " SGet (" + Integer.toString(val) + ")";
+    Log.i(tag, msg);
+  }
+
+  public static void logSGetObj(Object obj) {
+    long threadId = Thread.currentThread().getId();
+    String msg = threadId + " SGet (" + objToString(obj) + ")";
+    Log.i(tag, msg);
+  }
+
+  public static void logSGetBoolean(boolean obj) {
+    long threadId = Thread.currentThread().getId();
+    String msg = threadId + " SGet (" + Boolean.toString(obj) + ")";
+    Log.i(tag, msg);
+  }
+  
+  public static void logAGetBoolean(Object arry, boolean obj) {
+    long threadId = Thread.currentThread().getId();
+    String msg = threadId + " AGet (" + objToString(arry) 
+      + ", " + String.valueOf(obj) + ")";
+    Log.i(tag, msg);
+  }
+
+  public static void logAGet(Object arry, int val) {
+    long threadId = Thread.currentThread().getId();
+    String msg = threadId + " AGet (" + objToString(arry) 
+      + ", " + Integer.toString(val) + ")";
+    Log.i(tag, msg);
+  }
+
+  public static void logAGetObj(Object arry, Object obj) {
+    long threadId = Thread.currentThread().getId();
+    String msg = threadId + " AGet (" + objToString(arry) 
+      + ", " + objToString(obj) + ")";
+    Log.i(tag, msg);
+  }
+
+  public static void logInstaceFieldIntGet(Object self, int val) {
+    long threadId = Thread.currentThread().getId();
+    String msg = threadId + " InstanceFieldIntGet (" + objToString(self) 
+      + ", " + Integer.toString(val) + ")";
+    Log.i(tag, msg);
+  }
+
+  public static void logInstaceFieldBoolGet(Object self, boolean val) {
+    long threadId = Thread.currentThread().getId();
+    String msg = threadId + " InstanceFieldBoolGet (" + objToString(self) 
+      + ", " + String.valueOf(val) + ")";
+    Log.i(tag, msg);
+  }
+  
   public static void logInstanceFieldOp(Object self, Object dest) {
     long threadId = Thread.currentThread().getId();
     String msg = threadId + " InstanceFieldOp (" + objToString(self) 

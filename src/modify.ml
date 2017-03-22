@@ -451,24 +451,26 @@ let get_cursor (citm: D.code_item) (ins: D.link) : cursor =
 (* get the cursor of the first instruction *)
 let get_fst_cursor () : cursor = 0
 
-(* get the cursor of the last instruction *)
-let get_last_cursor (dx: D.dex) (citm: D.code_item) : cursor =
+let get_last_links (dx: D.dex) (citm: D.code_item) : D.link list = 
   let cfg  = St.time "cfg"  (Cf.make_cfg dx) citm in
   let pdom = St.time "pdom"  Cf.pdoms cfg in
   let inss = St.time "pdom" (Cf.get_last_inss cfg) pdom in
-  (* TODO: actually, this func should return cursor list *)
   let find_return_or_throw ins =
     let op, _ = D.get_ins dx ins in
     let hx = I.op_to_hx op in
     op = I.OP_THROW || (0x0e <= hx && hx <= 0x11) (* OP_RETURN_* *)
   in
-  let ins =
+  let last_inss =
     if 0 = L.length inss then (raise D.No_return)
     else
-    (if 1 = L.length inss then L.hd inss
-     else L.find find_return_or_throw inss)
+    (if 1 = L.length inss then [L.hd inss]
+     else L.filter find_return_or_throw inss)
   in
-  get_cursor citm ins
+  last_inss
+    
+(* get the cursor of the last instruction *)
+let get_last_cursors (dx: D.dex) (citm: D.code_item) : cursor list =
+  L.map (fun x -> get_cursor citm x) (get_last_links dx citm)
 
 (* get_ins : D.dex -> D.code_item -> cursor -> I.instr *)
 let get_ins (dx: D.dex) (citm: D.code_item) (c: cursor) : I.instr =
@@ -480,8 +482,8 @@ let get_fst_ins (dx: D.dex) (citm: D.code_item) : I.instr =
   get_ins dx citm (get_fst_cursor ())
 
 (* get_last_ins : D.dex -> D.code_item -> I.instr *)
-let get_last_ins (dx: D.dex) (citm: D.code_item) : I.instr =
-  get_ins dx citm (get_last_cursor dx citm)
+let get_last_inss (dx: D.dex) (citm: D.code_item) : I.instr list =
+  L.map (fun x -> get_ins dx citm x) (get_last_cursors dx citm)
 
 let next_off off : D.link =
   D.to_off ((D.of_off off) + 1)
@@ -529,7 +531,7 @@ let insrt_insns (dx: D.dex) (citm: D.code_item) cur (insns: I.instr list) =
 *)
 (* insrt_insns_under_off : D.dex -> D.code_item -> cursor -> I.instr list -> cursor *)
 let insrt_insns_under_off dx (citm: D.code_item) cur (insns: I.instr list) =
-  let hd::tl = insns
+  let hd::tl = insns 
   and nxt_cur = next cur
   and off = DA.get citm.D.insns cur in
   let ins = D.get_ins dx off
@@ -542,6 +544,7 @@ let insrt_insns_under_off dx (citm: D.code_item) cur (insns: I.instr list) =
   incr_insns_size citm hd;
   (* insert the remaining instructions from the next cursor *)
   insrt_insns dx citm nxt_cur tl
+              
 
 (*
                                               +---------+
@@ -593,13 +596,21 @@ let insrt_insns_after_start dx (citm: D.code_item) (insns: I.instr list) =
 
 (* insrt_insns_before_end : D.dex -> D.code_item -> I.instr list -> cursor *)
 let insrt_insns_before_end dx (citm: D.code_item) (insns: I.instr list) =
-  let cur = get_last_cursor dx citm in
-  insrt_insns_under_off dx citm cur insns
-
+  let offsets = get_last_links dx citm in
+  L.map
+    (fun curoffset -> 
+      (insrt_insns_under_off dx citm (get_cursor citm curoffset) insns))
+    offsets
+    
 (* insrt_insns_after_end : D.dex -> D.code_item -> I.instr list -> cursor *)
 let insrt_insns_after_end dx (citm: D.code_item) (insns: I.instr list) =
-  insrt_insns dx citm (next (get_last_cursor dx citm)) insns
-
+  let offsets = L.map (fun x -> DA.get citm.D.insns x)
+                      (get_last_cursors dx citm) in
+  L.map
+    (fun curoffset -> 
+      (insrt_insns dx citm (next (get_cursor citm curoffset)) insns))
+    offsets
+    
 (* insrt_return_void : D.dex -> D.link -> string -> unit *)
 let insrt_return_void dx (cid: D.link) (mname: string) : unit =
   let mid, _ = D.get_the_mtd dx cid mname in
@@ -1217,11 +1228,6 @@ object
     due to aggressive instrumentations *)
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
-    if (cname = "Landroid/support/v4/app/FragmentHostCallback;"
-        && mname = "onStartIntentSenderFromFragment") then 
-      (Printf.printf "%s" "oprhello\n";
-       Unparse.print_method dx citm;
-       Cf.cfg2dot dx (Cf.make_cfg dx citm));
     cur_citm <- citm
                   
   method v_ins (ins: D.link) : unit =
@@ -1541,7 +1547,7 @@ let hello () : D.dex =
   let _ = override dx cid J.init in
   let iid, _ = D.get_the_mtd dx cid J.init in
   let _, iitm = D.get_citm dx cid iid in
-  let last = get_last_cursor dx iitm in
+  let last = L.hd (get_last_cursors dx iitm) in
   let _ = insrt_ins dx iitm (next last) I.rv
   and argv = ["["^Java.Lang.str] in
   let main = new_method dx cid "main" D.spub J.v argv in

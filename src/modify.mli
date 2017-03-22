@@ -93,7 +93,7 @@ val new_method : Dex.dex -> Dex.link -> string
 val make_method_overridable : Dex.dex -> Dex.link -> Dex.link -> unit
 
 (** instruction inserting point *)
-type cursor
+type cursor = int
 
 (** previous instruction *)
 val prev : cursor -> cursor
@@ -107,8 +107,13 @@ val get_cursor : Dex.code_item -> Dex.link -> cursor
 (** get the first {!cursor} *)
 val get_fst_cursor : unit -> cursor
 
-(** get the last {!cursor} *)
-val get_last_cursor : Dex.dex -> Dex.code_item -> cursor
+(** get the last instruction {!link}s. Possibly multiple links
+because a method can include both returns and throws. *)
+val get_last_links : Dex.dex -> Dex.code_item -> Dex.link list
+
+(** get the last {!cursor}s. Possibly multiple cursors because a
+method can include both returns and throws. *)
+val get_last_cursors : Dex.dex -> Dex.code_item -> cursor list
 
 (** get the {!Instr.instr} at {!cursor} point *)
 val get_ins : Dex.dex -> Dex.code_item -> cursor -> Instr.instr
@@ -116,9 +121,9 @@ val get_ins : Dex.dex -> Dex.code_item -> cursor -> Instr.instr
 (** get the first {!Instr.instr} *)
 val get_fst_ins : Dex.dex -> Dex.code_item -> Instr.instr
 
-(** get the last {!Instr.instr}, raise {!Dex.No_return} if no return
+(** get the last {!Instr.instr}s, raise {!Dex.No_return} if no return
     for method *)
-val get_last_ins : Dex.dex -> Dex.code_item -> Instr.instr
+val get_last_inss : Dex.dex -> Dex.code_item -> Instr.instr list
 
 (** insert an {!Instr.instr} at {!cursor} point; {!cursor} will be advanced *)
 val insrt_ins : Dex.dex -> Dex.code_item -> cursor -> Instr.instr -> cursor
@@ -144,10 +149,10 @@ val insrt_insns_before_start : Dex.dex -> Dex.code_item -> Instr.instr list -> c
 val insrt_insns_after_start : Dex.dex -> Dex.code_item -> Instr.instr list -> cursor
 
 (** insert {!Instr.instr}s before the end of {!Dex.code_item} *)
-val insrt_insns_before_end : Dex.dex -> Dex.code_item -> Instr.instr list -> cursor
+val insrt_insns_before_end : Dex.dex -> Dex.code_item -> Instr.instr list -> cursor list
 
 (** insert {!Instr.instr}s after the end of {!Dex.code_item} *)
-val insrt_insns_after_end : Dex.dex -> Dex.code_item -> Instr.instr list -> cursor
+val insrt_insns_after_end : Dex.dex -> Dex.code_item -> Instr.instr list -> cursor list
 
 (** insert {!Instr.rv} at the end of the method *)
 val insrt_return_void : Dex.dex -> Dex.link -> string -> unit
