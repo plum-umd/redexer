@@ -340,7 +340,10 @@ let is_library (cname: string) : bool =
 let is_not_javalang (cname: string) : bool =
   not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"])
 
-
+let is_not_valueof (string) : bool =
+  not ((U.begins_with string "Ljava/lang")
+      || (U.ends_with string "valueOf"))
+      
 let adr_relevant dx (cid: D.link) regexes : bool =
   let ext_or_impl (cid': D.link) : bool =
     let sname = D.get_ty_str dx (D.get_superclass dx cid')
@@ -552,6 +555,7 @@ class virtual logger (dx: D.dex) =
        with D.No_return -> ())
       
   method v_ins (ins: D.link) : unit =
+    let thismname = mname in 
     if D.is_ins dx ins then
     (
       let op, opr = D.get_ins dx ins in
@@ -585,7 +589,7 @@ class virtual logger (dx: D.dex) =
            * XXX, Kris 1/18/17: why does it matter that these not be logged, since
            we already skip methods from our logging library? I'm
            commenting this out for now.  *)
-          let do_logging = is_not_javalang full && self#log_call full in
+          let do_logging = is_not_valueof full && self#log_call full in
           let mit = D.get_mit dx mid in
           let argv_ids = D.get_argv dx mit in
           (* This can be optimized *)
@@ -597,6 +601,9 @@ class virtual logger (dx: D.dex) =
             let vx::vy::vz::[] = vxyz 0 in
             let ent_cursor = M.get_cursor cur_citm ins in
             let ext_cursor = M.next ent_cursor in
+            Pf.printf "Before anything...\n";
+            Unparse.dumpit dx;
+            Pf.printf "%d %d\n" ent_cursor ext_cursor;
             let str_lname = D.of_idx (D.find_str dx lname)
             and str_mname = D.of_idx (D.find_str dx mname) in
 
@@ -637,9 +644,19 @@ class virtual logger (dx: D.dex) =
               @@ CL.fromList [ins2; ins3; ins4]
             ) in
             (* not to alter the control-flow, use ..._over_off *)
-            let _ = if mname <> J.init && ret_moved then
-                M.insrt_insns_over_off dx cur_citm ext_cursor ext_insns
-              else M.insrt_insns dx cur_citm ext_cursor ext_insns
+            let _ = 
+              if mname <> J.init && ret_moved then(
+                (*Pf.printf "Before instrumenting call to %s\n" mname;*)
+                let l = M.insrt_insns_over_off dx cur_citm ext_cursor ext_insns in
+                (*Pf.printf "After...\n";
+                Unparse.dumpit dx; *)
+                l)
+              else (
+                Pf.printf "Before instrumenting call to %s\n" mname;
+                let l = M.insrt_insns dx cur_citm ext_cursor ext_insns in
+                Pf.printf "After adding exit...\n";
+                Unparse.dumpit dx;
+                l)
             in
             api_cnt := !api_cnt + (L.length ext_insns);
 
@@ -689,6 +706,8 @@ class virtual logger (dx: D.dex) =
             in
             (* not to alter the control-flow, use ..._under_off *)
             let _ = M.insrt_insns_under_off dx cur_citm cursor ent_insns in
+            Pf.printf "After exit...\n";
+            Unparse.dumpit dx;
             api_cnt := !api_cnt + (L.length ent_insns);
             M.update_reg_usage dx cur_citm
           )
