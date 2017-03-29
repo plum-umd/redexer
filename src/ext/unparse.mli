@@ -47,8 +47,6 @@ val unparse : Dex.dex -> unit
 (** print {!Dex.code_item} as a method *)
 val print_method : Dex.dex -> Dex.code_item -> unit
 
-val dumpit : Dex.dex -> unit
-  
 (** {2 Collecting Information} *)
 
 (** print basic infomation about DEX file *)

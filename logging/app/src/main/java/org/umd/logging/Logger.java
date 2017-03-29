@@ -380,7 +380,7 @@ public class Logger {
   }
   
   public static void logAPIEntry(String cname, String mname, Object... args) {
-    Boolean cont = true;
+    /*Boolean cont = true;
     if(cname.contains("java/io/File")){
         cont = false;
         File sdcard = Environment.getExternalStorageDirectory();
@@ -425,14 +425,14 @@ public class Logger {
             }
         }
     }
-    if(cont){
+    if(cont){*/
         log("Api >", cname, mname, args);
-    }
+    /*}*/
   }
   
   public static void logAPIExit(String cname, String mname, Object... args) {
     Boolean cont = true;
-    if(cname.contains("java/io/File")){
+    /*if(cname.contains("java/io/File")){
         cont = false;
         File sdcard = Environment.getExternalStorageDirectory();
         String sdcard_path = sdcard.getAbsolutePath();
@@ -476,9 +476,9 @@ public class Logger {
             }
         }
     }
-    if(cont){
+    if(cont){*/
         log("Api <", cname, mname, args);
-    }
+  /*}*/
   }
 
   private static String processDialog(Dialog dialog){

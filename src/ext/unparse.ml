@@ -446,15 +446,6 @@ let print_method (dx : D.dex) (mtd: D.code_item) : unit =
   DA.iter dump_instr mtd.D.insns;
   pp "]\n"
 
-(* XXX *)
-let dumpit dx = 
-  let cls = D.get_cid dx "Lcom/example/android/camera2basic/Camera2BasicFragment$ImageSaver;" in
-  let (mid,_) = D.get_the_mtd dx cls "run" in
-  let (_,citm) = D.get_citm dx cls mid in
-  Printf.printf "run:\n";
-  print_method dx citm;
-  Printf.printf "\n"
-
 (***********************************************************************)
 (* Info. gathering                                                     *)
 (***********************************************************************)
