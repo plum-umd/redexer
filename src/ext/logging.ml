@@ -483,14 +483,18 @@ class virtual logger (dx: D.dex) =
     if log_entry then 
       (try 
         let per_exit_instr instr_link = 
-          let vr =
-            if is_void then this else
+          (* For this exit instruction, calculate the return type and
+             the register that will be returned into. We will then use
+             this information for autoboxing the return type if
+             necessary. *)
+          let (rety,vr) =
+            if is_void then (rety, this) else
               let op, opr = D.get_ins dx instr_link in
               match op, opr with
               | I.OP_RETURN,        I.OPR_REGISTER r :: []
               | I.OP_RETURN_WIDE,   I.OPR_REGISTER r :: []
-              | I.OP_RETURN_OBJECT, I.OPR_REGISTER r :: [] -> r
-              | I.OP_THROW, I.OPR_REGISTER r :: [] -> rety <- thrw; r
+              | I.OP_RETURN_OBJECT, I.OPR_REGISTER r :: [] -> (rety, r)
+              | I.OP_THROW, I.OPR_REGISTER r :: [] -> (thrw, r)
               | _, _ -> raise (D.Wrong_match "is_void")
           in
           let vx::vy::vz::[] = vxyz 0 in

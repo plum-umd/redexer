@@ -43,6 +43,7 @@ import java.lang.Throwable;
 import java.lang.Thread;
 import java.lang.StackTraceElement;
 import java.lang.StringBuilder;
+import java.lang.reflect.Array;
 
 import java.util.Arrays;
 import java.util.Date;
@@ -219,6 +220,9 @@ public class Logger {
           File sdcard = Environment.getExternalStorageDirectory();
           String sdcard_path = sdcard.getAbsolutePath();
           s_arg += "<file_path=" + ((File)arg).getAbsolutePath() + ">";
+        }
+        if (arg.getClass().isArray()) {
+          s_arg += "<array_length=" + Array.getLength(arg) + ">";
         }
         if(arg instanceof Intent && ((Intent)arg).getAction()!="android.intent.action.VIEW" && ((Intent)arg).getAction()!="android.intent.action.MAIN"){
           s_arg += "<action=" + ((Intent)arg).getAction() + ">";
