@@ -839,75 +839,75 @@ class fine_logger (dx: D.dex) =
        - Log field reads
      *)
     method v_ins ins : unit = 
-      super#v_ins ins;
-      if D.is_ins dx ins then begin
-          let op, opr = D.get_ins dx ins in
-          let instrument (ins0,ins1,mtd) = 
-            let ins2   = I.new_invoke call_stt [0; 1; D.of_idx mtd] in
-            let inss   = [ins0] in
-            let inss'  = [ins1; ins2] in
-            let cursor = M.get_cursor cur_citm ins in
-            let cursor' = M.insrt_insns_under_off dx cur_citm cursor inss in
-            M.insrt_insns_over_off  dx cur_citm cursor' inss';
-            M.update_reg_usage dx cur_citm
-          in
-          let instrument_st (ins0,mtd) = 
-            let ins2 = I.new_invoke call_stt [0; D.of_idx mtd] in
-            let inss = [ins0; ins2] in
-            let cursor = M.get_cursor cur_citm ins in
-            M.insrt_insns_over_off dx cur_citm cursor inss;
-            M.update_reg_usage dx cur_citm
-          in
-          begin 
-            match op with 
-            | OP_SGET ->
-               let (I.OPR_REGISTER r1 :: _) = opr in
-               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 0 r1 in
-               instrument_st (ins0,m_logsget)
-            | OP_SGET_BOOLEAN ->
-               let (I.OPR_REGISTER r1 :: _) = opr in
-               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 0 r1 in
-               instrument_st (ins0,m_logsgetbool)
-            |  OP_SGET_OBJECT ->
-               let (I.OPR_REGISTER r1 :: _) = opr in
-               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r1 in
-               instrument_st (ins0,m_logsoget)
-  (* | OP_SGET_BYTE                  (\* 0x64 *\) *)
-  (* | OP_SGET_CHAR                  (\* 0x65 *\) *)
-  (* | OP_SGET_SHORT                 (\* 0x66 *\) *)
-            | I.OP_AGET_OBJECT -> 
-               let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
-               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in
-               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 1 r1 in
-               instrument (ins0,ins1,m_logagetobj)
-            | I.OP_AGET_BOOLEAN -> 
-               let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
-               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in
-               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 1 r1 in
-               instrument (ins0,ins1,m_logagetbool)
-            | I.OP_AGET ->
-               let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
-               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in
-               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 1 r1 in
-               instrument (ins0,ins1,m_logaget)
-            | I.OP_IGET_OBJECT -> 
-               let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
-               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in
-               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 1 r1 in
-               instrument (ins0,ins1,m_loginstfld)
-            | I.OP_IGET_BOOLEAN -> 
-               let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
-               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in
-               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 1 r1 in
-               instrument (ins0,ins1,m_loginstfldbget)
-            | I.OP_IGET ->
-               let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in
-               let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in
-               let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 1 r1 in
-               instrument (ins0,ins1,m_loginstfldiget)
-            | _ -> ()
-          end
-        end
+      super#v_ins ins
+  (*     if D.is_ins dx ins then begin *)
+  (*         let op, opr = D.get_ins dx ins in *)
+  (*         let instrument (ins0,ins1,mtd) =  *)
+  (*           let ins2   = I.new_invoke call_stt [0; 1; D.of_idx mtd] in *)
+  (*           let inss   = [ins0] in *)
+  (*           let inss'  = [ins1; ins2] in *)
+  (*           let cursor = M.get_cursor cur_citm ins in *)
+  (*           let cursor' = M.insrt_insns_under_off dx cur_citm cursor inss in *)
+  (*           M.insrt_insns_over_off  dx cur_citm cursor' inss'; *)
+  (*           M.update_reg_usage dx cur_citm *)
+  (*         in *)
+  (*         let instrument_st (ins0,mtd) =  *)
+  (*           let ins2 = I.new_invoke call_stt [0; D.of_idx mtd] in *)
+  (*           let inss = [ins0; ins2] in *)
+  (*           let cursor = M.get_cursor cur_citm ins in *)
+  (*           M.insrt_insns_over_off dx cur_citm cursor inss; *)
+  (*           M.update_reg_usage dx cur_citm *)
+  (*         in *)
+  (*         begin  *)
+  (*           match op with  *)
+  (*           | OP_SGET -> *)
+  (*              let (I.OPR_REGISTER r1 :: _) = opr in *)
+  (*              let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 0 r1 in *)
+  (*              instrument_st (ins0,m_logsget) *)
+  (*           | OP_SGET_BOOLEAN -> *)
+  (*              let (I.OPR_REGISTER r1 :: _) = opr in *)
+  (*              let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 0 r1 in *)
+  (*              instrument_st (ins0,m_logsgetbool) *)
+  (*           |  OP_SGET_OBJECT -> *)
+  (*              let (I.OPR_REGISTER r1 :: _) = opr in *)
+  (*              let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r1 in *)
+  (*              instrument_st (ins0,m_logsoget) *)
+  (* (\* | OP_SGET_BYTE                  (\\* 0x64 *\\) *\) *)
+  (* (\* | OP_SGET_CHAR                  (\\* 0x65 *\\) *\) *)
+  (* (\* | OP_SGET_SHORT                 (\\* 0x66 *\\) *\) *)
+  (*           | I.OP_AGET_OBJECT ->  *)
+  (*              let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in *)
+  (*              let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in *)
+  (*              let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 1 r1 in *)
+  (*              instrument (ins0,ins1,m_logagetobj) *)
+  (*           | I.OP_AGET_BOOLEAN ->  *)
+  (*              let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in *)
+  (*              let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in *)
+  (*              let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 1 r1 in *)
+  (*              instrument (ins0,ins1,m_logagetbool) *)
+  (*           | I.OP_AGET -> *)
+  (*              let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in *)
+  (*              let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in *)
+  (*              let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 1 r1 in *)
+  (*              instrument (ins0,ins1,m_logaget) *)
+  (*           | I.OP_IGET_OBJECT ->  *)
+  (*              let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in *)
+  (*              let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in *)
+  (*              let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 1 r1 in *)
+  (*              instrument (ins0,ins1,m_loginstfld) *)
+  (*           | I.OP_IGET_BOOLEAN ->  *)
+  (*              let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in *)
+  (*              let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in *)
+  (*              let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 1 r1 in *)
+  (*              instrument (ins0,ins1,m_loginstfldbget) *)
+  (*           | I.OP_IGET -> *)
+  (*              let (I.OPR_REGISTER r1 :: I.OPR_REGISTER r2 :: _) = opr in *)
+  (*              let ins0 = I.new_move (I.op_to_hx I.OP_MOVE_OBJECT_FROM16) 0 r2 in *)
+  (*              let ins1 = I.new_move (I.op_to_hx I.OP_MOVE_FROM16) 1 r1 in *)
+  (*              instrument (ins0,ins1,m_loginstfldiget) *)
+  (*           | _ -> () *)
+  (*         end *)
+  (*       end *)
                   
     method skip_class c = false
     method log_entry emtd mname = 
