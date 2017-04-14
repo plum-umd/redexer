@@ -52,7 +52,7 @@ cmds = [
   "exported", "permissions", "sdk", "launcher",
   "activity", "service", "provider", "receiver",
   "custom_views", "fragments", "buttons",
-  "hello", "logging", "logging_ui", "directed", "remove_permissions"
+  "hello", "logging", "logging_ui", "directed", "remove_permissions", "add_permission"
 ]
 
 cmd = ""
@@ -306,6 +306,9 @@ when "hello"
   system("mv -f classes.dex #{RES}") if dex_succ?(apk, cmd)
 when "remove_permissions"
   apk.remove_permissions(perms)
+  finish_repackaging(apk,fn,to,RES)
+when "add_permission"
+  apk.add_permission()
   finish_repackaging(apk,fn,to,RES)
 end
 
