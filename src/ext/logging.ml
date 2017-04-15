@@ -822,8 +822,19 @@ class fine_logger (dx: D.dex) =
             | I.OP_MOVE_RESULT
             | I.OP_MOVE_RESULT_WIDE
             | I.OP_MOVE_RESULT_OBJECT ->
-               ignore (M.insrt_insns_under_off 
-                         dx citm (advance (numinsns * i) (M.next cursor)) inss)
+               let cur =
+                 (M.insrt_insns
+                    dx citm (advance (numinsns * i) (M.next cursor)) inss)
+                   - 1 in
+               let inserted_idx = DA.get citm.D.insns cur in
+               let cleanup_pesky_try (try_itm:D.try_item) = 
+                 (Pf.printf "Cleaning up pesky try...\n";
+                  if try_itm.D.end_addr = link then
+                    { try_itm with D.end_addr = inserted_idx }
+                  else
+                    try_itm)
+               in
+               citm.D.tries <- L.map cleanup_pesky_try (citm.D.tries)
             | _ ->
                ignore (M.insrt_insns_under_off
                          dx citm (advance (numinsns * i) cursor) inss)
@@ -839,7 +850,7 @@ class fine_logger (dx: D.dex) =
        - Log field reads
      *)
     method v_ins ins : unit = 
-      super#v_ins ins;
+      super#v_ins ins(*;
       if D.is_ins dx ins then begin
           let op, opr = D.get_ins dx ins in
           let instrument (ins0,ins1,mtd) = 
@@ -908,6 +919,7 @@ class fine_logger (dx: D.dex) =
             | _ -> ()
           end
         end
+                      *)
                   
     method skip_class c = false
     method log_entry emtd mname = 
