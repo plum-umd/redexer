@@ -115,7 +115,7 @@ let mtd = ref ""
 
 let get_citm (tx: D.dex) : D.code_item =
   let cid = D.get_cid tx (J.to_java_ty !cls) in
-  let mid, _ = D.get_the_mtd_shorty tx cid !mtd "LLLL" in
+  let mid, _ = D.get_the_mtd tx cid !mtd in
   let _, citm = D.get_citm tx cid mid in citm
 
 let dump_method (tx: D.dex) : unit =

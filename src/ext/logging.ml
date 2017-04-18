@@ -560,6 +560,7 @@ class virtual logger (dx: D.dex) =
       
   method v_ins (ins: D.link) : unit =
     let thismname = mname in 
+    (*Unparse.print_method dx cur_citm;*)
     if D.is_ins dx ins then
     (
       let op, opr = D.get_ins dx ins in
@@ -598,10 +599,10 @@ class virtual logger (dx: D.dex) =
           let argv_ids = D.get_argv dx mit in
           (* This can be optimized *)
           if (not do_logging) then
-               Log.i ("Skipping log of method call "^ full)
+               Log.i (Printf.sprintf "Skipping log of method call %s %x " full (D.of_off ins))
           else
           (
-            Log.i ("Log of method call: "^ full);
+            Log.i  (Printf.sprintf "Log of method call %s %x " full (D.of_off ins));
             let vx::vy::vz::[] = vxyz 0 in
             let ent_cursor = M.get_cursor cur_citm ins in
             let ext_cursor = M.next ent_cursor in
@@ -647,14 +648,24 @@ class virtual logger (dx: D.dex) =
             (* not to alter the control-flow, use ..._over_off *)
             let _ = 
               if mname <> J.init && ret_moved then(
-                (*Pf.printf "Before instrumenting call to %s\n" mname;*)
+                Pf.printf "Before instrumenting call to %s\n" mname;
                 let l = M.insrt_insns_over_off dx cur_citm ext_cursor ext_insns in
-                (*Pf.printf "After...\n";
-                Unparse.dumpit dx; *)
-                l)
+                Pf.printf "After...\n";
+                ())
               else (
-                let l = M.insrt_insns dx cur_citm ext_cursor ext_insns in
-                l)
+                let new_cur = M.insrt_insns dx cur_citm ext_cursor ext_insns - 1 in
+                let inserted_idx = DA.get cur_citm.D.insns new_cur in
+                let cleanup_pesky_try (try_itm:D.try_item) = 
+                  (
+                    Pf.printf "found a try that ends at %x and we're at %x\n" (D.of_off try_itm.end_addr) (D.of_off ins);
+                    if try_itm.D.end_addr = ins then
+                      (Pf.printf "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n" (D.of_off ins) (D.of_off inserted_idx);
+                       { try_itm with D.end_addr = inserted_idx })
+                    else
+                      try_itm)
+                in
+                cur_citm.D.tries <- L.map cleanup_pesky_try (cur_citm.D.tries));
+              (*Unparse.print_method dx cur_citm;*)
             in
             api_cnt := !api_cnt + (L.length ext_insns);
 
@@ -796,7 +807,11 @@ class fine_logger (dx: D.dex) =
        calling the super method, but then also identify all basic
        blocks and instrument those too. *)
     method v_citm citm = 
+      Printf.printf "v_citm\n";
+      (*Unparse.print_method dx citm;*)
       super#v_citm citm;
+      Printf.printf "super_v_citm\n";
+      (*Unparse.print_method dx citm;*)
       if log_entry then 
         let cfg = (St.time "cfg" (Cf.make_cfg dx) citm) in
         let instrs = Cf.get_bb_entries cfg in
@@ -824,21 +839,37 @@ class fine_logger (dx: D.dex) =
             | I.OP_MOVE_RESULT_OBJECT ->
                let cur =
                  (M.insrt_insns
-                    dx citm (advance (numinsns * i) (M.next cursor)) inss)
-                   - 1 in
+                    dx citm (advance (numinsns * i) (M.next cursor)) inss) - 1 in
                let inserted_idx = DA.get citm.D.insns cur in
                let cleanup_pesky_try (try_itm:D.try_item) = 
-                 (Pf.printf "Cleaning up pesky try...\n";
+               (
+                 Pf.printf "found a try that ends at %x and we're at %x\n" (D.of_off try_itm.end_addr) (D.of_off link);
+                 if try_itm.D.end_addr = link then
+                   (Pf.printf "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n" (D.of_off link) (D.of_off inserted_idx);
+                    { try_itm with D.end_addr = inserted_idx })
+                 else
+                   try_itm)
+            in
+               citm.D.tries <- L.map cleanup_pesky_try (citm.D.tries)
+            | _ ->
+               let cur = 
+                 (M.insrt_insns_under_off
+                    dx citm (advance (numinsns * i) cursor) inss)
+               in
+               let inserted_idx = DA.get citm.D.insns cur in
+               let cleanup_pesky_try (try_itm:D.try_item) = 
+                 (Pf.printf "found a try that ends at %x and we're at %x\n" (D.of_off try_itm.end_addr) (D.of_off link);
                   if try_itm.D.end_addr = link then
-                    { try_itm with D.end_addr = inserted_idx }
+                    (Pf.printf "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n" (D.of_off link) (D.of_off inserted_idx);
+                     { try_itm with D.end_addr = inserted_idx })
                   else
                     try_itm)
                in
                citm.D.tries <- L.map cleanup_pesky_try (citm.D.tries)
-            | _ ->
-               ignore (M.insrt_insns_under_off
-                         dx citm (advance (numinsns * i) cursor) inss)
           end;
+          (*Unparse.print_method dx citm;
+          ignore (Ctrlflow.make_cfg dx citm);
+          ignore (Reaching.make_dfa dx cur_citm)*)
         in
         L.iteri instrument_bbentry cursors;
         M.update_reg_usage dx citm;
@@ -850,7 +881,9 @@ class fine_logger (dx: D.dex) =
        - Log field reads
      *)
     method v_ins ins : unit = 
-      super#v_ins ins(*;
+      super#v_ins ins;
+
+    (*;
       if D.is_ins dx ins then begin
           let op, opr = D.get_ins dx ins in
           let instrument (ins0,ins1,mtd) = 
@@ -921,7 +954,7 @@ class fine_logger (dx: D.dex) =
         end
                       *)
                   
-    method skip_class c = false
+    method skip_class c = false (*c <> "Lcom/facebook/csslayout/LayoutEngine;"*)
     method log_entry emtd mname = 
       not (L.exists (fun x -> U.ends_with mname x) [J.init; J.clinit; J.hashCode])
           

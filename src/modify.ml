@@ -543,9 +543,18 @@ let insrt_insns_under_off dx (citm: D.code_item) cur (insns: I.instr list) =
   D.insrt_ins dx off hd;
   incr_insns_size citm hd;
   (* insert the remaining instructions from the next cursor *)
-  insrt_insns dx citm nxt_cur tl
-              
-
+  let new_c = insrt_insns dx citm nxt_cur tl in
+  let new_off = DA.get citm.D.insns new_c in
+  let fixup_try try_item =
+    (Printf.printf "Found a try ending at %x and we're now at %x\n" (D.of_off try_item.D.end_addr) (D.of_off new_off);
+    if try_item.D.end_addr = off then
+      { try_item with D.end_addr = new_off }
+    else 
+      try_item)
+  in
+  citm.D.tries <- L.map fixup_try citm.D.tries;
+  new_c
+                        
 (*
                                               +---------+
                                               |  instr  |
@@ -568,7 +577,16 @@ let insrt_insns_over_off dx (citm: D.code_item) cur (insns: I.instr list) =
   D.insrt_ins dx off last;
   incr_insns_size citm last;
   (* insert the remaining instructions from the previous cursor *)
-  insrt_insns dx citm nxt_cur rest
+  let c = insrt_insns dx citm nxt_cur rest in
+  let new_off = DA.get citm.D.insns cur in
+  let fixup_try try_item =
+    if try_item.D.start_addr = off then
+      { try_item with D.start_addr = new_off }
+    else 
+      try_item
+  in
+  citm.D.tries <- L.map fixup_try citm.D.tries;
+  c
 
 (*(*
                                               +---------+
@@ -1216,19 +1234,23 @@ object
   val mutable cname = ""
 
   method v_cdef cdef = 
-    cname <- D.get_ty_str dx cdef.D.c_class_id
-
+    cname <- D.get_ty_str dx cdef.D.c_class_id;
+    skip_cls <- false (*cname <> "Lbutterknife/internal/ButterKnifeProcessor;"*)
+                          
   method v_emtd (emtd: D.encoded_method) : unit =
     cur_mid   <- emtd.D.method_idx;
     is_static <- D.is_static emtd.D.m_access_flag;
     mname <- D.get_mtd_name dx cur_mid;
     Printf.printf "opr %s %s\n" cname mname;
-
+    
   (* to update goto instructions whose offset would be truncated
     due to aggressive instrumentations *)
   val mutable cur_citm = D.empty_citm ()
+                                      
   method v_citm (citm: D.code_item) : unit =
-    cur_citm <- citm
+    cur_citm <- citm;
+    (*Unparse.print_method dx citm;
+    ignore (Rc.make_dfa dx cur_citm)*)
                   
   method v_ins (ins: D.link) : unit =
     (* Get the sort of register definition for a given point. 
@@ -1249,6 +1271,8 @@ object
        This function takes in {d}, the instruction that is the
        reaching definition (provided from the result of the reaching
        definitions analysis) and {r}, the register of interest.  *)
+(*    Printf.printf "%x\n"  (D.of_off ins);
+    Rc.make_dfa dx cur_citm;*)
     let get_def_sort (d: D.link) (r: int) : I.reg_sort =
       if D.is_ins dx d then L.hd (get_sort (D.get_ins dx d) [r])
       else if D.is_param cur_citm r then
@@ -1273,7 +1297,19 @@ object
     let overwrite (inss: I.instr list) : unit =
       let cursor = get_cursor cur_citm ins in
       D.insrt_ins dx ins (L.hd inss);
-      insrt_insns dx cur_citm (next cursor) (L.tl inss);
+      let cur = insrt_insns dx cur_citm (next cursor) (L.tl inss) - 1 in
+      let inserted_idx = DA.get cur_citm.D.insns cur in
+      let doit = ref false in
+      let cleanup_pesky_try (try_itm:D.try_item) = 
+        (
+          Printf.printf "found a try that ends at %x and we're at %x\n" (D.of_off try_itm.end_addr) (D.of_off ins);
+          if try_itm.D.end_addr = ins then
+            (Printf.printf "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n" (D.of_off ins) (D.of_off inserted_idx);
+             { try_itm with D.end_addr = inserted_idx })
+          else
+            try_itm)
+      in
+      cur_citm.D.tries <- L.map cleanup_pesky_try (cur_citm.D.tries);
       exp_cnt := !exp_cnt + (L.length inss)
     in
     if D.is_ins dx ins then

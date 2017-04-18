@@ -11,7 +11,7 @@ debug: main.d.byte
 
 # auxiliary targets
 doc:
-	ocamlbuild -use-ocamlfind redexer.docdir/index.html
+	ocamlbuild -no-hygiene -use-ocamlfind redexer.docdir/index.html
 	mkdir -p docs
 	rm -rf docs/api
 	mv redexer.docdir docs/api
@@ -27,7 +27,7 @@ allclean: clean
 
 # x.native; strip the .native extension after building
 %.native:
-	ocamlbuild -use-ocamlfind $@
+	ocamlbuild -no-hygiene -use-ocamlfind $@
 	mv $@ $*
 
 # x.d.byte or x.byte
