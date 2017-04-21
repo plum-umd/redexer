@@ -34,6 +34,7 @@ class Apk
   require 'yaml'
   require 'tempfile'
   require 'rbconfig'
+  require 'parallel'
 
   THIS_FILE = File.expand_path(__FILE__)
   HERE = File.dirname(THIS_FILE)
@@ -95,6 +96,7 @@ class Apk
 
   TOOL = File.join(HOME, "tools")
   APKT = File.join(TOOL, "apktool.jar")
+  NUMPROCS = 4
 
   def unpack
     if @manifest == nil
@@ -127,7 +129,8 @@ class Apk
       if (not @succ) then return end
     end
     if multi then
-      nums = dexes.map do |s| 
+      @out << "Using #{NUMPROCS} worker processes"
+      nums = Parallel.map(dexes, in_processes: NUMPROCS) do |s| 
         s = s.match(/classes(\d+).dex/)
         if s == nil 
         then nil
