@@ -37,65 +37,13 @@
 
 package org.umd.logging;
 
-import android.util.Log;
-
-import java.lang.Throwable;
 import java.lang.Thread;
-import java.lang.StackTraceElement;
-import java.lang.StringBuilder;
-import java.lang.reflect.Array;
-
 import java.util.Arrays;
-import java.util.Date;
-import java.util.Iterator;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.ArrayList;
-
-import java.net.URL;
-
-import java.text.SimpleDateFormat;
-
-import java.io.FileOutputStream;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.BufferedWriter;
-import java.io.FileDescriptor;
-import java.io.IOException;
-
-import android.widget.CheckBox;
-import android.widget.RadioButton;
-import android.widget.TextView;
-
 import android.app.Activity;
-import android.app.Dialog;
-
-import android.content.Intent;
-import android.content.ComponentName;
-
-import android.view.MenuItem;
-import android.view.View;
-
-import android.net.Uri;
-
-import android.os.Environment;
-import android.os.AsyncTask;
-import android.os.Bundle;
-
-import android.graphics.Bitmap;
-import android.graphics.drawable.Drawable;
-import android.graphics.Paint;
-import android.graphics.Color;
-import android.graphics.Rect;
-import android.graphics.Canvas;
-import android.content.pm.PackageManager;
-import android.Manifest.permission;
-//import android.support.v4.app.ActivityCompat;
-//import android.support.v4.content.ContextCompat;
-
-
-import org.umd.logging.FragmentMapper;
-import org.umd.logging.FileWriterHandler;
 
 public class Logger {
   private int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 0;
@@ -112,7 +60,7 @@ public class Logger {
   }
   
   //Setup when onCreate or onResume are called and save when onPause and on Stop are logged (for the main class)
-  static void writeLog(String msg){
+  private static void writeLog(String msg){
 //        if (PackageManager.checkPermission("android.permission.WRITE_EXTERNAL_STORAGE",tag) != 0) {
 //            ActivityCompat.requestPermissions(current_activity.getApplicationContext(), new String[]{"android.permission.WRITE_EXTERNAL_STORAGE"},
 //                MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
@@ -130,8 +78,7 @@ public class Logger {
          pipe.add(msg);
         //}
   }
-  
-    
+
 //  static String getExtraString(Bundle bundle){
 //      String bundleStr = "";
 //      for (String key : bundle.keySet()) {
@@ -312,21 +259,17 @@ public class Logger {
 //  }
   
   static void logMethod(String io, Object... args) {
-    StackTraceElement elts[] = (new Throwable ()).getStackTrace();
+    //StackTraceElement elts[] = (new Throwable ()).getStackTrace();
     // 0 : org.umd.logging.Logger.logMethod
     // 1 : org.umd.logging.Logger.logMethod(Entry|Exit)
-    String cname = elts[2].getClassName();
-    String mname = elts[2].getMethodName();
+    //String cname = elts[2].getClassName();
+    //String mname = elts[2].getMethodName();
 //    log("Method " + io, cname, mname, args);
-    writeLog("Method " + io + " " + cname + mname);
+    writeLog("Method " + io + " " + "TODO");
   }
 
   public static void logBasicBlockEntry(int arg) {
-//    long threadId = Thread.currentThread().getId();
-//    String msg = threadId + " BasicBlock " + arg;
-//    //Log.i(tag, msg);
-//    writeLog(msg);
-    writeLog(".");
+    writeLog(String.valueOf(arg));
   }
 
 //  public static String objToString(Object obj) {
@@ -348,92 +291,6 @@ public class Logger {
 //    return arg;
 //  }
 
-  public static void logSGet(int val) {
-//    long threadId = Thread.currentThread().getId();
-//    String msg = threadId + " SGet (" + Integer.toString(val) + ")";
-//    //Log.i(tag, msg);
-//    writeLog(msg);
-    writeLog(".");
-  }
-
-  public static void logSGetObj(Object obj) {
-//    long threadId = Thread.currentThread().getId();
-//    String msg = threadId + " SGet (" + objToString(obj) + ")";
-//    //Log.i(tag, msg);
-//    writeLog(msg);
-    writeLog(".");
-  }
-
-  public static void logSGetBoolean(boolean obj) {
-//    long threadId = Thread.currentThread().getId();
-//    String msg = threadId + " SGet (" + Boolean.toString(obj) + ")";
-////    Log.i(tag, msg);
-//    writeLog(msg);
-    writeLog(".");
-  }
-  
-  public static void logAGetBoolean(Object arry, boolean obj) {
-//    long threadId = Thread.currentThread().getId();
-//    String msg = threadId + " AGet (" + objToString(arry) 
-//      + ", " + String.valueOf(obj) + ")";
-////    Log.i(tag, msg);
-//    writeLog(msg);
-    writeLog(".");
-  }
-
-  public static void logAGet(Object arry, int val) {
-//    long threadId = Thread.currentThread().getId();
-//    String msg = threadId + " AGet (" + objToString(arry)
-//      + ", " + Integer.toString(val) + ")";
-////    Log.i(tag, msg);
-//    writeLog(msg);
-    writeLog(".");
-  }
-
-  public static void logAGetObj(Object arry, Object obj) {
-//    long threadId = Thread.currentThread().getId();
-//    String msg = threadId + " AGet (" + objToString(arry) 
-//      + ", " + objToString(obj) + ")";
-////    Log.i(tag, msg);
-//    writeLog(msg);
-    writeLog(".");
-  }
-
-  public static void logInstaceFieldIntGet(Object self, int val) {
-//    long threadId = Thread.currentThread().getId();
-//    String msg = threadId + " InstanceFieldIntGet (" + objToString(self) 
-//      + ", " + Integer.toString(val) + ")";
-////    Log.i(tag, msg);
-//    writeLog(msg);
-    writeLog(".");
-  }
-
-  public static void logInstaceFieldBoolGet(Object self, boolean val) {
-//    long threadId = Thread.currentThread().getId();
-//    String msg = threadId + " InstanceFieldBoolGet (" + objToString(self) 
-//      + ", " + String.valueOf(val) + ")";
-////    Log.i(tag, msg);
-//    writeLog(msg);
-    writeLog(".");
-  }
-  
-  public static void logInstanceFieldOp(Object self, Object dest) {
-//    long threadId = Thread.currentThread().getId();
-//    String msg = threadId + " InstanceFieldOp (" + objToString(self) 
-//      + ", " + objToString(dest) + ")";
-//    Log.i(tag, msg);
-//    writeLog(msg);
-    writeLog(".");
-  }
-
-  public static void logStaticFieldOp(Object thing) {
-//    long threadId = Thread.currentThread().getId();
-    //String msg = threadId + " StaticFieldOp (" + objToString(thing) + ")";
-//    Log.i(tag, msg);
-    //writeLog(msg);
-    writeLog(".");
-  }
-  
   public static void logMethodEntry(Object... args) {
     logMethod(">", args);
   }
@@ -443,248 +300,11 @@ public class Logger {
   }
   
   public static void logAPIEntry(String cname, String mname, Object... args) {
-    /*Boolean cont = true;
-    if(cname.contains("java/io/File")){
-        cont = false;
-        File sdcard = Environment.getExternalStorageDirectory();
-        String sdcard_path = sdcard.getAbsolutePath();
-         Iterator<Object> iter = Arrays.asList(args).iterator();
-        while (iter.hasNext()) {
-            Object arg = iter.next();
-            if(arg instanceof File){
-                if(((File)arg).getAbsolutePath().startsWith(sdcard_path)){
-                    cont = true;
-                }
-            }
-            else if(arg instanceof String){
-                if(((String)arg).startsWith(sdcard_path)){
-                    cont = true;
-                }
-            }
-        }
-    }
-    if(mname.contains("startActivityForResult")){
-        cont = false;
-        Iterator<Object> iter = Arrays.asList(args).iterator();
-        while (iter.hasNext()) {
-            Object arg = iter.next();
-            if(arg instanceof Intent){
-                String intent_action =((Intent)arg).getAction();
-                if(intent_action=="android.intent.action.GET_CONTENT" || intent_action =="android.intent.action.PICK"){
-                    Bundle bundle = ((Intent)arg).getExtras();
-                    if(bundle != null){
-                        if(!bundle.keySet().contains("android.intent.extra.LOCAL_ONLY")){
-                            mname = mname + "CONTENT";
-                            cont = true;
-                            break;
-                        }
-                    }
-                }
-                else if(intent_action=="android.media.action.IMAGE_CAPTURE"){
-                    mname = mname + "CAMERA";
-                    cont = true;
-                    break;
-                }
-            }
-        }
-    }
-    if(cont){*/
-//        log("Api >", cname, mname, args);
-        writeLog("Api > " + cname + mname);
-    /*}*/
+    writeLog("Api > " + cname + mname);
   }
   
   public static void logAPIExit(String cname, String mname, Object... args) {
-    Boolean cont = true;
-    /*if(cname.contains("java/io/File")){
-        cont = false;
-        File sdcard = Environment.getExternalStorageDirectory();
-        String sdcard_path = sdcard.getAbsolutePath();
-        Iterator<Object> iter = Arrays.asList(args).iterator();
-        while (iter.hasNext()) {
-            Object arg = iter.next();
-            if(arg instanceof File){
-                if(((File)arg).getAbsolutePath().startsWith(sdcard_path)){
-                    cont = true;
-                }
-            }
-            else if(arg instanceof String){
-                if(((String)arg).startsWith(sdcard_path)){
-                    cont = true;
-                }
-            }
-        }
-    }
-    if(mname.contains("startActivityForResult")){
-        cont = false;
-        Iterator<Object> iter = Arrays.asList(args).iterator();
-        while (iter.hasNext()) {
-            Object arg = iter.next();
-            if(arg instanceof Intent){
-                String intent_action =((Intent)arg).getAction();
-                if(intent_action=="android.intent.action.GET_CONTENT" || intent_action=="android.intent.action.PICK"){
-                    Bundle bundle = ((Intent)arg).getExtras();
-                    if(bundle != null){
-                        if(!bundle.keySet().contains("android.intent.extra.LOCAL_ONLY")){
-                            mname = mname + "CONTENT";
-                            cont = true;
-                            break;
-                        }
-                    }
-                }
-                else if(intent_action=="android.media.action.IMAGE_CAPTURE"){
-                    mname = mname + "CAMERA";
-                    cont = true;
-                    break;
-                }
-            }
-        }
-    }
-    if(cont){*/
-//        log("Api <", cname, mname, args);
-        writeLog("Api < " + cname + mname);
-  /*}*/
+    writeLog("Api < " + cname + mname);
   }
 
-//  private static String processDialog(Dialog dialog){
-//    String file = takeScreenshot(dialog, "");
-//    String s_arg = "";
-//    if(file != ""){
-//      s_arg += "<file=" + file + ">";
-//      int width = dialog.getWindow().getDecorView().getWidth();
-//      int height = dialog.getWindow().getDecorView().getHeight();
-//      int x = (int)dialog.getWindow().getDecorView().getX();
-//      int y = (int)dialog.getWindow().getDecorView().getY();
-//      s_arg += "<x=" + String.valueOf(x) + ">";
-//      s_arg += "<y=" + String.valueOf(y) + ">";
-//      s_arg += "<width=" + String.valueOf(width) + ">";
-//      s_arg += "<height=" + String.valueOf(height) + ">";
-//    }
-//    return s_arg;
-//  }
-
-//  private static String saveIcon(MenuItem mitem){
-//    Date now = new Date();
-//    SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
-//
-//    String dateString = "";
-//    try{
-//      // getLocationOnScreen
-//      dateString = sdfr.format(now);
-//    } catch (Throwable e) {
-//      // Several error may come out with file handling or OOM
-//      ;//e.printStackTrace();
-//      return "";
-//    }
-//    try {
-//      // image naming and path  to include sd card  appending name you choose for file
-//      String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
-//
-//      Drawable drawable = mitem.getIcon();
-//      Bitmap bitmap = Bitmap.createBitmap(drawable.getIntrinsicWidth(), drawable.getIntrinsicHeight(), Bitmap.Config.ARGB_8888);
-//
-//      Canvas canvas = new Canvas(bitmap);
-//      drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
-//      drawable.draw(canvas);
-//
-//      File imageFile = new File(mPath);
-//
-//      FileOutputStream outputStream = new FileOutputStream(imageFile);
-//      int quality = 90;
-//      bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
-//      outputStream.flush();
-//      outputStream.close();
-//    } catch (Throwable e) {
-//      // Several error may come out with file handling or OOM
-//      ;//e.printStackTrace();
-//      return "";
-//    }
-//    return dateString;
-//  }
-  
-//  private static String takeScreenshot(Dialog diag, String addon_text){
-//    return "";
-//  }
-
-//  private static String takeScreenshot(Dialog diag, String addon_text) {
-//    Date now = new Date();
-//    SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
-//
-//    String dateString = "";
-//    try{
-//      // getLocationOnScreen
-//      dateString = sdfr.format(now);
-//    } catch (Throwable e) {
-//      // Several error may come out with file handling or OOM
-//      ;//e.printStackTrace();
-//      return "";
-//    }
-//    try {
-//      // image naming and path  to include sd card  appending name you choose for file
-//      String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
-//
-//      // create bitmap screen capture
-//      View v1;
-//      if(diag != null){
-//        v1 = diag.getWindow().getDecorView().getRootView();
-//      }else if(current_activity != null){
-//        v1 = current_activity.getWindow().getDecorView().getRootView();
-//      }else{
-//        return "";
-//      }
-//
-//      v1.setDrawingCacheEnabled(true);
-//      Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
-//      v1.setDrawingCacheEnabled(false);
-//      if(!addon_text.equals("")){
-//        bitmap = drawText(addon_text, bitmap);
-//      }
-//
-//      File imageFile = new File(mPath);
-//
-//      FileOutputStream outputStream = new FileOutputStream(imageFile);
-//      int quality = 90;
-//      bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
-//      outputStream.flush();
-//      outputStream.close();
-//    } catch (Throwable e) {
-//      // Several error may come out with file handling or OOM
-//      ;//e.printStackTrace();
-//      return "";
-//    }
-//    return dateString;
-//  }
-
-//  private static Bitmap drawText(String text, Bitmap bitmap){
-//    android.graphics.Bitmap.Config bitmapConfig =
-//      bitmap.getConfig();
-//    // set default bitmap config if none
-//    if(bitmapConfig == null) {
-//      bitmapConfig = android.graphics.Bitmap.Config.ARGB_8888;
-//    }
-//    // resource bitmaps are imutable, 
-//    // so we need to convert it to mutable one
-//    bitmap = bitmap.copy(bitmapConfig, true);
-//    
-//    Canvas canvas = new Canvas(bitmap);
-//    // new antialised Paint
-//    Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-//    // text color - #3D3D3D
-//    paint.setColor(Color.rgb(61, 61, 61));
-//    // text size in pixels
-//    paint.setTextSize((int) (14 * 5));
-//    // text shadow
-//    paint.setShadowLayer(1f, 0f, 1f, Color.WHITE);
-//    
-//    // draw text to the Canvas center
-//    Rect bounds = new Rect();
-//    paint.getTextBounds(text, 0, text.length(), bounds);
-//    int x = (bitmap.getWidth() - bounds.width())/2;
-//    int y = (bitmap.getHeight() + bounds.height())/2;
-//    
-//    canvas.drawText(text, x, y, paint);
-//    
-//    return bitmap;
-//  }
-  
 }
