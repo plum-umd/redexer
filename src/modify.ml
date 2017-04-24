@@ -546,11 +546,10 @@ let insrt_insns_under_off dx (citm: D.code_item) cur (insns: I.instr list) =
   let new_c = insrt_insns dx citm nxt_cur tl in
   let new_off = DA.get citm.D.insns new_c in
   let fixup_try try_item =
-    (Printf.printf "Found a try ending at %x and we're now at %x\n" (D.of_off try_item.D.end_addr) (D.of_off new_off);
     if try_item.D.end_addr = off then
       { try_item with D.end_addr = new_off }
     else 
-      try_item)
+      try_item
   in
   citm.D.tries <- L.map fixup_try citm.D.tries;
   new_c
@@ -1241,7 +1240,7 @@ object
     cur_mid   <- emtd.D.method_idx;
     is_static <- D.is_static emtd.D.m_access_flag;
     mname <- D.get_mtd_name dx cur_mid;
-    Printf.printf "opr %s %s\n" cname mname;
+    Log.v (Printf.sprintf "opr %s %s\n" cname mname);
     
   (* to update goto instructions whose offset would be truncated
     due to aggressive instrumentations *)
@@ -1301,13 +1300,10 @@ object
       let inserted_idx = DA.get cur_citm.D.insns cur in
       let doit = ref false in
       let cleanup_pesky_try (try_itm:D.try_item) = 
-        (
-          Printf.printf "found a try that ends at %x and we're at %x\n" (D.of_off try_itm.end_addr) (D.of_off ins);
-          if try_itm.D.end_addr = ins then
-            (Printf.printf "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n" (D.of_off ins) (D.of_off inserted_idx);
-             { try_itm with D.end_addr = inserted_idx })
-          else
-            try_itm)
+        if try_itm.D.end_addr = ins then
+          { try_itm with D.end_addr = inserted_idx }
+        else
+          try_itm
       in
       cur_citm.D.tries <- L.map cleanup_pesky_try (cur_citm.D.tries);
       exp_cnt := !exp_cnt + (L.length inss)

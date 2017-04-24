@@ -525,7 +525,8 @@ class virtual logger (dx: D.dex) =
           in_out_cnt := !in_out_cnt + (L.length ext_insns);
         in
         let last_links = M.get_last_links dx citm in
-        L.iter per_exit_instr last_links;
+        (* Optimized logging: do *not* log method returns! *)
+        (*L.iter per_exit_instr last_links;*)
         
         (* code snippet for method entries *)
         let vx::vy::vz::[] = vxyz 0 in
@@ -611,7 +612,7 @@ class virtual logger (dx: D.dex) =
 
             (* code snippet for API exits *)
             (* not to alter current cursor, do this part first *)
-            let rety = D.get_rety dx mit in
+            (*let rety = D.get_rety dx mit in
             let vr =
               if mname = J.init then I.of_reg (L.hd opr) else
               let op, opr = M.get_ins dx cur_citm ext_cursor in
@@ -667,7 +668,7 @@ class virtual logger (dx: D.dex) =
                 cur_citm.D.tries <- L.map cleanup_pesky_try (cur_citm.D.tries));
               (*Unparse.print_method dx cur_citm;*)
             in
-            api_cnt := !api_cnt + (L.length ext_insns);
+            api_cnt := !api_cnt + (L.length ext_insns);*)
 
             (* code snippet for API entries *)
             let argv = D.get_argv dx mit in
@@ -709,12 +710,27 @@ class virtual logger (dx: D.dex) =
               @@ copy_argv_instrs
               @@ CL.fromList [ins2; ins3; ins4]
             ) in
-            (* if the API is <init>, that instance is not yet initialized! *)
-            let cursor =
-              if mname = J.init then M.next ent_cursor else ent_cursor
-            in
             (* not to alter the control-flow, use ..._under_off *)
-            let _ = M.insrt_insns_under_off dx cur_citm cursor ent_insns in
+            if mname <> J.init then 
+              ignore (M.insrt_insns_under_off dx cur_citm ent_cursor ent_insns)
+            else
+              (let new_cur = M.insrt_insns dx cur_citm ext_cursor ent_insns - 1 in
+               let inserted_idx = DA.get cur_citm.D.insns new_cur in
+               let cleanup_pesky_try (try_itm:D.try_item) = 
+                 (
+                   Log.v 
+                     (Pf.sprintf "found a try that ends at %x and we're at %x\n" 
+                                 (D.of_off try_itm.end_addr) (D.of_off ins));
+                   if try_itm.D.end_addr = ins then
+                     (Log.v 
+                        (Pf.sprintf 
+                           "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n"
+                           (D.of_off ins) (D.of_off inserted_idx));
+                      { try_itm with D.end_addr = inserted_idx })
+                   else
+                     try_itm)
+               in
+               cur_citm.D.tries <- L.map cleanup_pesky_try (cur_citm.D.tries));
             api_cnt := !api_cnt + (L.length ent_insns);
             M.update_reg_usage dx cur_citm
           )
@@ -765,16 +781,6 @@ class default_logger (dx: D.dex) =
 class fine_logger (dx: D.dex) =
   let logger_cid       = D.get_cid dx logger in
   let m_bbenter, _     = D.get_the_mtd dx logger_cid logBBEnter in
-  let m_logstfld, _    = D.get_the_mtd dx logger_cid logStatFldOp in
-  let m_loginstfld, _  = D.get_the_mtd dx logger_cid logInstFldOp in
-  let m_loginstfldiget, _ = D.get_the_mtd dx logger_cid logInstFldIntGet in
-  let m_loginstfldbget, _ = D.get_the_mtd dx logger_cid logInstFldBoolGet in
-  let m_logaget, _     = D.get_the_mtd dx logger_cid logAGet in
-  let m_logagetobj, _  = D.get_the_mtd dx logger_cid logAGetObj in
-  let m_logagetbool, _ = D.get_the_mtd dx logger_cid logAGetBool in
-  let m_logsget, _     = D.get_the_mtd dx logger_cid logSGet in
-  let m_logsoget, _    = D.get_the_mtd dx logger_cid logSGetObj in
-  let m_logsgetbool, _ = D.get_the_mtd dx logger_cid logSGetBool in
 
   object (self)
     inherit logger dx as super
@@ -807,21 +813,20 @@ class fine_logger (dx: D.dex) =
        calling the super method, but then also identify all basic
        blocks and instrument those too. *)
     method v_citm citm = 
-      Printf.printf "v_citm\n";
       (*Unparse.print_method dx citm;*)
       super#v_citm citm;
-      Printf.printf "super_v_citm\n";
       (*Unparse.print_method dx citm;*)
       if log_entry then 
         let cfg = (St.time "cfg" (Cf.make_cfg dx) citm) in
         let instrs = Cf.get_bb_entries cfg in
         let cursors = L.map (fun x -> (M.get_cursor citm x), x) instrs in
+        let i = ref 0 in
         (* Instrument basic block entries *)
-        let instrument_bbentry i (cursor,link) = 
+        let instrument_bbentry (cursor,link) = 
           (* The instructions to really add to the method.. *)
           (* The number of instructions we add. Update when inss changes *)
           let numinsns = 2 in
-          let index = D.of_off link + numinsns * i in
+          let index = D.of_off link + numinsns * !i in
           let ins0 = I.new_const 0 index in
           let ins1 = I.new_invoke call_stt [0; D.of_idx m_bbenter] in
           let inss = [ins0; ins1] in
@@ -831,47 +836,69 @@ class fine_logger (dx: D.dex) =
           in
           let op, opr = D.get_ins dx link in
           begin
-            (* Some instructions have to be the beginnings of a basic block *)
             match op with 
+            (* But do not instrument the beginnings of returns. This
+               is because of a tricky issue with Dalvik's control-flow
+               analysis, which shows up when we add an `invoke-*` at
+               the entry of a basic block which contains (only) a
+               `return-*` instruction. This will cause the Dalvik
+               verifier to not kill the variables being returned, so
+               that if the point of the return falls within an
+               exception handler, variables will incorrectly be marked
+               as live and cause verifier errors. For more info see
+               this SO post:
+               http://stackoverflow.com/questions/43554462 *)
+            | I.OP_RETURN_VOID
+            | I.OP_RETURN
+            | I.OP_RETURN_WIDE
+            | I.OP_RETURN_OBJECT ->
+               ()
+            (* Some instructions have to be the beginnings of a basic
+               block. *)
             | I.OP_MOVE_EXCEPTION
             | I.OP_MOVE_RESULT
             | I.OP_MOVE_RESULT_WIDE
             | I.OP_MOVE_RESULT_OBJECT ->
                let cur =
                  (M.insrt_insns
-                    dx citm (advance (numinsns * i) (M.next cursor)) inss) - 1 in
+                    dx citm (advance (numinsns * !i) (M.next cursor)) inss) - 1 in
                let inserted_idx = DA.get citm.D.insns cur in
                let cleanup_pesky_try (try_itm:D.try_item) = 
-               (
-                 Pf.printf "found a try that ends at %x and we're at %x\n" (D.of_off try_itm.end_addr) (D.of_off link);
-                 if try_itm.D.end_addr = link then
-                   (Pf.printf "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n" (D.of_off link) (D.of_off inserted_idx);
-                    { try_itm with D.end_addr = inserted_idx })
-                 else
-                   try_itm)
-            in
-               citm.D.tries <- L.map cleanup_pesky_try (citm.D.tries)
+                 (
+                   Log.v (Pf.sprintf
+                            "found a try that ends at %x and we're at %x\n"
+                            (D.of_off try_itm.end_addr) (D.of_off link));
+                   if try_itm.D.end_addr = link then
+                     (Log.v (Pf.sprintf
+                               "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n"
+                               (D.of_off link) (D.of_off inserted_idx));
+                      { try_itm with D.end_addr = inserted_idx })
+                   else
+                     try_itm)
+               in
+               citm.D.tries <- L.map cleanup_pesky_try (citm.D.tries);
+               i := !i + 1
             | _ ->
                let cur = 
                  (M.insrt_insns_under_off
-                    dx citm (advance (numinsns * i) cursor) inss)
+                    dx citm (advance (numinsns * !i) cursor) inss)
                in
                let inserted_idx = DA.get citm.D.insns cur in
                let cleanup_pesky_try (try_itm:D.try_item) = 
-                 (Pf.printf "found a try that ends at %x and we're at %x\n" (D.of_off try_itm.end_addr) (D.of_off link);
+                 (Log.v (Pf.sprintf 
+                           "found a try that ends at %x and we're at %x\n"
+                           (D.of_off try_itm.end_addr) (D.of_off link));
                   if try_itm.D.end_addr = link then
                     (Pf.printf "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n" (D.of_off link) (D.of_off inserted_idx);
                      { try_itm with D.end_addr = inserted_idx })
                   else
                     try_itm)
                in
-               citm.D.tries <- L.map cleanup_pesky_try (citm.D.tries)
+               citm.D.tries <- L.map cleanup_pesky_try (citm.D.tries);
+               i := !i + 1
           end;
-          (*Unparse.print_method dx citm;
-          ignore (Ctrlflow.make_cfg dx citm);
-          ignore (Reaching.make_dfa dx cur_citm)*)
         in
-        L.iteri instrument_bbentry cursors;
+        L.iter instrument_bbentry cursors;
         M.update_reg_usage dx citm;
       else
         ()
@@ -883,7 +910,7 @@ class fine_logger (dx: D.dex) =
     method v_ins ins : unit = 
       super#v_ins ins;
 
-    method skip_class c = false (*c <> "Lcom/facebook/csslayout/LayoutEngine;"*)
+    method skip_class c = false
     method log_entry emtd mname = 
       not (L.exists (fun x -> U.ends_with mname x) [J.init; J.clinit; J.hashCode])
           
