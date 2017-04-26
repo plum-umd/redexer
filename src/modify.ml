@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2010-2014,
+ * Copyright (c) 2010-2017,
  *  Jinseong Jeon <jsjeon@cs.umd.edu>
  *  Kris Micinski <micinski@cs.umd.edu>
  *  Jeff Foster   <jfoster@cs.umd.edu>
@@ -99,7 +99,7 @@ let call_dir = I.op_to_hx I.OP_INVOKE_DIRECT
 (* Utilities                                                           *)
 (***********************************************************************)
 
-let (@@) cl1 cl2 = CL.append cl1 cl2
+let (@+) cl1 cl2 = CL.append cl1 cl2
 
 let print_fit (dx: D.dex) (fid, fit) : unit =
   let f_str = Log.of_i (D.of_idx fid)
@@ -168,14 +168,14 @@ let new_str (dx: D.dex) (str: string) : D.link =
 let str_sub_cnt = ref 0
 
 (* replace_str : D.dex -> string -> string -> bool *)
-let replace_str (dx: D.dex) (prv: string) (nex: string) : bool =
-  let sid = D.find_str dx prv in
-  if sid = D.no_idx then (new_str dx nex; false)
+let replace_str (dx: D.dex) ~(oldstr: string) ~(newstr: string) : bool =
+  let sid = D.find_str dx oldstr in
+  if sid = D.no_idx then (new_str dx newstr; false)
   else (* exists; overwrite the old one *)
   (
     incr str_sub_cnt;
     let off = DA.get dx.D.d_string_ids (D.of_idx sid) in
-    D.insrt_str dx off nex; true
+    D.insrt_str dx off newstr; true
   )
 
 (* report_str_repl_cnt : unit -> unit *)
@@ -183,25 +183,25 @@ let report_str_repl_cnt () : unit =
   Log.i ("# of string replacement(s): "^(Log.of_i !str_sub_cnt))
 
 (* find or make new type_id *)
-let find_or_new_ty_str (dx: D.dex) (str: string) : D.link =
-  let tid = D.find_ty_str dx str in
+let find_or_new_ty_str (dx: D.dex) (tyname: string) : D.link =
+  let tid = D.find_ty_str dx tyname in
   if tid <> D.no_idx then tid else
   (
-    let sid = find_or_new_str dx str
+    let sid = find_or_new_str dx tyname
     and tid' = D.to_idx (DA.length dx.D.d_type_ids) in
     DA.add dx.D.d_type_ids sid;
     tid'
   )
 
 (* wrapper for above function *)
-let new_ty (dx: D.dex) (str: string) : D.link =
-  find_or_new_ty_str dx str
+let new_ty (dx: D.dex) ~(tyname: string) : D.link =
+  find_or_new_ty_str dx tyname
 
 let is_lib (cname: string) : bool =
   J.is_library cname || A.is_library cname
 
 (* new_class : D.dex -> ?string -> string -> J.access_flag list -> D.link *)
-let new_class (dx: D.dex) ?(super=Java.Lang.obj) (cname: string)
+let new_class (dx: D.dex) ?(super=Java.Lang.obj) ~(cname: string)
   (flags: D.access_flag list) : D.link =
   let cname = J.to_java_ty cname
   and super = J.to_java_ty super in
@@ -224,7 +224,7 @@ let new_class (dx: D.dex) ?(super=Java.Lang.obj) (cname: string)
   cid
 
 (* make_class_overridable : D.dex -> D.link -> unit *)
-let make_class_overridable (dx: D.dex) (cid: D.link) : unit =
+let make_class_overridable (dx: D.dex) ~(cid: D.link) : unit =
   let cdef = D.get_cdef dx cid in
   cdef.D.c_access_flag <- wipe_off_final cdef.D.c_access_flag
 
@@ -262,7 +262,7 @@ let append_itf (dx: D.dex) (cid: D.link) (itf_id: D.link) : unit =
   DA.iter itf_attacher dx.D.d_class_defs
 
 (* add_interface : D.dex -> D.link -> string -> unit *)
-let add_interface (dx: D.dex) (cid: D.link) (interface: string) : unit =
+let add_interface (dx: D.dex) ~(cid: D.link) ~(interface: string) : unit =
   let icid = D.get_cid dx interface in
   if icid = D.no_idx then
     raise (D.Wrong_dex ("no such interface exists: "^interface))
@@ -294,8 +294,8 @@ let fld_exists (dx: D.dex) (cid: D.link) (fname: string) : D.link =
 
 (* new_field : D.dex -> D.link -> string
   -> J.access_flag list -> string -> D.link *)
-let new_field (dx: D.dex) (cid: D.link) (fname: string)
-  (flags: D.access_flag list) (ty: string) : D.link =
+let new_field (dx: D.dex) ~(cid: D.link) ~(fname: string)
+  (flags: D.access_flag list) ~(ty: string) : D.link =
   let ty = J.to_type_descr ty in
   let old = fld_exists dx cid fname in
   if old <> D.no_idx then old else
@@ -361,13 +361,13 @@ let mtd_body_exists (dx: D.dex) (cid: D.link) (mname: string) : D.link =
 
 
 (* make_method_overridable : D.dex -> D.link -> D.link -> unit *)
-let make_method_overridable (dx: D.dex) (cid: D.link) (mid: D.link) : unit =
+let make_method_overridable (dx: D.dex) ~(cid: D.link) ~(mid: D.link) : unit =
   let emtd = D.get_emtd dx cid mid in
   emtd.D.m_access_flag <- wipe_off_final emtd.D.m_access_flag
 
 (* new_sig : D.dex -> D.link -> string -> string -> string list -> D.link *)
-let new_sig (dx: D.dex) (cid: D.link) (mname: string)
-    (rety: string) (argv: string list) : D.link =
+let new_sig (dx: D.dex) ~(cid: D.link) ~(mname: string)
+            ~(rety: string) ~(argv: string list) : D.link =
   let old = mtd_sig_exists dx cid mname in
   if old <> D.no_idx then old else
   (
@@ -403,8 +403,8 @@ let new_sig (dx: D.dex) (cid: D.link) (mname: string)
 
 (* new_method : D.dex -> D.link -> string
   -> J.access_flag list -> string -> string list -> D.link *)
-let new_method (dx: D.dex) (cid: D.link) (mname: string)
-    (flags: D.access_flag list) (rety: string) (argv: string list) : D.link =
+let new_method (dx: D.dex) ~(cid: D.link) ~(mname: string)
+    (flags: D.access_flag list) ~(rety: string) ~(argv: string list) : D.link =
   let flags = if mname = J.init then D.ACC_CONSTRUCTOR::flags else flags in
   let old = mtd_body_exists dx cid mname in
   if old <> D.no_idx then old else
@@ -836,7 +836,6 @@ object (self)
     fit.D.f_type_id <- l2l maps.cmap fit.D.f_type_id
 
   method v_mit (mit: D.method_id_item) : unit =
-    let cname = D.get_ty_str dx mit.D.m_class_id in
     if target_in_hierarchy dx maps.cmap mit.D.m_class_id
     then
     (
@@ -1234,14 +1233,13 @@ object
 
   method v_cdef cdef = 
     cname <- D.get_ty_str dx cdef.D.c_class_id;
-    skip_cls <- false (*cname <> "Lbutterknife/internal/ButterKnifeProcessor;"*)
+    skip_cls <- false
                           
   method v_emtd (emtd: D.encoded_method) : unit =
     cur_mid   <- emtd.D.method_idx;
     is_static <- D.is_static emtd.D.m_access_flag;
     mname <- D.get_mtd_name dx cur_mid;
-    Log.v (Printf.sprintf "opr %s %s\n" cname mname);
-    
+        
   (* to update goto instructions whose offset would be truncated
     due to aggressive instrumentations *)
   val mutable cur_citm = D.empty_citm ()
@@ -1270,8 +1268,6 @@ object
        This function takes in {d}, the instruction that is the
        reaching definition (provided from the result of the reaching
        definitions analysis) and {r}, the register of interest.  *)
-(*    Printf.printf "%x\n"  (D.of_off ins);
-    Rc.make_dfa dx cur_citm;*)
     let get_def_sort (d: D.link) (r: int) : I.reg_sort =
       if D.is_ins dx d then L.hd (get_sort (D.get_ins dx d) [r])
       else if D.is_param cur_citm r then
@@ -1298,7 +1294,6 @@ object
       D.insrt_ins dx ins (L.hd inss);
       let cur = insrt_insns dx cur_citm (next cursor) (L.tl inss) - 1 in
       let inserted_idx = DA.get cur_citm.D.insns cur in
-      let doit = ref false in
       let cleanup_pesky_try (try_itm:D.try_item) = 
         if try_itm.D.end_addr = ins then
           { try_itm with D.end_addr = inserted_idx }
@@ -1482,17 +1477,17 @@ object
             if not (J.is_primitive tname) then
             (
               let ins = I.new_move mv_obj16 dst src in
-              acc @@ CL.single ins, (d_tl, s_tl)
+              acc @+ CL.single ins, (d_tl, s_tl)
             )
             else if J.is_wide tname then
             (
               let ins = I.new_move mv_wd_16 dst src in
-              acc @@ CL.single ins, (L.tl d_tl, L.tl s_tl)
+              acc @+ CL.single ins, (L.tl d_tl, L.tl s_tl)
             )
             else
             (
               let ins = I.new_move move_f16 dst src in
-              acc @@ CL.single ins, (d_tl, s_tl)
+              acc @+ CL.single ins, (d_tl, s_tl)
             )
           in
           let argn = L.length argv in
@@ -1500,7 +1495,7 @@ object
           and srcs = L.map I.of_reg argv in
           let inss = CL.toList (
             fst (L.fold_left copy_argv (CL.empty, (dsts, srcs)) argv_ty)
-            @@ CL.single (I.new_invoke (hx + 6) [0; argn-1; D.of_idx mid])
+            @+ CL.single (I.new_invoke (hx + 6) [0; argn-1; D.of_idx mid])
           ) in
           overwrite inss
         )

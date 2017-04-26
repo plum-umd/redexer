@@ -78,16 +78,6 @@ let stt_rnge = I.op_to_hx I.OP_INVOKE_STATIC_RANGE
 let logging = "Lorg/umd/logging"
 let logger = logging^"/Logger;"
 let logBBEnter = "logBasicBlockEntry"
-let logStatFldOp = "logStaticFieldOp"
-let logInstFldOp = "logInstanceFieldOp"
-let logInstFldIntGet = "logInstaceFieldIntGet"
-let logInstFldBoolGet = "logInstaceFieldBoolGet"
-let logAGet = "logAGet"
-let logAGetBool = "logAGetBoolean"
-let logAGetObj = "logAGetObj"
-let logSGet = "logSGet"
-let logSGetBool = "logSGetBoolean"
-let logSGetObj = "logSGetObj"
 let logMEnt = "logMethodEntry"
 let logMExt = "logMethodExit"
 let logAEnt = "logAPIEntry"
@@ -97,12 +87,14 @@ let logAExt = "logAPIExit"
 type detail =
   | Default
   | Fine
+  | Optimized
   | Regex of Js.json
 
 let config = try
     Js.from_file "data/logging.json"
   with _ -> `Null
 
+(* The logging detail to be used. *)
 let detail = ref Default
 
 module SM = Map.Make(String)
@@ -126,7 +118,7 @@ let comp_to_tran =
                               act_comps (U.repeat act_trans (L.length act_comps) []) in
   SM.add Aos.asynctask Aos.task_methods act_maps
 
-let (@@) cl1 cl2 = CL.append cl1 cl2
+let (@+) cl1 cl2 = CL.append cl1 cl2
 
 (***********************************************************************)
 (* Add transitions of interest                                         *)
@@ -340,6 +332,11 @@ let is_library (cname: string) : bool =
 let is_not_javalang (cname: string) : bool =
   not (L.exists (U.begins_with cname) ["Ljava/lang";"Ljava/util"])
 
+(* Don't instrument calls to `java.lang.valueOf`. If we try to do
+   that, it messes up our instrumentation: we're using `valueOf` in
+   our instrumentation, and trying to instrument it here messes up
+   register hygiene.
+ *)
 let is_not_valueof (string) : bool =
   not ((U.begins_with string "Ljava/lang")
        && (U.ends_with string "valueOf"))
@@ -432,10 +429,13 @@ class virtual logger (dx: D.dex) =
     Log.i (Pf.sprintf "%s of class: %s" yesno cname)
 
   val mutable mid = D.no_idx
+
   (* to determine supercall in constructors *)
   val mutable mname = ""
+
   (* the type of arguments, if exists *)
   val mutable argv = ([]: D.link list)
+
   (* the type of return value, if exists *)
   val mutable rety = D.no_idx
   val mutable is_void = false
@@ -517,8 +517,8 @@ class virtual logger (dx: D.dex) =
           let ext_insns =
             CL.toList (
                 CL.fromList [ins0; ins1]
-                @@ (if is_void then CL.empty else copy_ret vr vx)
-                @@ CL.single ins2)
+                @+ (if is_void then CL.empty else copy_ret vr vx)
+                @+ CL.single ins2)
           in
           let cursor = M.get_cursor citm instr_link in
           M.insrt_insns_under_off dx citm cursor ext_insns;
@@ -526,7 +526,9 @@ class virtual logger (dx: D.dex) =
         in
         let last_links = M.get_last_links dx citm in
         (* Optimized logging: do *not* log method returns! *)
-        (*L.iter per_exit_instr last_links;*)
+        (match !detail with 
+         | Optimized -> ()
+         | _         -> L.iter per_exit_instr last_links);
 
         (* code snippet for method entries *)
         let vx::vy::vz::[] = vxyz 0 in
@@ -546,13 +548,13 @@ class virtual logger (dx: D.dex) =
             with Not_found ->
               [I.new_arr_op aput_obj [this + r_i; vx; vy]]
           in
-          acc @@ (CL.fromList (ins_c::ins_a)),
+          acc @+ (CL.fromList (ins_c::ins_a)),
           (arr_i + 1, if J.is_wide tname then r_i + 2 else r_i + 1)
         in
         let ent_insns = CL.toList (
             CL.fromList [ins0; ins1]
-            @@ fst (L.fold_left copy_argv (CL.empty, (0, 0)) argv)
-            @@ CL.single ins2
+            @+ fst (L.fold_left copy_argv (CL.empty, (0, 0)) argv)
+            @+ CL.single ins2
           ) in
         let _ = M.insrt_insns_before_start dx citm ent_insns in
         in_out_cnt := !in_out_cnt + (L.length ent_insns);
@@ -561,17 +563,16 @@ class virtual logger (dx: D.dex) =
 
   method v_ins (ins: D.link) : unit =
     let thismname = mname in
-    (*Unparse.print_method dx cur_citm;*)
     if D.is_ins dx ins then
     (
       let op, opr = D.get_ins dx ins in
       match I.access_link op with
-      | I.METHOD_IDS
-        (*when not (L.mem op [I.OP_INVOKE_SUPER; I.OP_INVOKE_SUPER_RANGE])*) ->
+      | I.METHOD_IDS ->
       (
         let mid = D.opr2idx (U.get_last opr) in
         let cid = D.get_cid_from_mid dx mid in
         let mname = D.get_mtd_name dx mid in
+        (* Determine whether or not to instrument a given method *)
         let instrument_instr =
           try
             ignore (D.get_citm dx cid mid);
@@ -590,15 +591,10 @@ class virtual logger (dx: D.dex) =
           let lid = if sid = D.no_idx then cid else sid in
           let lname = D.get_ty_str dx lid in
           let full = D.get_mtd_full_name dx mid in
-          (* Automatically reject javalang clases, since they are
-           *used* in our logging code
-           * XXX, Kris 1/18/17: why does it matter that these not be logged, since
-           we already skip methods from our logging library? I'm
-           commenting this out for now.  *)
           let do_logging = is_not_valueof full in
           let mit = D.get_mit dx mid in
-          let argv_ids = D.get_argv dx mit in
-          (* This can be optimized *)
+          
+          (* This can be optimized. -- How? *)
           if (not do_logging) then
                Log.i (Printf.sprintf "Skipping log of method call %s %x " full (D.of_off ins))
           else
@@ -610,65 +606,69 @@ class virtual logger (dx: D.dex) =
             let str_lname = D.of_idx (D.find_str dx lname)
             and str_mname = D.of_idx (D.find_str dx mname) in
 
-            (* code snippet for API exits *)
-            (* not to alter current cursor, do this part first *)
-            (*let rety = D.get_rety dx mit in
-            let vr =
-              if mname = J.init then I.of_reg (L.hd opr) else
-              let op, opr = M.get_ins dx cur_citm ext_cursor in
-              match op, opr with
-              | I.OP_MOVE_RESULT,        I.OPR_REGISTER r :: []
-              | I.OP_MOVE_RESULT_WIDE,   I.OPR_REGISTER r :: []
-              | I.OP_MOVE_RESULT_OBJECT, I.OPR_REGISTER r :: [] -> r
-              | _, _ -> D.no_index
-            in
-            let ret_moved = vr <> D.no_index in
-            let ins0 = I.new_const vz (if ret_moved then 1 else 0)
-            and ins1 = I.new_arr vz vz (D.of_idx objs)
-            and ins2 = I.new_const_id cnst_str vx str_lname
-            and ins3 = I.new_const_id cnst_str vy str_mname
-            and ins4 = I.new_invoke stt_rnge [vx; vz; D.of_idx a_ext_mid]
-            and copy_ret vr vx =
-              let ins_c = I.new_const vy 0
-              and ins_a =
-                try
-                  let ins_a1 = auto_boxing vr rety
-                  and ins_a2 = I.new_move_result mv_r_obj vx
-                  and ins_a3 = I.new_arr_op aput_obj [vx; vz; vy] in
-                  [ins_a1; ins_a2; ins_a3]
-                with Not_found ->
-                  [I.new_arr_op aput_obj [vr; vz; vy]]
+            (* code snippet for API exits. To avoid altering current
+               cursor, do this part first *)
+            let instrument_exit () = 
+              let rety = D.get_rety dx mit in
+              let vr =
+                if mname = J.init then I.of_reg (L.hd opr) else
+                  let op, opr = M.get_ins dx cur_citm ext_cursor in
+                  match op, opr with
+                  | I.OP_MOVE_RESULT,        I.OPR_REGISTER r :: []
+                  | I.OP_MOVE_RESULT_WIDE,   I.OPR_REGISTER r :: []
+                  | I.OP_MOVE_RESULT_OBJECT, I.OPR_REGISTER r :: [] -> r
+                  | _, _ -> D.no_index
               in
-              CL.fromList (ins_c::ins_a)
-            in
-            let ext_insns = CL.toList (
-              CL.fromList [ins0; ins1]
-              @@ (if ret_moved then copy_ret vr vx else CL.empty)
-              @@ CL.fromList [ins2; ins3; ins4]
-            ) in
-            (* not to alter the control-flow, use ..._over_off *)
-            let _ =
-              if mname <> J.init && ret_moved then(
-                Pf.printf "Before instrumenting call to %s\n" mname;
-                let l = M.insrt_insns_over_off dx cur_citm ext_cursor ext_insns in
-                Pf.printf "After...\n";
-                ())
-              else (
-                let new_cur = M.insrt_insns dx cur_citm ext_cursor ext_insns - 1 in
-                let inserted_idx = DA.get cur_citm.D.insns new_cur in
-                let cleanup_pesky_try (try_itm:D.try_item) =
-                  (
-                    Pf.printf "found a try that ends at %x and we're at %x\n" (D.of_off try_itm.end_addr) (D.of_off ins);
-                    if try_itm.D.end_addr = ins then
-                      (Pf.printf "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n" (D.of_off ins) (D.of_off inserted_idx);
-                       { try_itm with D.end_addr = inserted_idx })
-                    else
-                      try_itm)
+              let ret_moved = vr <> D.no_index in
+              let ins0 = I.new_const vz (if ret_moved then 1 else 0)
+              and ins1 = I.new_arr vz vz (D.of_idx objs)
+              and ins2 = I.new_const_id cnst_str vx str_lname
+              and ins3 = I.new_const_id cnst_str vy str_mname
+              and ins4 = I.new_invoke stt_rnge [vx; vz; D.of_idx a_ext_mid]
+              and copy_ret vr vx =
+                let ins_c = I.new_const vy 0
+                and ins_a =
+                  try
+                    let ins_a1 = auto_boxing vr rety
+                    and ins_a2 = I.new_move_result mv_r_obj vx
+                    and ins_a3 = I.new_arr_op aput_obj [vx; vz; vy] in
+                    [ins_a1; ins_a2; ins_a3]
+                  with Not_found ->
+                    [I.new_arr_op aput_obj [vr; vz; vy]]
                 in
-                cur_citm.D.tries <- L.map cleanup_pesky_try (cur_citm.D.tries));
-              (*Unparse.print_method dx cur_citm;*)
+                CL.fromList (ins_c::ins_a)
+              in
+              let ext_insns = CL.toList (
+                                  CL.fromList [ins0; ins1]
+                                  @+ (if ret_moved then copy_ret vr vx else CL.empty)
+                                  @+ CL.fromList [ins2; ins3; ins4]
+                                ) in
+              (* not to alter the control-flow, use ..._over_off *)
+              let _ =
+                if mname <> J.init && ret_moved then(
+                  Pf.printf "Before instrumenting call to %s\n" mname;
+                  let l = M.insrt_insns_over_off dx cur_citm ext_cursor ext_insns in
+                  Pf.printf "After...\n";
+                  ())
+                else (
+                  let new_cur = M.insrt_insns dx cur_citm ext_cursor ext_insns - 1 in
+                  let inserted_idx = DA.get cur_citm.D.insns new_cur in
+                  let cleanup_pesky_try (try_itm:D.try_item) =
+                    (
+                      Pf.printf "found a try that ends at %x and we're at %x\n" (D.of_off try_itm.end_addr) (D.of_off ins);
+                      if try_itm.D.end_addr = ins then
+                        (Pf.printf "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n" (D.of_off ins) (D.of_off inserted_idx);
+                         { try_itm with D.end_addr = inserted_idx })
+                      else
+                        try_itm)
+                  in
+                  cur_citm.D.tries <- L.map cleanup_pesky_try (cur_citm.D.tries));
+              in
+              api_cnt := !api_cnt + (L.length ext_insns)
             in
-            api_cnt := !api_cnt + (L.length ext_insns);*)
+            (match !detail with 
+             | Optimized -> ()
+             | _         -> instrument_exit ());
 
             (* code snippet for API entries *)
             let argv = D.get_argv dx mit in
@@ -695,7 +695,7 @@ class virtual logger (dx: D.dex) =
                 with Not_found ->
                   [I.new_arr_op aput_obj [r_i; vz; vy]]
               in
-              acc @@ (CL.fromList (ins_c::ins_a)),
+              acc @+ (CL.fromList (ins_c::ins_a)),
               (arr_i + 1, if J.is_wide tname then L.tl tl else tl)
             in
             let params = L.map I.of_reg (I.get_argv (op, opr)) in
@@ -707,8 +707,8 @@ class virtual logger (dx: D.dex) =
             in
             let ent_insns = CL.toList (
               CL.fromList [ins0; ins1]
-              @@ copy_argv_instrs
-              @@ CL.fromList [ins2; ins3; ins4]
+              @+ copy_argv_instrs
+              @+ CL.fromList [ins2; ins3; ins4]
             ) in
             (* not to alter the control-flow, use ..._under_off *)
             if mname <> J.init then
@@ -801,17 +801,17 @@ class fine_logger (dx: D.dex) =
        calling the super method, but then also identify all basic
        blocks and instrument those too. *)
     method v_citm citm =
-      (*Unparse.print_method dx citm;*)
+      Unparse.print_method dx citm;
       super#v_citm citm;
-      (*Unparse.print_method dx citm;*)
+      Unparse.print_method dx citm;
       if log_entry then
         let cfg = (St.time "cfg" (Cf.make_cfg dx) citm) in
         let instrs = Cf.get_bb_entries cfg in
         let cursors = L.map (fun x -> (M.get_cursor citm x), x) instrs in
         let i = ref 0 in
-        (* Instrument basic block entries. Note that unfortunately, this is challenging because of Dalvik's 
-
-*)
+        (* Instrument basic block entries. Note that unfortunately,
+           this is challenging because of Dalvik's strange ways of
+           handling control flow analysis for tries. *)
         let instrument_bbentry (cursor,link) =
           (* The instructions to really add to the method.. *)
           (* The number of instructions we add. Update when inss changes *)
@@ -863,12 +863,15 @@ class fine_logger (dx: D.dex) =
                   [start: addr_n+3, end: addr_end, handler: addr_hnd] 
                 *)
                let n = advance (numinsns * !i) (M.next cursor) in
+               Printf.printf "Before instrumentation..\n";
+               Unparse.print_method dx citm;
                let cur = (M.insrt_insns dx citm n inss) in
                let inserted_idx = DA.get citm.D.insns cur in
                let cleanup_pesky_try (try_itm:D.try_item) =
                  let s = M.get_cursor citm try_itm.start_addr in
                  let e = M.get_cursor citm try_itm.end_addr in
                  if s <= n && n <= e then
+                   (Printf.printf "Cleaning up a try..\n";
                    let fst = 
                      { try_itm with
                        D.start_addr = try_itm.D.start_addr;
@@ -881,7 +884,7 @@ class fine_logger (dx: D.dex) =
                        D.end_addr   = try_itm.D.end_addr;
                      } 
                    in
-                   [fst; snd]
+                   [fst; snd])
                  else
                    [try_itm]
 
@@ -939,11 +942,12 @@ class fine_logger (dx: D.dex) =
                  let s = M.get_cursor citm try_itm.start_addr in
                  let e = M.get_cursor citm try_itm.end_addr in
                  if s <= n && n <= e then
-                   let snd = 
+                   (Printf.printf "cleaning up tries..\n";
+                    let snd = 
                      let fresh_addr2 = DA.get citm.D.insns n_plus_2 in
                      { try_itm with 
                        D.start_addr = fresh_addr2;
-                       D.end_addr   = try_itm.end_addr
+                       D.end_addr   = try_itm.D.end_addr
                      }
                    in
                    if s <= n-1 then
@@ -953,21 +957,15 @@ class fine_logger (dx: D.dex) =
                        D.end_addr   = DA.get citm.D.insns (n-1)
                      }::[snd]
                    else
-                     [snd]
+                     [snd])
                  else
                    [try_itm]
-                     (*(Log.v (Pf.sprintf
-                           "found a try that ends at %x and we're at %x\n"
-                           (D.of_off try_itm.end_addr) (D.of_off link));
-                  if try_itm.D.end_addr = link then
-                    (Pf.printf "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n" (D.of_off link) (D.of_off inserted_idx);
-                     { try_itm with D.end_addr = inserted_idx })
-                  else
-                    try_itm) *)
                in
                citm.D.tries <- L.flatten (L.map cleanup_pesky_try (citm.D.tries));
                i := !i + 1
           end;
+          Printf.printf "After this isntruction tries..\n";
+          Unparse.print_method dx citm;
         in
         L.iter instrument_bbentry cursors;
         M.update_reg_usage dx citm;
@@ -1064,9 +1062,10 @@ class log_transition_entries (dx: D.dex) =
 let modify (dx: D.dex) : unit =
   (* add non-overriden transition methods *)
   let logging = match !detail with
-    | Default -> new log_transition_entries dx
-    | Fine    -> new fine_logger dx
-    | Regex _ -> failwith "regex flag for logger not implement quite yet"
+    | Default   -> new log_transition_entries dx
+    | Fine      -> new fine_logger dx
+    | Optimized -> new fine_logger dx
+    | Regex   _ -> failwith "regex flag for logger not implement quite yet"
   in
   (*St.time "transition" add_transition dx;*)
   (* log API uses and entry/exit of all methods, except for Logger itself *)

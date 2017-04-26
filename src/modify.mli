@@ -36,7 +36,35 @@
 (* Modify                                                              *)
 (***********************************************************************)
 
-(** This module provides utility functions for modifying DEX binary. *)
+(** Provides utility functions for modifying Dalvik binaries and
+    bytecode. It includes functions that insert and change types,
+    strings, methods, etc... It also provides functions that allow
+    bytecode manipulation.
+
+    This module also provides utilities for building
+    semantics-preserving instrumentation of method bytecode. For
+    example, {shift_reg_usage} shifts all registers in a method by a
+    certain offset. This allows inserting instructions that use
+    "fresh" registers, disjoint from those the method uses.
+    
+    Rewriting bytecode in a semantics-preserving way is tricky. For
+    example, Dalvik includes instructions that can only address a
+    subset of registers (e.g., 0-15), and provides variants of those
+    instructions (e.g., move/from16) that access larger sets of
+    registers (at the expense of a less compact binary
+    representation). Because of this, this module also contains
+    various cleanup utilities that assist in writing
+    semantics-preserving instrumentation, e.g., {expand_opr}. This
+    makes it possible to instrument the bytecode without having to
+    worry about these auxiliary problems, and later do a cleanup
+    pass. However, it is up to the programmer to call these functions
+    in the right way.
+    
+    If you also plan to work with and manipulate bytecode, it is also
+    worth reading the notes on instruction sequence representation and
+    cursors below.
+
+ *)
 
 (** {2 Utilities} *)
 
@@ -49,97 +77,180 @@ val seed_addr : int -> unit
 val new_str : Dex.dex -> string -> Dex.link
 
 (** replace old [string] with new one;
- [true] if replaced, [false] if newly added *)
-val replace_str : Dex.dex -> string -> string -> bool
+    returns [true] if replaced, [false] if newly added *)
+val replace_str : Dex.dex -> oldstr:string -> newstr:string -> bool
 
 (** report [string] replacement counts *)
 val report_str_repl_cnt : unit -> unit
 
-(** add a new type *)
-val new_ty : Dex.dex -> string -> Dex.link
+(** add a new type, return its {!Dex.link} within the type pool  *)
+val new_ty : Dex.dex -> tyname:string -> Dex.link
 
 (** add a new class definition;
  pass superclass name, its name, and {!Dex.access_flag}s *)
-val new_class : Dex.dex -> ?super:string -> string
+val new_class : Dex.dex -> ?super:string -> cname:string
  -> Dex.access_flag list -> Dex.link
 
-(** rip off the [final] qualifier on {!Dex.class_def_item} *)
-val make_class_overridable : Dex.dex -> Dex.link -> unit
+(** Remove the [final] qualifier on {!Dex.class_def_item} *)
+val make_class_overridable : Dex.dex -> cid:Dex.link -> unit
 
-(** add an interface to a class. *)
-val add_interface : Dex.dex -> Dex.link -> string -> unit
+(** Add an interface to a class. *)
+val add_interface : Dex.dex -> cid:Dex.link -> interface:string -> unit
 
-(** add a new field definition;
- pass class id, its name, {!Dex.access_flag}s, and type *)
-val new_field : Dex.dex -> Dex.link -> string
- -> Dex.access_flag list -> string -> Dex.link
+(** Add new field definition with name [typ] and its access flags ({!Dex.access_flag}s)*)
+val new_field : Dex.dex -> cid:Dex.link -> fname:string
+ -> Dex.access_flag list -> ty:string -> Dex.link
 
 (** add a new method signature;
  pass class id, its name, return type, and arguments *)
-val new_sig : Dex.dex -> Dex.link -> string
- -> string -> string list -> Dex.link
+val new_sig : Dex.dex -> cid:Dex.link -> mname:string
+ -> rety:string -> argv:string list -> Dex.link
 
 (** add a new method definition, along with empty body;
  pass class id, its name, {!Dex.access_flag}s, return type, and arguments *)
-val new_method : Dex.dex -> Dex.link -> string
- -> Dex.access_flag list -> string -> string list -> Dex.link
+val new_method : Dex.dex -> cid:Dex.link -> mname:string
+ -> Dex.access_flag list -> rety:string -> argv:string list -> Dex.link
 
-(** rip off the [final] qualifer on {!Dex.encoded_method} 
+(** Remove [final] qualifer on method specified by the link [mtd]
 
     @raises {Dex.Wrong_dex} if the method cannot be found (e.g.,
  because it is part of a framework class).
-
 *)
-val make_method_overridable : Dex.dex -> Dex.link -> Dex.link -> unit
+val make_method_overridable : Dex.dex -> cid:Dex.link -> mid:Dex.link -> unit
 
-(** instruction inserting point *)
+(** {2 Cursors and instruction insertion} 
+    
+    Cursors are indices into a method's code. Within Redexer, code
+    items are implemented as arrays of links into the data pool. For
+    example: 
+
+{v
+    0     | 0xADDR0      where 0xADDR0 in data pool is const v0, 0
+    1     | 0xADDR1            0xADDR1              is ins2
+    2     | ...  
+    ...
+    n     | 0xADDRn            0xADDRn is the last instruction
+v}
+
+    One natural question is why Redexer does not simply keep method
+    code as an array of instructions, but instead redirects them
+    through the data pool. The reasons are both for efficiency and
+    assisting in performing instrumentation that does not alter
+    control flow. For example, if we were to represent code items as
+    arrays of instructions rather than offsets, consider how we would
+    insert code into the middle of a method. We would first add the
+    method code in at a given location. But then all of the control
+    flow components (if-else, goto, exception tables) would now be
+    pointing to the wrong location. If we were to do this, it would
+    require a much heavier instrumentation each time an instruction
+    was inserted or removed from a code item.
+
+    Redexer provides a cursor API, which allows inserting instructions
+    into the middle of methods in a control-flow-preserving way. A
+    cursor is an index into a code item, and various functions
+    operating on cursors cleanly insert code into the middle of a
+    method.
+
+    Keep in mind that--while operating on cursors--the instructions
+    corresponding to cursors will change as instructions are added and
+    removed from a code item. To assist in this, instructions that
+    modify cursors return the cursors after (e.g.,) inserting
+    instructions. This allows chaining these operations together by,
+    e.g., folding.
+ *)
+
+(** A cursor is an index into a code item. *)
 type cursor = int
 
-(** previous instruction *)
+(** Get the previous cursor *)
 val prev : cursor -> cursor
 
-(** next instruction *)
+(** Get the next cursor *)
 val next : cursor -> cursor
 
-(** get the {!cursor} of the given instruction *)
+(** Lookup the {!cursor} of a given instruction. 
+    Note that this takes O(n) time. *)
 val get_cursor : Dex.code_item -> Dex.link -> cursor
 
-(** get the first {!cursor} *)
+(** Get the first {!cursor} *)
 val get_fst_cursor : unit -> cursor
 
-(** get the last instruction {!link}s. Possibly multiple links
-because a method can include both returns and throws. *)
+(** Get the last instruction {!link}s. Note that this returns multiple
+    possibly last links because a method can have multiple exit points
+    (e.g., a return and also a throw). This function invokes control
+    flow analysis, and will not be necessarily quick (especially for
+    large methods). *)
 val get_last_links : Dex.dex -> Dex.code_item -> Dex.link list
 
-(** get the last {!cursor}s. Possibly multiple cursors because a
-method can include both returns and throws. *)
+(** Get the last {!cursor}s. Similar to [get_last_links] but returns
+    {!cursor}s instead.  *)
 val get_last_cursors : Dex.dex -> Dex.code_item -> cursor list
 
-(** get the {!Instr.instr} at {!cursor} point *)
+(** Get the {!Instr.instr} at {!cursor} point. O(1) time. *)
 val get_ins : Dex.dex -> Dex.code_item -> cursor -> Instr.instr
 
-(** get the first {!Instr.instr} *)
+(** Get the first {!Instr.instr}. O(1) time *)
 val get_fst_ins : Dex.dex -> Dex.code_item -> Instr.instr
 
-(** get the last {!Instr.instr}s, raise {!Dex.No_return} if no return
+(** Get the last {!Instr.instr}s, raise {!Dex.No_return} if no return
     for method *)
 val get_last_inss : Dex.dex -> Dex.code_item -> Instr.instr list
 
-(** insert an {!Instr.instr} at {!cursor} point; {!cursor} will be advanced *)
+(** Insert an {!Instr.instr} at {!cursor} point; Return the next
+    cursor within the code item *)
 val insrt_ins : Dex.dex -> Dex.code_item -> cursor -> Instr.instr -> cursor
 
-(** remove an {!Instr.instr} at {!cursor} point; {!cursor} will remain as same *)
+(** Remove an {!Instr.instr} at {!cursor} point; Return the same {!cursor} *)
 val rm_ins : Dex.dex -> Dex.code_item -> cursor -> cursor
 
-(** insert {!Instr.instr}s at {!cursor} point; {!cursor} will be advanced *)
+(** insert {!Instr.instr}s at {!cursor} point; Return {!cursor} after
+    inserting each of the instructions 
+
+    Be careful when using this instruction, since it will not
+    necessarily alter control flow correctly. Specifically, be mindful
+    of the fact that inserting instructions at a point will not
+    correctly fix up the boundaries of `try` blocks within the code
+    block.
+
+ *)
+
 val insrt_insns : Dex.dex -> Dex.code_item -> cursor -> Instr.instr list -> cursor
 
-(** insert {!Instr.instr}s under the specified {!Dex.offset},
- while preserving that {!Dex.offset} at {!cursor} point *)
+(** insert {!Instr.instr}s under the specified {!Dex.offset}, while
+    preserving that {!Dex.offset} at {!cursor} point:
+
+{v
+                 +---------+                      +---------+
+   cur | link -> |  instr  |   ==>  cur | link -> |  added  |
+                 +---------+                      | snippet |
+                                                  +---------+
+                                                  |  instr  |
+                                                  +---------+
+v}
+
+    This helps in writing semantics-preserving transformation because
+    it keeps control-flow from being altered. For example, if [link]
+    is the target of a goto instruction, the added snippet will be
+    included correctly.
+
+    Note: if this instruction was within a try previously, this
+    function extends the try 
+ *)
 val insrt_insns_under_off : Dex.dex -> Dex.code_item -> cursor -> Instr.instr list -> cursor
 
-(** insert {!Instr.instr}s over the specified {!Dex.offset},
- while preserving that {!Dex.offset} at {!cursor} point *)
+(** insert {!Instr.instr}s over the specified {!Dex.offset}, while
+    preserving that {!Dex.offset} at {!cursor} point.
+
+{v
+                                                  +---------+
+                                                  |  instr  |
+                                                  +---------+
+             +---------+                          |  added  |
+ n | link -> |  instr  |       ==>    n | link -> | snippet |
+             +---------+                          +---------+
+v}
+
+ *)
 val insrt_insns_over_off : Dex.dex -> Dex.code_item -> cursor -> Instr.instr list -> cursor
 
 (** insert {!Instr.instr}s before the start of {!Dex.code_item} *)
