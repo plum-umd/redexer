@@ -42,10 +42,7 @@ HOME = File.join(HERE, "..")
 RES = File.join(HOME, "results")
 $tmp_dir = "tmp_dir_" + rand(36**8).to_s(36) # random string with size 8
 
-puts("Test:" + HERE)
-puts("#{File.join(HERE, "apk")}")
-#require "#{File.join(HERE, "apk")}"
-require "/Users/dvotipka/Documents/Projects/UMD/AndroidStudies/redexer/scripts/apk"
+require_relative "apk"
 
 cmds = [
   "unparse", "htmlunparse", "jsonunparse", "id", "combine",

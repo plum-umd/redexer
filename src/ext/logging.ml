@@ -662,7 +662,8 @@ class virtual logger (dx: D.dex) =
                       else
                         try_itm)
                   in
-                  cur_citm.D.tries <- L.map cleanup_pesky_try (cur_citm.D.tries));
+                  cur_citm.D.tries <- L.map cleanup_pesky_try (cur_citm.D.tries);
+                  cur_citm.D.tries_size <- L.length cur_citm.D.tries);
               in
               api_cnt := !api_cnt + (L.length ext_insns)
             in
@@ -730,7 +731,8 @@ class virtual logger (dx: D.dex) =
                    else
                      try_itm)
                in
-               cur_citm.D.tries <- L.map cleanup_pesky_try (cur_citm.D.tries));
+               cur_citm.D.tries <- L.map cleanup_pesky_try (cur_citm.D.tries);
+               cur_citm.D.tries_size <- L.length cur_citm.D.tries);
             api_cnt := !api_cnt + (L.length ent_insns);
             M.update_reg_usage dx cur_citm
           )

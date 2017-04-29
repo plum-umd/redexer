@@ -59,13 +59,15 @@ module B = Buffer
 (* Reaching Definition Analysis                                        *)
 (***********************************************************************)
 
-let get_cursor citm off =
-  DA.index_of (fun e -> e = off) citm.D.insns
-
-let compare_off citm off1 off2 = compare (get_cursor citm off1) (get_cursor citm off2)
-
 (* bot_off = D.no_off *)
 let top_off = D.to_off (I32.to_int I32.max_int)
+
+let get_cursor citm off =
+  if off = D.no_off then -1 
+  else if off = top_off then max_int 
+  else DA.index_of (fun e -> e = off) citm.D.insns
+
+let compare_off citm off1 off2 = compare (get_cursor citm off1) (get_cursor citm off2)
 
 let meet_off citm off1 off2 =
   if compare_off citm off1 off2 < 0 then off1 else off2
