@@ -51,6 +51,7 @@ module I32 = Int32
 
 module L = List
 
+module DA = DynArray
 module Pf = Printf
 module B = Buffer
 
@@ -58,14 +59,16 @@ module B = Buffer
 (* Reaching Definition Analysis                                        *)
 (***********************************************************************)
 
-let compare_off off1 off2 = match off1, off2 with
-  | D.Off o1, D.Off o2 -> I32.compare o1 o2
+let get_cursor citm off =
+  DA.index_of (fun e -> e = off) citm.D.insns
+
+let compare_off citm off1 off2 = compare (get_cursor citm off1) (get_cursor citm off2)
 
 (* bot_off = D.no_off *)
 let top_off = D.to_off (I32.to_int I32.max_int)
 
-let meet_off off1 off2 =
-  if compare_off off1 off2 < 0 then off1 else off2
+let meet_off citm off1 off2 =
+  if compare_off citm off1 off2 < 0 then off1 else off2
 
 let all (n: int) v : D.link IM.t =
   L.fold_left (fun acc i -> IM.add i v acc) IM.empty (U.range 0 (n - 1) [])
@@ -101,9 +104,9 @@ let make_dfa (dx: D.dex) (citm: D.code_item) : reaching =
     let bot = all citm.D.registers_size D.no_off
     let top = all citm.D.registers_size top_off
 
-    let meet l1 l2 =
+    let meet (l1:l) (l2:l) =
       let wrapper _ vo1 vo2 = match vo1, vo2 with
-        | Some v1, Some v2 -> Some (meet_off v1 v2)
+        | Some v1, Some v2 -> Some (meet_off citm v1 v2)
         | Some _, None -> vo1
         | None, Some _ -> vo2
         | _, _ -> None
@@ -111,7 +114,7 @@ let make_dfa (dx: D.dex) (citm: D.code_item) : reaching =
       IM.merge wrapper l1 l2
 
     let compare l1 l2 =
-      IM.compare compare_off l1 l2
+      IM.compare (compare_off citm) l1 l2
 
     let to_s l =
       let buf = B.create (IM.cardinal l) in
