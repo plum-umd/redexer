@@ -803,9 +803,7 @@ class fine_logger (dx: D.dex) =
        calling the super method, but then also identify all basic
        blocks and instrument those too. *)
     method v_citm citm =
-      Unparse.print_method dx citm;
       super#v_citm citm;
-      Unparse.print_method dx citm;
       if log_entry then
         let cfg = (St.time "cfg" (Cf.make_cfg dx) citm) in
         let instrs = Cf.get_bb_entries cfg in
@@ -866,7 +864,6 @@ class fine_logger (dx: D.dex) =
                 *)
                let n = advance (numinsns * !i) (M.next cursor) in
                Printf.printf "Before instrumentation..\n";
-               Unparse.print_method dx citm;
                let cur = (M.insrt_insns dx citm n inss) in
                let inserted_idx = DA.get citm.D.insns cur in
                let cleanup_pesky_try (try_itm:D.try_item) =
@@ -969,7 +966,6 @@ class fine_logger (dx: D.dex) =
                i := !i + 1
           end;
           Printf.printf "After this isntruction tries..\n";
-          Unparse.print_method dx citm;
         in
         L.iter instrument_bbentry cursors;
         M.update_reg_usage dx citm;
