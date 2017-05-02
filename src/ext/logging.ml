@@ -900,6 +900,7 @@ class fine_logger (dx: D.dex) =
                       { try_itm with D.end_addr = inserted_idx })*)
                in
                citm.D.tries <- L.flatten (L.map cleanup_pesky_try (citm.D.tries));
+               citm.D.tries_size <- L.length citm.D.tries;
                i := !i + 1
             | _ ->
 
@@ -964,6 +965,7 @@ class fine_logger (dx: D.dex) =
                    [try_itm]
                in
                citm.D.tries <- L.flatten (L.map cleanup_pesky_try (citm.D.tries));
+               citm.D.tries_size <- L.length citm.D.tries;
                i := !i + 1
           end;
           Printf.printf "After this isntruction tries..\n";
