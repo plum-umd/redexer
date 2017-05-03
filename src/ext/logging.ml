@@ -988,7 +988,7 @@ class fine_logger (dx: D.dex) =
 
     method skip_class c = false
     method log_entry emtd mname =
-      not (L.exists (fun x -> U.ends_with mname x) [J.init; J.clinit; J.hashCode])
+      true (*not (L.exists (fun x -> U.ends_with mname x) [J.init; J.clinit; J.hashCode])*)
 
     method log_call _ = true
   end
