@@ -44,7 +44,8 @@ public class BogusActivity extends Activity {
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     TextView tv = new TextView(this);
-    Logger.logAPIEntry(TextView.class.getName(), "setText", "Hello, Loggig");
+    Object[] o = {"","","","","Hello, Logging"};
+    Logger.logAPIEntry(TextView.class.getName(), "setText", o);
     tv.setText("Hello, Logging");
     setContentView(tv);
     Logger.logAPIExit(this.getClass().getSuperclass().getName(), "setContentView");
@@ -57,7 +58,7 @@ public class BogusActivity extends Activity {
     long l = 2L;
     float f = 3.14f;
     double d = 4.0;
-    Logger.logMethodEntry("XXX", "XXX", this, b, c, bt, s, i, l, f, d);
+    Logger.logMethodEntry("XXX", "XXX", o);
 
     Intent intent = new Intent(this, DisplayActivity.class);
     String message = "Hello, another Activity";

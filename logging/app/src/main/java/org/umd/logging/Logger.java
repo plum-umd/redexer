@@ -60,6 +60,9 @@ import android.content.ComponentName;
 import android.os.Bundle;
 import java.util.Iterator;
 import java.lang.reflect.Array;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.lang.System;
+import android.util.Log;
 
 public class Logger {
   private int MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 0;
@@ -69,7 +72,7 @@ public class Logger {
                                     Boolean.class, Character.class, Byte.class, Short.class, Integer.class,
                                     Long.class, Float.class, Double.class, Void.class));
   static BufferedWriter out = null;
-  static ArrayList<String> pipe = null;
+  static ConcurrentLinkedQueue<Object[]> pipe = null;
   static Thread thread = null;
   static boolean isWrapperType(Class clazz) {
     return WRAPPER_TYPES.contains(clazz);
@@ -82,196 +85,197 @@ public class Logger {
 //                MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
 //        }
          if(pipe == null){
-                pipe = new ArrayList<String>();
+                //pipe = new ArrayList<String>();
          }
          if(thread == null){
-                thread = new Thread(new FileWriterHandler(pipe));
-                thread.start();
+                //thread = new Thread(new FileWriterHandler(pipe));
+                //thread.start();
          }
          
          //Date date = new Date();
          //out.write("Logged at" + String.valueOf(date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds() + "\n"));
-         pipe.add(msg);
+         //pipe.add(msg);
         //}
   }
 
-  static String getExtraString(Bundle bundle){
-      String bundleStr = "";
-      for (String key : bundle.keySet()) {
-          Object value = bundle.get(key);
-          String value_str = "None";
-          if(value != null){
-              value_str = value.toString().replace("\n"," ").replace(",","");
-          }
-          bundleStr += String.format("<%s=%s>", key, value_str);
-      }
-      if(bundleStr.equals("")){
-          bundleStr = "<extras=NONE>";
-      }
-      return bundleStr;
+  public static void logPut(Object[] params) {
+    if(pipe == null){
+      pipe = new ConcurrentLinkedQueue<Object[]>();
+    }
+    if(thread == null){
+      thread = new Thread(new FileWriterHandler(pipe));
+      thread.start();
+    }
+    params[2] = Thread.currentThread().getId();
+    pipe.add(params);
   }
   
-  static String join(Iterable<Object> args, String delimiter, String mname) {
-    StringBuilder buf = new StringBuilder();
-    Iterator<Object> iter = args.iterator();
-    int argCount = 0;
-    while (iter.hasNext()) {
-      Object arg = iter.next();
-      String s_arg = "";
-      if (arg == null) {
-        s_arg = "null";
-      } else if (isWrapperType(arg.getClass())) {
-        s_arg = System.identityHashCode(arg) + "&" + arg.toString();
-      //Check if first argument is a string
-      } else if (arg.getClass() == String.class) {
-        s_arg = "\"" + ((String)arg).replace("\n","\\n") + "\"";
-      //Check if it a class object
-      } else if (arg.getClass() == Class.class) {
-        s_arg = ((Class)arg).getName();
-      //Check if first argument is an activity
-      }else if(argCount == 0 && arg instanceof Activity){
-        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<activity=true>";
-        if(mname.equals("onBackPressed")){
-//          String file = takeScreenshot(null, "back button");
-//          s_arg += "<file=" + file + ">";
-        }else if(mname.equals("onResume")){
-          current_activity = (Activity)arg;
-        }
-      //Check if first argument is a fragment
-      }else if(argCount == 0 && FragmentMapper.getInstance().isFragment(arg.getClass())){
-        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<fragment=true>";
-      //Check if first argument is an asynctask object
-      }else if(argCount == 0 && arg instanceof AsyncTask){
-        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<atask=true>";
-      //Try to annotate all of the arguments
-      }else{
-        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
-        if(arg instanceof View){
-          if(argCount == 0 || argCount == 1){
-            try{
-//              String file = takeScreenshot(null,"");
-//              s_arg += "<file=" + file + ">";
-              int[] location = new int[2];
-              ((View)arg).getLocationOnScreen(location);
-              s_arg += "<x=" + String.valueOf(location[0]) + ">";
-              s_arg += "<y=" + String.valueOf(location[1]) + ">";
-              s_arg += "<width=" + String.valueOf(((View)arg).getWidth()) + ">";
-              s_arg += "<height=" + String.valueOf(((View)arg).getHeight()) + ">";
-            }catch(Exception e){
-              ;//System.out.println(e.getMessage());
-            }
-          }
-          
-          //TextView and specific subclasses
-          if(arg instanceof TextView){
-            s_arg += "<text=" + ((TextView)arg).getText() + ">";
-            if(arg instanceof RadioButton){
-              s_arg += "<value=" + ((RadioButton)arg).isChecked() + ">";
-            }else if(arg instanceof CheckBox){
-              s_arg += "<value=" + ((CheckBox)arg).isChecked() + ">";
-            }
-          }
-
-          try{
-            s_arg += "<id=" + ((View)arg).getId() + ">"; //This is unique per app
-            s_arg += "<imagename=" + ((View)arg).getResources().getResourceEntryName(((View)arg).getId()) + ">";
-          }catch(Exception e){
-            ;//System.out.println(e.getMessage());
-          }
-        }
-
-        //Extract the URI
-        if(arg instanceof Uri){
-          s_arg += "<URI=" + ((Uri)arg).toString() + ">";
-        }
-
-        //Extract the URL
-        if(arg instanceof URL){
-          s_arg += "<URL=" + ((URL)arg).toString() + ">";
-        }
-
-        if(arg instanceof MenuItem){
-          s_arg += "<id=" + ((MenuItem)arg).getItemId() + ">";
-          s_arg += "<menuname=" + ((MenuItem)arg).getTitleCondensed() + ">";
-//          String fname = saveIcon((MenuItem)arg);
-//          if(fname != ""){
-//            s_arg += "<iconfile=" + fname + ">";
+//  static String join(Iterable<Object> args, String delimiter, String mname) {
+//    StringBuilder buf = new StringBuilder();
+//    Iterator<Object> iter = args.iterator();
+//    int argCount = 0;
+//    while (iter.hasNext()) {
+//      Object arg = iter.next();
+//      String s_arg = "";
+//      if (arg == null) {
+//        s_arg = "null";
+//      } else if (isWrapperType(arg.getClass())) {
+//        s_arg = System.identityHashCode(arg) + "&" + arg.toString();
+//      //Check if first argument is a string
+//      } else if (arg.getClass() == String.class) {
+//        s_arg = "\"" + ((String)arg).replace("\n","\\n") + "\"";
+//      //Check if it a class object
+//      } else if (arg.getClass() == Class.class) {
+//        s_arg = ((Class)arg).getName();
+//      //Check if first argument is an activity
+//      }else if(argCount == 0 && arg instanceof Activity){
+//        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<activity=true>";
+//        if(mname.equals("onBackPressed")){
+////          String file = takeScreenshot(null, "back button");
+////          s_arg += "<file=" + file + ">";
+//        }else if(mname.equals("onResume")){
+//          current_activity = (Activity)arg;
+//        }
+//      //Check if first argument is a fragment
+//      }else if(argCount == 0 && FragmentMapper.getInstance().isFragment(arg.getClass())){
+//        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<fragment=true>";
+//      //Check if first argument is an asynctask object
+//      }else if(argCount == 0 && arg instanceof AsyncTask){
+//        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<atask=true>";
+//      //Try to annotate all of the arguments
+//      }else{
+//        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
+//        if(arg instanceof View){
+//          if(argCount == 0 || argCount == 1){
+//            try{
+////              String file = takeScreenshot(null,"");
+////              s_arg += "<file=" + file + ">";
+//              int[] location = new int[2];
+//              ((View)arg).getLocationOnScreen(location);
+//              s_arg += "<x=" + String.valueOf(location[0]) + ">";
+//              s_arg += "<y=" + String.valueOf(location[1]) + ">";
+//              s_arg += "<width=" + String.valueOf(((View)arg).getWidth()) + ">";
+//              s_arg += "<height=" + String.valueOf(((View)arg).getHeight()) + ">";
+//            }catch(Exception e){
+//              ;//System.out.println(e.getMessage());
+//            }
 //          }
+//          
+//          //TextView and specific subclasses
+//          if(arg instanceof TextView){
+//            s_arg += "<text=" + ((TextView)arg).getText() + ">";
+//            if(arg instanceof RadioButton){
+//              s_arg += "<value=" + ((RadioButton)arg).isChecked() + ">";
+//            }else if(arg instanceof CheckBox){
+//              s_arg += "<value=" + ((CheckBox)arg).isChecked() + ">";
+//            }
+//          }
+//
 //          try{
-////            String file = takeScreenshot(null,"");
-//            s_arg += "<file=" + file + ">";
+//            s_arg += "<id=" + ((View)arg).getId() + ">"; //This is unique per app
+//            s_arg += "<imagename=" + ((View)arg).getResources().getResourceEntryName(((View)arg).getId()) + ">";
 //          }catch(Exception e){
 //            ;//System.out.println(e.getMessage());
 //          }
-        }
-
-        //Take image of Dialog
-//        if(arg instanceof Dialog){
-//          if(argCount == 0 || argCount == 1){
-//            s_arg += processDialog((Dialog)arg);
-//          }
 //        }
-        if(arg instanceof Thread){
-          s_arg += "<thread=" + ((Thread)arg).getId() + ">";
-        }
-        if(arg instanceof File){
-          File sdcard = Environment.getExternalStorageDirectory();
-          String sdcard_path = sdcard.getAbsolutePath();
-          s_arg += "<file_path=" + ((File)arg).getAbsolutePath() + ">";
-        }
-        if (arg.getClass().isArray()) {
-          s_arg += "<array_length=" + Array.getLength(arg) + ">";
-        }
-        if(arg instanceof Intent && ((Intent)arg).getAction()!="android.intent.action.VIEW" && ((Intent)arg).getAction()!="android.intent.action.MAIN"){
-          s_arg += "<action=" + ((Intent)arg).getAction() + ">";
-          s_arg += "<data=" + ((Intent)arg).getDataString() + ">";
-          s_arg += "<package=" + ((Intent)arg).getPackage() + ">";
-          ComponentName comp_name = (ComponentName)((Intent)arg).getComponent();
-          if(comp_name != null)
-              s_arg += "<component=" + ((ComponentName)((Intent)arg).getComponent()).flattenToShortString() +">";
-          else
-              s_arg += "<component=null>";
-          s_arg += "<type=" + ((Intent)arg).getType() + ">";
-          s_arg += "<filter_hashcode=" + ((Intent)arg).filterHashCode() + ">";
-          Bundle bundle = ((Intent)arg).getExtras();
-          if(bundle != null){
-              if(!bundle.keySet().contains("umd_Intent_key")){
-                  ((Intent)arg).putExtra("umd_Intent_key",System.currentTimeMillis());
-                  bundle = ((Intent)arg).getExtras();
-              }
-              s_arg += getExtraString(bundle);
-          }
-          else{
-              ((Intent)arg).putExtra("umd_Intent_key",System.currentTimeMillis());
-              s_arg += getExtraString(((Intent)arg).getExtras());
-          }
-          
-        }
-      }
-
-      buf.append(s_arg);
-      if (!iter.hasNext())
-        break;
-      buf.append(delimiter);
-      argCount++;
-    }
-    return buf.toString();
-  }
+//
+//        //Extract the URI
+//        if(arg instanceof Uri){
+//          s_arg += "<URI=" + ((Uri)arg).toString() + ">";
+//        }
+//
+//        //Extract the URL
+//        if(arg instanceof URL){
+//          s_arg += "<URL=" + ((URL)arg).toString() + ">";
+//        }
+//
+//        if(arg instanceof MenuItem){
+//          s_arg += "<id=" + ((MenuItem)arg).getItemId() + ">";
+//          s_arg += "<menuname=" + ((MenuItem)arg).getTitleCondensed() + ">";
+////          String fname = saveIcon((MenuItem)arg);
+////          if(fname != ""){
+////            s_arg += "<iconfile=" + fname + ">";
+////          }
+////          try{
+//////            String file = takeScreenshot(null,"");
+////            s_arg += "<file=" + file + ">";
+////          }catch(Exception e){
+////            ;//System.out.println(e.getMessage());
+////          }
+//        }
+//
+//        //Take image of Dialog
+////        if(arg instanceof Dialog){
+////          if(argCount == 0 || argCount == 1){
+////            s_arg += processDialog((Dialog)arg);
+////          }
+////        }
+//        if(arg instanceof Thread){
+//          s_arg += "<thread=" + ((Thread)arg).getId() + ">";
+//        }
+//        if(arg instanceof File){
+//          File sdcard = Environment.getExternalStorageDirectory();
+//          String sdcard_path = sdcard.getAbsolutePath();
+//          s_arg += "<file_path=" + ((File)arg).getAbsolutePath() + ">";
+//        }
+//        if (arg.getClass().isArray()) {
+//          s_arg += "<array_length=" + Array.getLength(arg) + ">";
+//        }
+//        if(arg instanceof Intent && ((Intent)arg).getAction()!="android.intent.action.VIEW" && ((Intent)arg).getAction()!="android.intent.action.MAIN"){
+//          s_arg += "<action=" + ((Intent)arg).getAction() + ">";
+//          s_arg += "<data=" + ((Intent)arg).getDataString() + ">";
+//          s_arg += "<package=" + ((Intent)arg).getPackage() + ">";
+//          ComponentName comp_name = (ComponentName)((Intent)arg).getComponent();
+//          if(comp_name != null)
+//              s_arg += "<component=" + ((ComponentName)((Intent)arg).getComponent()).flattenToShortString() +">";
+//          else
+//              s_arg += "<component=null>";
+//          s_arg += "<type=" + ((Intent)arg).getType() + ">";
+//          s_arg += "<filter_hashcode=" + ((Intent)arg).filterHashCode() + ">";
+//          Bundle bundle = ((Intent)arg).getExtras();
+//          if(bundle != null){
+//              if(!bundle.keySet().contains("umd_Intent_key")){
+//                  ((Intent)arg).putExtra("umd_Intent_key",System.currentTimeMillis());
+//                  bundle = ((Intent)arg).getExtras();
+//              }
+//              s_arg += getExtraString(bundle);
+//          }
+//          else{
+//              ((Intent)arg).putExtra("umd_Intent_key",System.currentTimeMillis());
+//              s_arg += getExtraString(((Intent)arg).getExtras());
+//          }
+//          
+//        }
+//      }
+//
+//      buf.append(s_arg);
+//      if (!iter.hasNext())
+//        break;
+//      buf.append(delimiter);
+//      argCount++;
+//    }
+//    return buf.toString();
+//  }
+//  
+//  static String ofJavaTy(String cname) {
+//    String sanitized = cname;
+//    if (cname.startsWith("L") && cname.endsWith(";")) {
+//      sanitized = cname.substring(1, cname.length() - 1).replace('/','.');
+//    }
+//    return sanitized;
+//  }
   
-  static String ofJavaTy(String cname) {
-    String sanitized = cname;
-    if (cname.startsWith("L") && cname.endsWith(";")) {
-      sanitized = cname.substring(1, cname.length() - 1).replace('/','.');
-    }
-    return sanitized;
-  }
-  
-  static void log(String io, String cname, String mname, Object... args) {
-    String s_args = join(Arrays.asList(args), ", ", mname);
+  static void log(String io, String additional, String cname, String mname, Object... args) {
+//    String s_args = join(Arrays.asList(args), ", ", mname);
     long threadId = Thread.currentThread().getId();
-    String msg = io + " " + threadId + " " + ofJavaTy(cname) + "." + mname + "(" + s_args + ")";
+//    String msg = io + " " + threadId + " " + ofJavaTy(cname) + "." + mname + "(" + s_args + ")";
     //Log.i(tag, msg.replaceAll("\n"," "));
-    writeLog(msg.replaceAll("\n"," "));
+//    writeLog(msg.replaceAll("\n"," "));
+    Object[] p_args = {io,additional,threadId,cname,mname};
+    Object[] combinedArray = new Object[p_args.length + args.length];
+    System.arraycopy(p_args, 0, combinedArray, 0, p_args.length);
+    System.arraycopy(args, 0, combinedArray, p_args.length, args.length);
+    logPut(combinedArray);
   }
   
   static void logMethod(String io, Object... args) {
@@ -280,12 +284,23 @@ public class Logger {
     // 1 : org.umd.logging.Logger.logMethod(Entry|Exit)
     String cname = elts[2].getClassName();
     String mname = elts[2].getMethodName();
-    log("Method " + io, cname, mname, args);
+    log("Method ", io, cname, mname, args);
 //    writeLog("Method " + io + " " + "TODO");
   }
 
   public static void logBasicBlockEntry(int arg) {
-    writeLog(String.valueOf(arg));
+    //logPut("b",String.valueOf(arg),"","",empty);
+//    writeLog(String.valueOf(arg));
+    Object[] params = {"b","","","",String.valueOf(arg)};
+    if(pipe == null){
+      pipe = new ConcurrentLinkedQueue<Object[]>();
+    }
+    if(thread == null){
+      thread = new Thread(new FileWriterHandler(pipe));
+      thread.start();
+    }
+    params[1] = Thread.currentThread().getId();
+    pipe.add(params);
   }
 
 //  public static String objToString(Object obj) {
@@ -307,20 +322,47 @@ public class Logger {
 //    return arg;
 //  }
 
-  public static void logMethodEntry(String cname, String mname, Object... args) {
-    logMethod(">", args);
+  public static void logMethodEntry(String cname, String mname, Object[] args) {
+    //logMethod(">", args);
+    args[0] = "m";
+    args[1] = Thread.currentThread().getId();
+    args[2] = cname;
+    args[3] = mname;
+    if(pipe == null){
+      pipe = new ConcurrentLinkedQueue<Object[]>();
+    }
+    if(thread == null){
+      thread = new Thread(new FileWriterHandler(pipe));
+      thread.start();
+    }
+    pipe.add(args);
   }
   
   public static void logMethodExit(Object... args) {
+    Log.i(tag, "logMethodExit");
     logMethod("<", args);
   }
   
-  public static void logAPIEntry(String cname, String mname, Object... args) {
-    writeLog("Api > " + cname + mname);
+  public static void logAPIEntry(String cname, String mname, Object[] args) {
+    //logMethod(">", args);
+    args[0] = "a";
+    args[1] = Thread.currentThread().getId();
+    args[2] = cname;
+    args[3] = mname;
+    if(pipe == null){
+      pipe = new ConcurrentLinkedQueue<Object[]>();
+    }
+    if(thread == null){
+      thread = new Thread(new FileWriterHandler(pipe));
+      thread.start();
+    }
+    pipe.add(args);
   }
   
   public static void logAPIExit(String cname, String mname, Object... args) {
-    writeLog("Api < " + cname + mname);
+//    writeLog("Api < " + cname + mname);
+    Log.i(tag,"logAPIExit");
+    log("Api ", "<", cname, mname, args);
   }
 
 }
