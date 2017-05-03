@@ -473,6 +473,10 @@ class virtual logger (dx: D.dex) =
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
     Log.i (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
+    let mname = D.get_mtd_name dx mid in 
+    let cname = D.get_ty_str dx cid in
+    let str_lname = D.of_idx (D.find_str dx cname) in
+    let str_mname = D.of_idx (D.find_str dx mname) in
     cur_citm <- citm;
     (* to secure at least three registers for logging *)
     (* 3 is minimum, but 5 here to expand invoke-* operands *)
@@ -533,20 +537,23 @@ class virtual logger (dx: D.dex) =
         (* code snippet for method entries *)
         let vx::vy::vz::[] = vxyz 0 in
         let argn = citm.D.ins_size in
-        let ins0 = I.new_const vz argn
-        and ins1 = I.new_arr vx vz (D.of_idx objs)
-        and ins2 = I.new_invoke call_stt [vx; D.of_idx m_ent_mid]
+        let ins0 = I.new_const vz (argn+2)
+        and ins1 = I.new_arr vz vz (D.of_idx objs)
+        and rest = 
+          [I.new_const_id cnst_str vx str_lname;
+           I.new_const_id cnst_str vy str_mname;
+           I.new_invoke stt_rnge [vx; vz; D.of_idx m_ent_mid]]
         and copy_argv (acc, (arr_i, r_i)) ty =
           let tname = D.get_ty_str dx ty in
           let ins_c = I.new_const vy arr_i
           and ins_a =
             try
               let ins_a1 = auto_boxing (this + r_i) ty
-              and ins_a2 = I.new_move_result mv_r_obj vz
-              and ins_a3 = I.new_arr_op aput_obj [vz; vx; vy] in
+              and ins_a2 = I.new_move_result mv_r_obj vx
+              and ins_a3 = I.new_arr_op aput_obj [vx; vz; vy] in
               [ins_a1; ins_a2; ins_a3]
             with Not_found ->
-              [I.new_arr_op aput_obj [this + r_i; vx; vy]]
+              [I.new_arr_op aput_obj [this + r_i; vz; vy]]
           in
           acc @+ (CL.fromList (ins_c::ins_a)),
           (arr_i + 1, if J.is_wide tname then r_i + 2 else r_i + 1)
@@ -554,7 +561,7 @@ class virtual logger (dx: D.dex) =
         let ent_insns = CL.toList (
             CL.fromList [ins0; ins1]
             @+ fst (L.fold_left copy_argv (CL.empty, (0, 0)) argv)
-            @+ CL.single ins2
+            @+ CL.fromList rest
           ) in
         let _ = M.insrt_insns_before_start dx citm ent_insns in
         in_out_cnt := !in_out_cnt + (L.length ent_insns);

@@ -307,7 +307,7 @@ public class Logger {
 //    return arg;
 //  }
 
-  public static void logMethodEntry(Object... args) {
+  public static void logMethodEntry(String cname, String mname, Object... args) {
     logMethod(">", args);
   }
   
