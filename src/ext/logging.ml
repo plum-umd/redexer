@@ -675,7 +675,7 @@ class virtual logger (dx: D.dex) =
               api_cnt := !api_cnt + (L.length ext_insns)
             in
             (match !detail with 
-             | Optimized -> ()
+             | Optimized -> instrument_exit ()
              | _         -> instrument_exit ());
 
             (* code snippet for API entries *)
