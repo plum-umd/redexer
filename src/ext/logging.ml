@@ -378,6 +378,7 @@ class virtual logger (dx: D.dex) =
   and ty_void = D.find_ty_str dx (J.to_type_descr J.v) in
   let c_map = SM.map (fun cname -> M.new_ty dx cname) descr_to_class
   and get_v_of descr cid =
+    Printf.printf "Trying to find %s L%s\n" (D.get_ty_str dx cid) descr;
     fst (D.get_the_mtd_shorty dx cid JL.v_of ("L"^descr))
   in
   let v_of_map = SM.mapi get_v_of c_map in
@@ -537,7 +538,7 @@ class virtual logger (dx: D.dex) =
         (* code snippet for method entries *)
         let vx::vy::vz::[] = vxyz 0 in
         let argn = citm.D.ins_size in
-        let ins0 = I.new_const vz (argn+2)
+        let ins0 = I.new_const vz (argn+4)
         and ins1 = I.new_arr vz vz (D.of_idx objs)
         and rest = 
           [I.new_const_id cnst_str vx str_lname;
@@ -560,7 +561,7 @@ class virtual logger (dx: D.dex) =
         in
         let ent_insns = CL.toList (
             CL.fromList [ins0; ins1]
-            @+ fst (L.fold_left copy_argv (CL.empty, (0, 0)) argv)
+            @+ fst (L.fold_left copy_argv (CL.empty, (4, 0)) argv)
             @+ CL.fromList rest
           ) in
         let _ = M.insrt_insns_before_start dx citm ent_insns in
@@ -627,13 +628,13 @@ class virtual logger (dx: D.dex) =
                   | _, _ -> D.no_index
               in
               let ret_moved = vr <> D.no_index in
-              let ins0 = I.new_const vz (if ret_moved then 1 else 0)
+              let ins0 = I.new_const vz (if ret_moved then 4 else 5)
               and ins1 = I.new_arr vz vz (D.of_idx objs)
               and ins2 = I.new_const_id cnst_str vx str_lname
               and ins3 = I.new_const_id cnst_str vy str_mname
               and ins4 = I.new_invoke stt_rnge [vx; vz; D.of_idx a_ext_mid]
               and copy_ret vr vx =
-                let ins_c = I.new_const vy 0
+                let ins_c = I.new_const vy 4
                 and ins_a =
                   try
                     let ins_a1 = auto_boxing vr rety
@@ -685,7 +686,7 @@ class virtual logger (dx: D.dex) =
               then argv else lid :: argv
             in
             let argn = L.length argv in
-            let ins0 = I.new_const vz argn
+            let ins0 = I.new_const vz (argn+4)
             and ins1 = I.new_arr vz vz (D.of_idx objs)
             and ins2 = I.new_const_id cnst_str vx str_lname
             and ins3 = I.new_const_id cnst_str vy str_mname
@@ -711,7 +712,7 @@ class virtual logger (dx: D.dex) =
             parameters. *)
             let copy_argv_instrs = match params with
               | [] -> CL.empty
-              | _  -> fst (L.fold_left copy_argv (CL.empty, (0, params)) argv)
+              | _  -> fst (L.fold_left copy_argv (CL.empty, (4, params)) argv)
             in
             let ent_insns = CL.toList (
               CL.fromList [ins0; ins1]
