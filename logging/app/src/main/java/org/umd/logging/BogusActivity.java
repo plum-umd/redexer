@@ -58,8 +58,8 @@ public class BogusActivity extends Activity {
     long l = 2L;
     float f = 3.14f;
     double d = 4.0;
-    Logger.logMethodEntry("XXX", "XXX", o);
-
+    Logger.logMethodEntry("XXX", "XXX", new Object[]{this, b, c, bt, s, i, l, f, d});
+    
     Intent intent = new Intent(this, DisplayActivity.class);
     String message = "Hello, another Activity";
     intent.putExtra(DisplayActivity.EXTRA_MESSAGE, message);
