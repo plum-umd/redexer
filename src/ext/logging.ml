@@ -628,7 +628,7 @@ class virtual logger (dx: D.dex) =
                   | _, _ -> D.no_index
               in
               let ret_moved = vr <> D.no_index in
-              let ins0 = I.new_const vz (if ret_moved then 4 else 5)
+              let ins0 = I.new_const vz (if ret_moved then 5 else 4)
               and ins1 = I.new_arr vz vz (D.of_idx objs)
               and ins2 = I.new_const_id cnst_str vx str_lname
               and ins3 = I.new_const_id cnst_str vy str_mname
