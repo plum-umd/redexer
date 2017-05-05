@@ -455,7 +455,7 @@ class virtual logger (dx: D.dex) =
     in
     let full = D.get_mtd_full_name dx mid in
     (* to skip constructors and synthetic methods (static blocks) *)
-    log_entry <- not has_monitor && (self#log_entry emtd full) &&
+    log_entry <- (*not has_monitor && *) (self#log_entry emtd full) &&
                    (* Ignore methods if we don't have source for them *)
                    (try ignore (D.get_data_item dx emtd.D.code_off); true
                     with _ -> false);
@@ -804,8 +804,8 @@ class fine_logger (dx: D.dex) =
           emtd.D.code_off <> D.no_off &&
             has_monitors dx (snd (D.get_citm dx cid mid))
         in
-        (has_monitor)
-          || (L.mem mname [J.init; J.clinit; J.hashCode]);
+        (*(has_monitor)
+          ||*) (L.mem mname [J.init; J.clinit; J.hashCode]);
 
     (* Visit a code item: first instrument the entry and exit by
        calling the super method, but then also identify all basic
