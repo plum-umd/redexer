@@ -48,7 +48,7 @@ public class BogusActivity extends Activity {
     Logger.logAPIEntry(TextView.class.getName(), "setText", o);
     tv.setText("Hello, Logging");
     setContentView(tv);
-    Logger.logAPIExit(this.getClass().getSuperclass().getName(), "setContentView");
+    Logger.logAPIExit(this.getClass().getSuperclass().getName(), "XXX",new Object[]{"","","","","setContentView"});
 
     boolean b = true;
     char c = 'A';

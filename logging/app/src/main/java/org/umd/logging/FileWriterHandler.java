@@ -89,9 +89,9 @@ public class FileWriterHandler implements Runnable{
                 if (args == null) {
                     continue;
                 }
-                for(int i = 0; i<args.length; i++){
-                    Log.i(tag, i + " = " + args[i]);
-                }
+                //for(int i = 0; i<args.length; i++){
+                //    Log.i(tag, i + " = " + args[i]);
+                //}
                 //Log.i(tag, "here" + args[0]);
                 String io = (String) args[0];
                 long id = (Long)args[1];
@@ -111,9 +111,11 @@ public class FileWriterHandler implements Runnable{
                     else if (io == "m") {
                         out.write("Method > " + id + " " + cname + "." + mname + "(");
                         //out.write("Method " + cname + "." + mname + "(");
-                    } else {
+                    } else if (io == "a") {
                         out.write("API > " + id + " " + cname + "." + mname + "(");
                         //out.write("API " + cname + "." + mname + "(");
+                    } else {
+                        out.write("API < " + id + " " + cname + "." + mname + "(");
                     }
                 
                     // Method entry / API call

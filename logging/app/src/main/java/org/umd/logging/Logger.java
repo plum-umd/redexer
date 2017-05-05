@@ -324,6 +324,7 @@ public class Logger {
 
   public static void logMethodEntry(String cname, String mname, Object[] args) {
     //logMethod(">", args);
+    //Log.i(tag,"Method arg length = " + args.length);
     args[0] = "m";
     args[1] = Thread.currentThread().getId();
     args[2] = cname;
@@ -339,12 +340,13 @@ public class Logger {
   }
   
   public static void logMethodExit(Object... args) {
-    Log.i(tag, "logMethodExit");
+    //Log.i(tag, "logMethodExit");
     logMethod("<", args);
   }
   
   public static void logAPIEntry(String cname, String mname, Object[] args) {
     //logMethod(">", args);
+    //Log.i(tag,"API arg length = " + args.length);
     args[0] = "a";
     args[1] = Thread.currentThread().getId();
     args[2] = cname;
@@ -359,10 +361,22 @@ public class Logger {
     pipe.add(args);
   }
   
-  public static void logAPIExit(String cname, String mname, Object... args) {
+  public static void logAPIExit(String cname, String mname, Object[] args) {
+  // four null values followed by nothing else, or four nulls followed by the return value
 //    writeLog("Api < " + cname + mname);
-    Log.i(tag,"logAPIExit");
-    log("Api ", "<", cname, mname, args);
+    //Log.i(tag,"API Exit arg length = " + args.length);
+    args[0] = "ae";
+    args[1] = Thread.currentThread().getId();
+    args[2] = cname;
+    args[3] = mname;
+    if(pipe == null){
+      pipe = new ConcurrentLinkedQueue<Object[]>();
+    }
+    if(thread == null){
+      thread = new Thread(new FileWriterHandler(pipe));
+      thread.start();
+    }
+    pipe.add(args);
   }
 
 }
