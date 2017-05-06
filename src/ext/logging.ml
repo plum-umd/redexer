@@ -442,6 +442,7 @@ class virtual logger (dx: D.dex) =
   val mutable is_void = false
   val mutable log_entry = false
   val mutable cur_emtd = None
+  val mutable has_monitor = false
 
   (* Visits method entries, attempts to insert logging code. *)
   method v_emtd (emtd: D.encoded_method) : unit =
@@ -449,10 +450,9 @@ class virtual logger (dx: D.dex) =
     mname <- D.get_mtd_name dx mid;
     cur_emtd <- Some emtd;
     (* TODO: what happens if an exception raised in a synchronized block? *)
-    let has_monitor =
+    has_monitor <- 
       emtd.D.code_off <> D.no_off &&
-      has_monitors dx (snd (D.get_citm dx cid mid))
-    in
+        has_monitors dx (snd (D.get_citm dx cid mid));
     let full = D.get_mtd_full_name dx mid in
     (* to skip constructors and synthetic methods (static blocks) *)
     log_entry <- (*not has_monitor && *) (self#log_entry emtd full) &&
@@ -474,6 +474,7 @@ class virtual logger (dx: D.dex) =
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
     Log.i (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
+    (*Unparse.print_method dx citm;*)
     let mname = D.get_mtd_name dx mid in 
     let cname = D.get_ty_str dx cid in
     let str_lname = D.of_idx (D.find_str dx cname) in
@@ -799,11 +800,10 @@ class fine_logger (dx: D.dex) =
       super#v_emtd emtd;
       let cur_mid = emtd.D.method_idx in
       cur_mname <- D.get_mtd_name dx cur_mid;
-      skip_mtd <-
-        let has_monitor =
+      has_monitor <-
           emtd.D.code_off <> D.no_off &&
-            has_monitors dx (snd (D.get_citm dx cid mid))
-        in
+            has_monitors dx (snd (D.get_citm dx cid mid));
+      skip_mtd <-
         (*(has_monitor)
           ||*) (L.mem mname [J.init; J.clinit; J.hashCode]);
 
@@ -904,8 +904,9 @@ class fine_logger (dx: D.dex) =
                                (D.of_off link) (D.of_off inserted_idx));
                       { try_itm with D.end_addr = inserted_idx })*)
                in
-               citm.D.tries <- L.flatten (L.map cleanup_pesky_try (citm.D.tries));
-               citm.D.tries_size <- L.length citm.D.tries;
+               (*if not has_monitor then *)
+                 (citm.D.tries <- L.flatten (L.map cleanup_pesky_try (citm.D.tries));
+                  citm.D.tries_size <- L.length citm.D.tries);
                i := !i + 1
             | _ ->
 
@@ -941,7 +942,7 @@ class fine_logger (dx: D.dex) =
                 *)
                let n = advance (numinsns * !i) cursor in
                let n_plus_2 =
-                 (M.insrt_insns_under_off dx citm n inss) - 1
+                 (M.insrt_insns_under_off dx citm n inss)
                in
                let inserted_idx = DA.get citm.D.insns n_plus_2 in
                (* If the target instruction lies within this try,
@@ -969,13 +970,15 @@ class fine_logger (dx: D.dex) =
                  else
                    [try_itm]
                in
-               citm.D.tries <- L.flatten (L.map cleanup_pesky_try (citm.D.tries));
-               citm.D.tries_size <- L.length citm.D.tries;
+               (*if not has_monitor then*)
+                 (citm.D.tries <- L.flatten (L.map cleanup_pesky_try (citm.D.tries));
+                  citm.D.tries_size <- L.length citm.D.tries);
                i := !i + 1
           end;
           Printf.printf "After this isntruction tries..\n";
         in
         L.iter instrument_bbentry cursors;
+        (*Unparse.print_method dx citm;*)
         M.update_reg_usage dx citm;
       else
         ()
@@ -987,7 +990,7 @@ class fine_logger (dx: D.dex) =
     method v_ins ins : unit =
       super#v_ins ins;
 
-    method skip_class c = false
+    method skip_class c = false (*c <> "Lcom/antivirus/tuneup/traffic/c;"*)
     method log_entry emtd mname =
       true (*not (L.exists (fun x -> U.ends_with mname x) [J.init; J.clinit; J.hashCode])*)
 
