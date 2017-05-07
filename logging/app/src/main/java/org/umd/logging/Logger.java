@@ -358,6 +358,23 @@ public class Logger {
       thread = new Thread(new FileWriterHandler(pipe));
       thread.start();
     }
+
+    for(int i = 4; i < args.length; i++) {
+      Object arg = args[i];
+      if(arg instanceof Intent) {
+        ComponentName comp_name = (ComponentName) ((Intent) arg).getComponent();
+        Bundle bundle = ((Intent) arg).getExtras();
+        if (bundle != null) {
+          if (!bundle.keySet().contains("umd_Intent_key")) {
+            ((Intent) arg).putExtra("umd_Intent_key", FileWriterHandler.mIntentKey.getAndIncrement());
+            bundle = ((Intent) arg).getExtras();
+          }
+        } else {
+          ((Intent) arg).putExtra("umd_Intent_key", FileWriterHandler.mIntentKey.getAndIncrement());
+        }
+
+      }
+    }
     pipe.add(args);
   }
   

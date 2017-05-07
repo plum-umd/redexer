@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import android.os.Environment;
 import android.view.MenuItem;
@@ -37,6 +38,8 @@ public class FileWriterHandler implements Runnable{
     private static Activity current_activity = null;
     static Thread thread = null;
     final static String tag = Logger.class.getPackage().getName();
+    static AtomicInteger mIntentKey = new AtomicInteger();
+
     public FileWriterHandler(ConcurrentLinkedQueue<Object[]> p){
         pipe = p;
         try{
@@ -241,15 +244,14 @@ public class FileWriterHandler implements Runnable{
                                 Bundle bundle = ((Intent) arg).getExtras();
                                 if (bundle != null) {
                                     if (!bundle.keySet().contains("umd_Intent_key")) {
-                                        ((Intent) arg).putExtra("umd_Intent_key", System.currentTimeMillis());
+                                        ((Intent) arg).putExtra("umd_Intent_key", mIntentKey.getAndIncrement());
                                         bundle = ((Intent) arg).getExtras();
                                     }
                                     s_arg += getExtraString(bundle);
                                 } else {
-                                    ((Intent) arg).putExtra("umd_Intent_key", System.currentTimeMillis());
+                                    ((Intent) arg).putExtra("umd_Intent_key", mIntentKey.getAndIncrement());
                                     s_arg += getExtraString(((Intent) arg).getExtras());
                                 }
-
                             }
                         }
                         out.write(s_arg);
