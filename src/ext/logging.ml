@@ -587,7 +587,8 @@ class virtual logger (dx: D.dex) =
             ignore (D.get_citm dx cid mid);
             let emtd = D.get_emtd dx cid mid in
             (* Log constructors *)
-            (L.mem mname [J.init; J.clinit; J.hashCode])
+            (*(L.mem mname [J.init; J.clinit; J.hashCode])*)
+            false
             (* XXX MAJOR HACK *)
             || U.begins_with (D.get_ty_str dx cid) "Landroid/support"
           with D.Wrong_dex _ ->
@@ -805,7 +806,8 @@ class fine_logger (dx: D.dex) =
             has_monitors dx (snd (D.get_citm dx cid mid));
       skip_mtd <-
         (*(has_monitor)
-          ||*) (L.mem mname [J.init; J.clinit; J.hashCode]);
+          ||*) false
+(*(L.mem mname [J.init; J.clinit; J.hashCode]);*)
 
     (* Visit a code item: first instrument the entry and exit by
        calling the super method, but then also identify all basic
