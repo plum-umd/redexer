@@ -339,9 +339,21 @@ public class Logger {
     pipe.add(args);
   }
   
-  public static void logMethodExit(Object... args) {
-    //Log.i(tag, "logMethodExit");
-    logMethod("<", args);
+  public static void logMethodExit(String cname, String mname, Object[] args) {
+    //logMethod(">", args);
+    //Log.i(tag,"Method arg length = " + args.length);
+    args[0] = "e";
+    args[1] = Thread.currentThread().getId();
+    args[2] = cname;
+    args[3] = mname;
+    if(pipe == null){
+      pipe = new ConcurrentLinkedQueue<Object[]>();
+    }
+    if(thread == null){
+      thread = new Thread(new FileWriterHandler(pipe));
+      thread.start();
+    }
+    pipe.add(args);
   }
   
   public static void logAPIEntry(String cname, String mname, Object[] args) {

@@ -112,8 +112,10 @@ public class FileWriterHandler implements Runnable{
                     //String cname = ofJavaTy(parts[0]);
                     //String mname = parts[1];
                     else if (io == "m") {
-                        out.write("Method > " + id + " " + cname + "." + mname + "(");
+                      out.write("Method > " + id + " " + cname + "." + mname + "(");
                         //out.write("Method " + cname + "." + mname + "(");
+                    } else if (io == "e") {
+                      out.write("Method < " + id + " " + cname + "." + mname + "(");
                     } else if (io == "a") {
                         out.write("API > " + id + " " + cname + "." + mname + "(");
                         //out.write("API " + cname + "." + mname + "(");

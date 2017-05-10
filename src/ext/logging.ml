@@ -465,7 +465,7 @@ class virtual logger (dx: D.dex) =
       Log.i ("Skipping log of method body: "^full);
     let mit = D.get_mit dx mid in
     argv <- D.get_argv dx mit;
-    if not (D.is_static emtd.D.m_access_flag) then
+    if (not (D.is_static emtd.D.m_access_flag)) then
       argv <- cid :: argv; (* including "this" *)
     rety <- D.get_rety dx mit;
     is_void <- 0 = D.ty_comp dx rety ty_void
@@ -504,9 +504,12 @@ class virtual logger (dx: D.dex) =
               | _, _ -> raise (D.Wrong_match "is_void")
           in
           let vx::vy::vz::[] = vxyz 0 in
-          let ins0 = I.new_const vx (if is_void then 0 else 1)
-          and ins1 = I.new_arr vx vx (D.of_idx objs)
-          and ins2 = I.new_invoke stt_rnge [vx; vx; D.of_idx m_ext_mid]
+          let ins0 = I.new_const vz 4 (*(if is_void then 0 else 1)*) (* XXX << hacked so it only works with clinit *)
+          and ins1 = I.new_arr vz vz (D.of_idx objs)
+          and rest = 
+            [I.new_const_id cnst_str vx str_lname;
+             I.new_const_id cnst_str vy str_mname;
+             I.new_invoke stt_rnge [vx; vz; D.of_idx m_ext_mid] ]
           and copy_ret vr vx =
             let ins_c = I.new_const vy 0
             and ins_a =
@@ -523,8 +526,8 @@ class virtual logger (dx: D.dex) =
           let ext_insns =
             CL.toList (
                 CL.fromList [ins0; ins1]
-                @+ (if is_void then CL.empty else copy_ret vr vx)
-                @+ CL.single ins2)
+                (*@+ (if is_void then CL.empty else copy_ret vr vx)*)
+                @+ CL.fromList rest)
           in
           let cursor = M.get_cursor citm instr_link in
           M.insrt_insns_under_off dx citm cursor ext_insns;
@@ -533,12 +536,22 @@ class virtual logger (dx: D.dex) =
         let last_links = M.get_last_links dx citm in
         (* Optimized logging: do *not* log method returns! *)
         (match !detail with 
-         | Optimized -> ()
+         | Optimized ->  
+            if mname = J.clinit then 
+              L.iter per_exit_instr last_links
+            else
+              ()
          | _         -> L.iter per_exit_instr last_links);
 
         (* code snippet for method entries *)
         let vx::vy::vz::[] = vxyz 0 in
-        let argn = citm.D.ins_size in
+        let argn = 
+          if mname = J.init || mname = J.clinit then 0 
+          else
+            citm.D.ins_size 
+        in
+        if mname = J.init || mname = J.clinit then 
+          argv <- [];
         let ins0 = I.new_const vz (argn+4)
         and ins1 = I.new_arr vz vz (D.of_idx objs)
         and rest = 
