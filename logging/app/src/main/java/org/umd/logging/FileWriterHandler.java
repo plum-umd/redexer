@@ -102,7 +102,7 @@ public class FileWriterHandler implements Runnable{
                 String mname = (String)args[3];
                     // Block entry
                     if (io == "b") {
-                        out.write("BBEntry " + args[4]);
+                        out.write("BBEntry " + id + " " + args[4]);
                         out.newLine();
                         continue;
                     }
@@ -129,7 +129,8 @@ public class FileWriterHandler implements Runnable{
                         if (arg == null) {
                             s_arg = "null";
                         } else if (isWrapperType(arg.getClass())) {
-                            s_arg = System.identityHashCode(arg) + "&" + arg.toString();
+                            //s_arg = System.identityHashCode(arg) + "&" + arg.toString();
+                            s_arg = System.identityHashCode(arg) + "&" + arg.getClass().getName() + "@" + System.identityHashCode(arg);
                             //Check if first argument is a string
                         } else if (arg.getClass() == String.class) {
                             s_arg = "\"\"";
