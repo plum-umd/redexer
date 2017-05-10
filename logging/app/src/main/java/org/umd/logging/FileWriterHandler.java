@@ -132,7 +132,7 @@ public class FileWriterHandler implements Runnable{
                             s_arg = System.identityHashCode(arg) + "&" + arg.toString();
                             //Check if first argument is a string
                         } else if (arg.getClass() == String.class) {
-                            s_arg = "\"" + ((String) arg).replace("\n", "\\n") + "\"";
+                            s_arg = "\"\"";
                             //Check if it a class object
                         } else if (arg.getClass() == Class.class) {
                             s_arg = ((Class) arg).getName();
@@ -154,64 +154,6 @@ public class FileWriterHandler implements Runnable{
                           //Try to annotate all of the arguments
                         } else {
                             s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
-                            if(arg instanceof View){
-                              if(argCount == 0 || argCount == 1){
-                                try{
-                    //              String file = takeScreenshot(null,"");
-                    //              s_arg += "<file=" + file + ">";
-                                  int[] location = new int[2];
-                                  ((View)arg).getLocationOnScreen(location);
-                                  s_arg += "<x=" + String.valueOf(location[0]) + ">";
-                                  s_arg += "<y=" + String.valueOf(location[1]) + ">";
-                                  s_arg += "<width=" + String.valueOf(((View)arg).getWidth()) + ">";
-                                  s_arg += "<height=" + String.valueOf(((View)arg).getHeight()) + ">";
-                                }catch(Exception e){
-                                  ;//System.out.println(e.getMessage());
-                                }
-                              }
-                              
-                              //TextView and specific subclasses
-                              if(arg instanceof TextView){
-                                s_arg += "<text=" + ((TextView)arg).getText() + ">";
-                                if(arg instanceof RadioButton){
-                                  s_arg += "<value=" + ((RadioButton)arg).isChecked() + ">";
-                                }else if(arg instanceof CheckBox){
-                                  s_arg += "<value=" + ((CheckBox)arg).isChecked() + ">";
-                                }
-                              }
-
-                              try{
-                                s_arg += "<id=" + ((View)arg).getId() + ">"; //This is unique per app
-                                s_arg += "<imagename=" + ((View)arg).getResources().getResourceEntryName(((View)arg).getId()) + ">";
-                              }catch(Exception e){
-                                ;//System.out.println(e.getMessage());
-                              }
-                            }
-
-                            //Extract the URI
-                            if(arg instanceof Uri){
-                              s_arg += "<URI=" + ((Uri)arg).toString() + ">";
-                            }
-
-                            //Extract the URL
-                            if(arg instanceof URL){
-                              s_arg += "<URL=" + ((URL)arg).toString() + ">";
-                            }
-
-                            if(arg instanceof MenuItem){
-                              s_arg += "<id=" + ((MenuItem)arg).getItemId() + ">";
-                              s_arg += "<menuname=" + ((MenuItem)arg).getTitleCondensed() + ">";
-                    //          String fname = saveIcon((MenuItem)arg);
-                    //          if(fname != ""){
-                    //            s_arg += "<iconfile=" + fname + ">";
-                    //          }
-                    //          try{
-                    ////            String file = takeScreenshot(null,"");
-                    //            s_arg += "<file=" + file + ">";
-                    //          }catch(Exception e){
-                    //            ;//System.out.println(e.getMessage());
-                    //          }
-                            }
 
                             //Take image of Dialog
                     //        if(arg instanceof Dialog){
@@ -232,7 +174,7 @@ public class FileWriterHandler implements Runnable{
                             }
                             if(arg instanceof Intent && ((Intent)arg).getAction()!="android.intent.action.VIEW" && ((Intent)arg).getAction()!="android.intent.action.MAIN"){
                                 s_arg += "<action=" + ((Intent) arg).getAction() + ">";
-                                s_arg += "<data=" + ((Intent) arg).getDataString() + ">";
+//                                s_arg += "<data=" + ((Intent) arg).getDataString() + ">";
                                 s_arg += "<package=" + ((Intent) arg).getPackage() + ">";
                                 ComponentName comp_name = (ComponentName) ((Intent) arg).getComponent();
                                 if (comp_name != null)
