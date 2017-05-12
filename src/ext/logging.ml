@@ -487,7 +487,8 @@ class virtual logger (dx: D.dex) =
     (* code snippet for method exits *)
     (* to calc the last ins correctly, do this part first *)
     if log_entry then
-      (try
+      let do_exit () = 
+        try
         let per_exit_instr instr_link =
           (* For this exit instruction, calculate the return type and
              the register that will be returned into. We will then use
@@ -542,9 +543,12 @@ class virtual logger (dx: D.dex) =
             else
               ()
          | _         -> L.iter per_exit_instr last_links);
-
-        (* code snippet for method entries *)
-        let vx::vy::vz::[] = vxyz 0 in
+        with D.No_return -> ()
+      in
+      do_exit();
+      
+      (* code snippet for method entries *)
+      let vx::vy::vz::[] = vxyz 0 in
         let argn = 
           if mname = J.init || mname = J.clinit then 0 
           else
@@ -581,7 +585,6 @@ class virtual logger (dx: D.dex) =
         let _ = M.insrt_insns_before_start dx citm ent_insns in
         in_out_cnt := !in_out_cnt + (L.length ent_insns);
         M.update_reg_usage dx citm
-       with D.No_return -> ())
 
   method v_ins (ins: D.link) : unit =
     let thismname = mname in
