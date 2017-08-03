@@ -1,5 +1,10 @@
 [![Build Status](https://travis-ci.org/plum-umd/redexer.svg?branch=master)](https://travis-ci.org/plum-umd/redexer)
 
+# This branch
+
+This branch is to support logging with Hogarth. A system for sparse
+logging of Android apps and subsequent analysis of those logs. 
+
 # redexer
 
 Redexer is a reengineering tool that manipulates Android app binaries.

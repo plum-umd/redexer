@@ -64,6 +64,7 @@ to = nil
 perms = []
 detail = :none
 outputdir = nil
+$logging = false
 
 option_parser = OptionParser.new do |opts|
   opts.banner = "Usage: ruby #{__FILE__} target.(apk|dex) [options]"
@@ -160,7 +161,9 @@ def finish_repackaging(apk,fn,to,res)
     close(apk)
     raise "rewriting dex failed"
   end
-  #apk.add_permission
+  if $logging then
+    apk.add_permission
+  end
   if to
     apk.repack(to)
   else
@@ -296,6 +299,7 @@ when "custom_views", "fragments", "buttons"
     PP.pp res
   end
 when "logging", "logging_ui"
+  $logging = true
   apk.send(cmd.to_sym,detail)
   finish_repackaging(apk,fn,to,RES)
 when "directed"

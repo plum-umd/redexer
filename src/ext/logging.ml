@@ -538,10 +538,10 @@ class virtual logger (dx: D.dex) =
         (* Optimized logging: do *not* log method returns! *)
         (match !detail with 
          | Optimized ->  
-            if mname = J.clinit then 
+            (*if mname = J.clinit then *)
               L.iter per_exit_instr last_links
-            else
-              ()
+            (*else
+              ()*)
          | _         -> L.iter per_exit_instr last_links);
         with D.No_return -> ()
       in
