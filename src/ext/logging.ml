@@ -364,6 +364,34 @@ let has_monitors dx (citm: D.code_item) : bool =
 let vxyz (s: int) : int list =
   L.map (fun i -> i mod 16) (U.range s (s + 2) [])
 
+let cleanup_pesky_try cursor_before cursor_after citm (try_itm:D.try_item) =
+  let s = M.get_cursor citm try_itm.D.start_addr in
+  let e = M.get_cursor citm try_itm.D.end_addr in
+  if s <= cursor_before && cursor_before <= e then
+    (Printf.printf "cleaning up tries..\n";
+     let snd = 
+       let fresh_addr2 = DA.get citm.D.insns cursor_after in
+       { try_itm with 
+         D.start_addr = fresh_addr2;
+         D.end_addr   = try_itm.D.end_addr
+       }
+     in
+     if s <= cursor_before-1 then
+       (* Include the first try block *)
+       { try_itm with 
+         D.start_addr = try_itm.D.start_addr;
+         D.end_addr   = DA.get citm.D.insns (cursor_before-1)
+       }::[snd]
+     else
+       [snd])
+  else
+    [try_itm]
+
+let cleanup_tries c_before (c_after) (citm) : unit = 
+  citm.D.tries <- L.flatten (L.map (cleanup_pesky_try c_before c_after citm) 
+                                   (citm.D.tries));
+  citm.D.tries_size <- L.length citm.D.tries
+
 (* The logger class is virtual so we can implement different behavior
    for each type of configuration. *)
 class virtual logger (dx: D.dex) =
@@ -400,6 +428,7 @@ class virtual logger (dx: D.dex) =
     (* use invoke-*-range to support registers whose index is over 1 byte *)
     I.new_invoke stt_rnge (args @ [D.of_idx v_of])
   in
+  
   object(self)
   inherit V.iterator dx
 
@@ -444,6 +473,7 @@ class virtual logger (dx: D.dex) =
   val mutable cur_emtd = None
   val mutable has_monitor = false
 
+        
   (* Visits method entries, attempts to insert logging code. *)
   method v_emtd (emtd: D.encoded_method) : unit =
     mid <- emtd.D.method_idx;
@@ -474,7 +504,6 @@ class virtual logger (dx: D.dex) =
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
     Log.i (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
-    (*Unparse.print_method dx citm;*)
     let mname = D.get_mtd_name dx mid in 
     let cname = D.get_ty_str dx cid in
     let str_lname = D.of_idx (D.find_str dx cname) in
@@ -505,7 +534,7 @@ class virtual logger (dx: D.dex) =
               | _, _ -> raise (D.Wrong_match "is_void")
           in
           let vx::vy::vz::[] = vxyz 0 in
-          let ins0 = I.new_const vz 4 (*(if is_void then 0 else 1)*) (* XXX << hacked so it only works with clinit *)
+          let ins0 = I.new_const vz 4
           and ins1 = I.new_arr vz vz (D.of_idx objs)
           and rest = 
             [I.new_const_id cnst_str vx str_lname;
@@ -527,22 +556,16 @@ class virtual logger (dx: D.dex) =
           let ext_insns =
             CL.toList (
                 CL.fromList [ins0; ins1]
-                (*@+ (if is_void then CL.empty else copy_ret vr vx)*)
                 @+ CL.fromList rest)
           in
           let cursor = M.get_cursor citm instr_link in
-          M.insrt_insns_under_off dx citm cursor ext_insns;
+          let n_plus_k = M.insrt_insns_under_off 
+                           dx citm cursor ext_insns in
+          cleanup_tries cursor n_plus_k citm;
           in_out_cnt := !in_out_cnt + (L.length ext_insns);
         in
         let last_links = M.get_last_links dx citm in
-        (* Optimized logging: do *not* log method returns! *)
-        (match !detail with 
-         | Optimized ->  
-            (*if mname = J.clinit then *)
-              L.iter per_exit_instr last_links
-            (*else
-              ()*)
-         | _         -> L.iter per_exit_instr last_links);
+        L.iter per_exit_instr last_links
         with D.No_return -> ()
       in
       do_exit();
@@ -889,42 +912,8 @@ class fine_logger (dx: D.dex) =
                   [start: addr_n+3, end: addr_end, handler: addr_hnd] 
                 *)
                let n = advance (numinsns * !i) (M.next cursor) in
-               Printf.printf "Before instrumentation..\n";
                let cur = (M.insrt_insns dx citm n inss) in
-               let inserted_idx = DA.get citm.D.insns cur in
-               let cleanup_pesky_try (try_itm:D.try_item) =
-                 let s = M.get_cursor citm try_itm.start_addr in
-                 let e = M.get_cursor citm try_itm.end_addr in
-                 if s <= n && n <= e then
-                   (Printf.printf "Cleaning up a try..\n";
-                   let fst = 
-                     { try_itm with
-                       D.start_addr = try_itm.D.start_addr;
-                       D.end_addr   = link;
-                     }
-                   in
-                   let snd = 
-                     { try_itm with
-                       D.start_addr = DA.get citm.D.insns cur;
-                       D.end_addr   = try_itm.D.end_addr;
-                     } 
-                   in
-                   [fst; snd])
-                 else
-                   [try_itm]
-
-(*                   Log.v (Pf.sprintf
-                          "found a try that ends at %x and we're at %x\n"
-                          (D.of_off try_itm.end_addr) (D.of_off link));
-                   if try_itm.D.end_addr  link then
-                     (Log.v (Pf.sprintf
-                               "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n"
-                               (D.of_off link) (D.of_off inserted_idx));
-                      { try_itm with D.end_addr = inserted_idx })*)
-               in
-               (*if not has_monitor then *)
-                 (citm.D.tries <- L.flatten (L.map cleanup_pesky_try (citm.D.tries));
-                  citm.D.tries_size <- L.length citm.D.tries);
+               cleanup_tries n cur citm;
                i := !i + 1
             | _ ->
 
@@ -965,32 +954,7 @@ class fine_logger (dx: D.dex) =
                let inserted_idx = DA.get citm.D.insns n_plus_2 in
                (* If the target instruction lies within this try,
                   split it into two as per the above diagram. *)
-               let cleanup_pesky_try (try_itm:D.try_item) =
-                 let s = M.get_cursor citm try_itm.start_addr in
-                 let e = M.get_cursor citm try_itm.end_addr in
-                 if s <= n && n <= e then
-                   (Printf.printf "cleaning up tries..\n";
-                    let snd = 
-                     let fresh_addr2 = DA.get citm.D.insns n_plus_2 in
-                     { try_itm with 
-                       D.start_addr = fresh_addr2;
-                       D.end_addr   = try_itm.D.end_addr
-                     }
-                   in
-                   if s <= n-1 then
-                     (* Include the first try block *)
-                     { try_itm with 
-                       D.start_addr = try_itm.start_addr;
-                       D.end_addr   = DA.get citm.D.insns (n-1)
-                     }::[snd]
-                   else
-                     [snd])
-                 else
-                   [try_itm]
-               in
-               (*if not has_monitor then*)
-                 (citm.D.tries <- L.flatten (L.map cleanup_pesky_try (citm.D.tries));
-                  citm.D.tries_size <- L.length citm.D.tries);
+               cleanup_tries n n_plus_2 citm;
                i := !i + 1
           end;
           Printf.printf "After this isntruction tries..\n";
@@ -1008,7 +972,7 @@ class fine_logger (dx: D.dex) =
     method v_ins ins : unit =
       super#v_ins ins;
 
-    method skip_class c = false (*c <> "Lcom/antivirus/tuneup/traffic/c;"*)
+    method skip_class c = false
     method log_entry emtd mname =
       true (*not (L.exists (fun x -> U.ends_with mname x) [J.init; J.clinit; J.hashCode])*)
 
