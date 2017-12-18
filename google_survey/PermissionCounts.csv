@@ -1,0 +1,14 @@
+"","permission","total"
+"1","appindexing/AppIndex",15
+"2","appinvite/AppInvite",3
+"3","cast/Cast",4
+"4","drive/Drive",1
+"5","location/ActivityRecognition",6
+"6","location/LocationServices",50
+"7","location/reporting/ReportingServices",1
+"8","panorama/Panorama",1
+"9","plus/Plus",16
+"10","safetynet/SafetyNet",2
+"11","search/SearchAuth",2
+"12","wallet/Wallet",7
+"13","wearable/Wearable",23

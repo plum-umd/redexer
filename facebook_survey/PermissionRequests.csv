@@ -1,0 +1,35 @@
+"","app","permlist","total"
+"1","bn.ereader.apk","read:'', write:''",2
+"2","com.amazon.mShop.android.shopping.apk","read:''",1
+"3","com.aws.android.apk","read:'public_profile', read:'email', read:'user_birthday'",3
+"4","com.bitstrips.imoji","write:'logging_in'",1
+"5","com.booking.apk","read:'wishlists', read:'email'",2
+"6","com.buzzfeed.android.apk","read:'email', write:'publish_actions'",2
+"7","com.clearchannel.iheartradio.controller.apk","read:'activity', read:'observer', write:'activity'",3
+"8","com.cmcm.live","read:'public_profile', read:'user_birthday', read:'email', read:'user_friends', write:'publish_actions'",5
+"9","com.cnn.mobile.android.phone.apk","write:'publish'",1
+"10","com.contacts1800.ecomapp.apk","write:'publish'",1
+"11","com.digidust.elokence.akinator.freemium.apk","write:'user_friends', write:'publish_actions', read:'user_friends'",3
+"12","com.duolingo","read:''",1
+"13","com.emn8.mobilem8.nativeapp.bk","write:'', read:''",2
+"14","com.energysh.drawshow","write:'publish_actions'",1
+"15","com.expedia.bookings.apk","read:'email'",1
+"16","com.fishbrain.app","write:'publish_actions', read:'publish_actions'",2
+"17","com.hp.pregnancy.lite.apk","write:''",1
+"18","com.jb.gosms.apk","write:'publish_actions'",1
+"19","com.move.realtor.apk","read:'user_status'",1
+"20","com.nascar.nascarmobile","write:'publish'",1
+"21","com.oovoo.apk","read:'', write:''",2
+"22","com.ovuline.pregnancy","read:'input_method', read:'public_profile', read:'email'",3
+"23","com.picsart.studio.apk","write:'publish_actions'",1
+"24","com.pinterest.apk","read:''",1
+"25","com.quvideo.xiaoying.apk","read:'public_profile', read:'user_photos', read:'user_videos'",3
+"26","com.relayrides.android.relayrides.apk","read:'email'",1
+"27","com.roidapp.photogrid.apk","read:'user_photos'",1
+"28","com.sgiggle.production.apk","read:'', write:'publish_actions'",2
+"29","com.sirma.mobile.bible.android","read:'email', read:'public_profile'",2
+"30","com.smule.magicpiano","write:'publish_actions', read:''",2
+"31","com.smule.singandroid.apk","write:'publish_actions', read:''",2
+"32","com.target.socsav","read:'public_profile', read:'user_friends', read:'email', write:'publish_actions'",4
+"33","com.wishabi.flipp","read:'email'",1
+"34","org.khanacademy.android","read:'email'",1
