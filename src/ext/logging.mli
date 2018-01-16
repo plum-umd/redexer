@@ -48,6 +48,9 @@ type detail =
 (** conclude more logging *)
 val detail : detail ref
 
+(** The current basic block id (monotonically incrases with each bb) *)
+val bb_id : int ref
+
 (** add non-overriden transition methods *)
 val add_transition : Dex.dex -> unit
 

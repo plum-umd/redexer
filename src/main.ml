@@ -77,6 +77,8 @@ module Yj = Yojson.Basic
 
 let dex = ref "classes.dex"
 
+let bb_lg_file = ref "lastbb.txt"
+
 let dump (tx: D.dex) : unit =
   St.time "dump" (Dp.dump !dex) tx
 
@@ -223,7 +225,10 @@ let instrument_logging (tx: D.dex) : unit =
       close_in ch;
       St.time "rename" (Md.rename_cls cx) res;
       (* finally, dump the rewritten dex *)
-      St.time "dump" (Dp.dump !dex) cx
+      St.time "dump" (Dp.dump !dex) cx;
+      let oc = open_out !bb_lg_file in
+      Printf.fprintf oc "%d\n" !Lgg.bb_id;
+      close_out oc
     end
   with End_of_file -> prerr_endline "EOF"
 
@@ -323,6 +328,7 @@ let arg_specs = A.align
      " instrument logging feature into the given dex");
     ("-logging-detail", A.Unit (fun () -> Lgg.detail := Lgg.Optimized),
      " logging more methods (default: false)");
+    ("-starting-bb", A.Set_int Lgg.bb_id, " instrument basic blocks starting with this ID");
 
     ("-directed", A.Unit do_directed,
      " instrument the dex such that it is directed to certain call sites");

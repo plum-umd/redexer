@@ -97,6 +97,8 @@ let config = try
 (* The logging detail to be used. *)
 let detail = ref Default
 
+let bb_id = ref 0
+
 module SM = Map.Make(String)
 
 (* from descriptor to wrapper class: { Z => java.lang.Boolean, ... } *)
@@ -865,7 +867,8 @@ class fine_logger (dx: D.dex) =
           (* The instructions to really add to the method.. *)
           (* The number of instructions we add. Update when inss changes *)
           let numinsns = 2 in
-          let index = D.of_off link + numinsns * !i in
+          let index = !bb_id in
+          bb_id := !bb_id + 1;
           let ins0 = I.new_const 0 index in
           let ins1 = I.new_invoke call_stt [0; D.of_idx m_bbenter] in
           let inss = [ins0; ins1] in
