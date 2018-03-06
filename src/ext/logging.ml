@@ -761,9 +761,9 @@ class virtual logger (dx: D.dex) =
               @+ CL.fromList [ins2; ins3; ins4]
             ) in
             (* not to alter the control-flow, use ..._under_off *)
-            if mname <> J.init then
+            (*if mname <> J.init then
               ignore (M.insrt_insns_under_off dx cur_citm ent_cursor ent_insns)
-            else
+            else*)
               (let new_cur = M.insrt_insns dx cur_citm ext_cursor ent_insns - 1 in
                let inserted_idx = DA.get cur_citm.D.insns new_cur in
                let cleanup_pesky_try (try_itm:D.try_item) =
