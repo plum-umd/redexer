@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout android:layout_width="fill_parent" android:layout_height="wrap_content"
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <LinearLayout android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_alignParentLeft="true"
+      xmlns:android="http://schemas.android.com/apk/res/android">
+        <TextView android:textSize="20.0dip" android:id="@id/label_list" android:layout_width="fill_parent" android:layout_height="wrap_content" android:text="@id/label"
+          xmlns:android="http://schemas.android.com/apk/res/android" />
+        <TextView android:textSize="15.0dip" android:id="@id/label_list_2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@id/label"
+          xmlns:android="http://schemas.android.com/apk/res/android" />
+    </LinearLayout>
+    <ImageView android:id="@id/img_delete" android:layout_width="48.0dip" android:layout_height="48.0dip" android:layout_marginLeft="8.0dip" android:src="@drawable/ic_tab_example" android:layout_alignParentRight="true" android:contentDescription="@string/list_erase_your_recordeed_call" />
+</RelativeLayout>

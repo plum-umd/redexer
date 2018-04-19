@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="about_close_button">cerrar</string>
+    <string name="about_content">Llame al registrador por Kobi Krasnoff</string>
+    <string name="about_title">Sobre</string>
+    <string name="app_name">Call Recorder para Android</string>
+    <string name="confirm_delete_no">no</string>
+    <string name="confirm_delete_text">Está seguro que desea eliminar este registro?</string>
+    <string name="confirm_delete_title">Alerta de diálogo</string>
+    <string name="confirm_delete_yes">sí</string>
+    <string name="confirm_play">Jugar de</string>
+    <string name="confirm_send">Enviar</string>
+    <string name="dialog_close">cerrar</string>
+    <string name="dialog_delete_all_content">Está seguro de que desea eliminar todas las grabaciones?</string>
+    <string name="dialog_delete_all_no">No</string>
+    <string name="dialog_delete_all_title">Mensaje de alerta</string>
+    <string name="dialog_delete_all_yes">Sí</string>
+    <string name="dialog_no_memory">"No hay ninguna tarjeta de memoria en su dispositivo.
+Por favor, instale uno."</string>
+    <string name="dialog_privacy">Política de privacidad</string>
+    <string name="dialog_privacy_terms">Por favor, haga clic en los botones de abajo para ver las condiciones de uso y política de privacidad</string>
+    <string name="dialog_terms">Terms of use</string>
+    <string name="dialog_welcome_screen">pantalla de bienvenida</string>
+    <string name="hello_world">Hola, mundo!</string>
+    <string name="list_erase_your_recordeed_call">borrar la llamada grabada</string>
+    <string name="list_play_your_recordeed_call">reproducir la llamada grabada</string>
+    <string name="list_send_your_recordeed_call">enviar la llamada grabada</string>
+    <string name="menu_Disable_record">Desactivar Record</string>
+    <string name="menu_Enable_record">Activar Record</string>
+    <string name="menu_about">sobre</string>
+    <string name="menu_delete_all">Eliminar todas las grabaciones</string>
+    <string name="menu_privacy_policy">Política de privacidad</string>
+    <string name="menu_record_is_now_disabled">La aplicación no está habilitado ahora para grabar llamadas</string>
+    <string name="menu_record_is_now_enabled">La aplicación está ahora permiten grabar llamadas</string>
+    <string name="menu_settings">Configuración</string>
+    <string name="menu_terms">Condiciones de uso</string>
+    <string name="no_records_message">"No hay grabaciones en este teléfono.
+Para capacidad de activación para grabación abrir el menú principal y seleccione \"Habilitar registro\". 
+Una que la aplicación registre todas las llamadas entrantes y salientes."</string>
+    <string name="notification_text">El teléfono detendrá la grabación cuando termine la conversación</string>
+    <string name="notification_ticker">Grabación está empezando</string>
+    <string name="notification_title">Ahora el teléfono está grabando la conversación</string>
+    <string name="options_delete">Borrar</string>
+    <string name="options_title">Opciones del Título</string>
+    <string name="radio_Disable_record">Desactivar Record</string>
+    <string name="radio_Enable_record">Activar Record</string>
+    <string name="reciever_end_call">Finalizar la llamada Record</string>
+    <string name="reciever_start_call">Iniciar llamada de registro</string>
+    <string name="record_impossible">Desafortunadamente, no es posible grabar las llamadas en este dispositivo.</string>
+    <string name="sendMail_body">Se trata de un registro de llamadas de su teléfono</string>
+    <string name="sendMail_subject">Su registro de su teléfono</string>
+    <string name="send_mail">Enviar el correo</string>
+    <string name="textview_startup">"Por favor, elija si la aplicación podrás grabar tus llamadas.
+Siempre se puede cambiar su elección presionando el botón de menú Android."</string>
+    <string name="title_activity_main">Call Recorder para Android</string>
+    <string name="withheld_number">Número Retenido</string>
+</resources>

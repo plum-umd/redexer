@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 19
-    buildToolsVersion "19.1"
+    buildToolsVersion '27.0.3'
 
     defaultConfig {
         applicationId "org.umd.logging"

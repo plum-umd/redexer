@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:icon="@drawable/ic_record_enable" android:enabled="false" android:id="@id/menu_Enable_record" android:orderInCategory="100" android:title="@string/menu_Enable_record" />
+    <item android:icon="@drawable/ic_record_disable" android:enabled="false" android:id="@id/menu_Disable_record" android:orderInCategory="100" android:title="@string/menu_Disable_record" />
+    <item android:icon="@drawable/ic_about" android:id="@id/menu_about" android:orderInCategory="100" android:title="@string/menu_about" />
+    <item android:icon="@drawable/ic_menu_example" android:id="@id/menu_see_terms" android:orderInCategory="100" android:title="@string/menu_terms" />
+    <item android:icon="@drawable/ic_menu_example" android:id="@id/menu_privacy_policy" android:orderInCategory="100" android:title="@string/menu_privacy_policy" />
+    <item android:icon="@drawable/ic_delete_all" android:id="@id/menu_delete_all" android:orderInCategory="100" android:title="@string/menu_delete_all" />
+</menu>

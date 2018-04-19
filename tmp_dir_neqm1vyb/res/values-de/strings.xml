@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="about_close_button">Schließen</string>
+    <string name="about_content">Call recorder by Kobi Krasnoff</string>
+    <string name="about_title">über</string>
+    <string name="app_name">Call recorder for Android</string>
+    <string name="confirm_delete_no">nicht</string>
+    <string name="confirm_delete_text">Sind Sie sicher, dass Sie diese Aufnahme löschen?</string>
+    <string name="confirm_delete_title">Warnmeldung</string>
+    <string name="confirm_delete_yes">ja</string>
+    <string name="confirm_play">Abspielen</string>
+    <string name="confirm_send">Senden</string>
+    <string name="dialog_close">schließen</string>
+    <string name="dialog_delete_all_content">Sind Sie sicher, dass Sie alle Ihre Aufnahmen löschen?</string>
+    <string name="dialog_delete_all_no">Keine</string>
+    <string name="dialog_delete_all_title">Warnmeldung</string>
+    <string name="dialog_delete_all_yes">Ja</string>
+    <string name="dialog_no_memory">"Es ist keine Speicherkarte in Ihrem Gerät.
+Bitte installieren Sie ein."</string>
+    <string name="dialog_privacy">Datenschutz</string>
+    <string name="dialog_privacy_terms">Bitte klicken Sie auf die Buttons unten um die Nutzungsbedingungen und Datenschutzbestimmungen zu sehen</string>
+    <string name="dialog_terms">Nutzungsbedingungen</string>
+    <string name="dialog_welcome_screen">Willkommens-Bildschirm</string>
+    <string name="hello_world">Hallo Welt!</string>
+    <string name="list_erase_your_recordeed_call">löschen Sie Ihre aufgezeichneten Anruf</string>
+    <string name="list_play_your_recordeed_call">spielen Sie Ihre aufgezeichneten Anruf</string>
+    <string name="list_send_your_recordeed_call">senden Sie Ihre aufgezeichneten Anruf</string>
+    <string name="menu_Disable_record">Deaktivieren Rekord</string>
+    <string name="menu_Enable_record">Aktivieren Rekord</string>
+    <string name="menu_about">über</string>
+    <string name="menu_delete_all">Alle Aufnahmen löschen</string>
+    <string name="menu_privacy_policy">Datenschutz</string>
+    <string name="menu_record_is_now_disabled">Die Anwendung ist nun nicht zu ermöglichen, Anrufe aufzeichnen</string>
+    <string name="menu_record_is_now_enabled">Die Anwendung wird jetzt ermöglichen, Anrufe aufzeichnen</string>
+    <string name="menu_settings">Einstellungen</string>
+    <string name="menu_terms">Nutzungsbedingungen</string>
+    <string name="no_records_message">"Es gibt keine Aufnahmen in diesem Telefon.
+Damit Rekord Möglichkeit das Hauptmenü zu öffnen, und wählen Sie \"Enable Rekord\".
+Danach wird die Anwendung erfassen alle ankommenden und abgehenden Anrufe."</string>
+    <string name="notification_text">Das Telefon wird die Aufnahme zu beenden, wenn das Gespräch wird beendet</string>
+    <string name="notification_ticker">Aufnahme beginnt jetzt</string>
+    <string name="notification_title">Das Telefon ist nun das Gespräch aufzeichnen</string>
+    <string name="options_delete">Löschen</string>
+    <string name="options_title">Optionen Titel</string>
+    <string name="radio_Disable_record">Deaktivieren Rekord</string>
+    <string name="radio_Enable_record">Aktivieren Rekord</string>
+    <string name="reciever_end_call">End Record Anruf</string>
+    <string name="reciever_start_call">Aufzeichnungsbeginn Anruf</string>
+    <string name="record_impossible">Leider ist es nicht möglich, Anrufe in dieser Vorrichtung aufzunehmen.</string>
+    <string name="sendMail_body">Dies ist ein Aufruf Rekord von Ihrem Telefon</string>
+    <string name="sendMail_subject">Ihre Aufzeichnung von Ihrem Telefon</string>
+    <string name="send_mail">E-Mail senden</string>
+    <string name="textview_startup">"Bitte wählen Sie, wenn die Anwendung Ihre Anrufe aufgezeichnet werden sollen.
+Sie können sich jederzeit ändern Sie Ihre Wahl durch Drücken der Android Menü-Taste."</string>
+    <string name="title_activity_main">Call recorder for android</string>
+    <string name="withheld_number">Unterdrückte Rufnummer</string>
+</resources>

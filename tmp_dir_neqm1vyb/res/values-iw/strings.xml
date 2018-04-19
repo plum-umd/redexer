@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="about_close_button">סגור</string>
+    <string name="about_content">מקליט שיחות מאת קובי קרסנוב</string>
+    <string name="about_title">אודות</string>
+    <string name="app_name">מקליט שיחות לאנדרויד</string>
+    <string name="confirm_delete_no">לא</string>
+    <string name="confirm_delete_text">האם אתה בטוח שברצונך למחוק הקלטה זאת?</string>
+    <string name="confirm_delete_title">מסך התראה</string>
+    <string name="confirm_delete_yes">כן</string>
+    <string name="confirm_play">נגן</string>
+    <string name="confirm_send">שלח</string>
+    <string name="dialog_close">סגור</string>
+    <string name="dialog_delete_all_content">האם אתה בטוח שברצונך למחוק את כל ההקלטות?</string>
+    <string name="dialog_delete_all_no">לא</string>
+    <string name="dialog_delete_all_title">מסך התראה</string>
+    <string name="dialog_delete_all_yes">כן</string>
+    <string name="dialog_no_memory">"אין כרטיס זיכרון במכשירך.
+אנא התקן אחד."</string>
+    <string name="dialog_privacy">מדיניות פרטיות</string>
+    <string name="dialog_privacy_terms">אנא לחץ על הכפתורים למטה כדי לראות את תנאי שימוש ומדיניות פרטיות</string>
+    <string name="dialog_terms">תנאי שימוש</string>
+    <string name="dialog_welcome_screen">ברוכים הבאים</string>
+    <string name="hello_world">שלום עולם</string>
+    <string name="list_erase_your_recordeed_call">erase your recorded call</string>
+    <string name="list_play_your_recordeed_call">play your recorded call</string>
+    <string name="list_send_your_recordeed_call">send your recorded call</string>
+    <string name="menu_Disable_record">מנע הקלטה</string>
+    <string name="menu_Enable_record">אפשר הקלטה</string>
+    <string name="menu_about">אודות</string>
+    <string name="menu_delete_all">מחק את כל ההקלטות</string>
+    <string name="menu_privacy_policy">מדיניות פרטיות</string>
+    <string name="menu_record_is_now_disabled">אפליקציה זאת אינה מסוגלת עכשיו להקליט שיחות</string>
+    <string name="menu_record_is_now_enabled">אפליקציה זאת מסוגלת עכשיו להקליט שיחות</string>
+    <string name="menu_settings">כיוונים</string>
+    <string name="menu_terms">תנאי שימוש</string>
+    <string name="no_records_message">"אין קבצי הקלטות במכשיר זה.
+על מנת לאפשר הקלטות פתח את התפריט הראשי ובחר \"אפשר הקלטה\" לאחר מכן האפליצקציה צהיה מסוגלת להקליט את כל השיחות היוצאות והנכנסות."</string>
+    <string name="notification_text">ההקלטה תיפסק כאשר השיחה תסתיים</string>
+    <string name="notification_ticker">הקלטה כעת מתחילה</string>
+    <string name="notification_title">המערכת מקליטה כרגע</string>
+    <string name="options_delete">מחק</string>
+    <string name="options_title">בחר אופציה</string>
+    <string name="radio_Disable_record">מנע הקלטה</string>
+    <string name="radio_Enable_record">אפשר הקלטה</string>
+    <string name="reciever_end_call">מסיים הקלטה</string>
+    <string name="reciever_start_call">מתחיל הקלטה</string>
+    <string name="record_impossible">למרבה הצער, לא ניתן להקליט במכשיר זה.</string>
+    <string name="sendMail_body">מצורף הקלטת שיחה ממכשיר הטלפון שלך</string>
+    <string name="sendMail_subject">הקלטת שיחה ממכשיר הטלפון שלך</string>
+    <string name="send_mail">שלח דואר</string>
+    <string name="textview_startup">"אנא בחר האם המכשיר יקליט את שיחותך.
+ניתן תמיד שנות את בחירתך על ידי לחיצה על מקש התפריט במכשירך"</string>
+    <string name="title_activity_main">מקליט שיחות לאנדרויד</string>
+    <string name="withheld_number">מספר חסוי</string>
+</resources>

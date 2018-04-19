@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="about_close_button">chiudere</string>
+    <string name="about_content">Call Recorder da Kobi Krasnoff</string>
+    <string name="about_title">circa</string>
+    <string name="app_name">Call Recorder per Android</string>
+    <string name="confirm_delete_no">no</string>
+    <string name="confirm_delete_text">Sei sicuro di voler cancellare questa registrazione?</string>
+    <string name="confirm_delete_title">Alert di dialogo</string>
+    <string name="confirm_delete_yes">sì</string>
+    <string name="confirm_play">giocare</string>
+    <string name="confirm_send">inviare</string>
+    <string name="dialog_close">chiudere</string>
+    <string name="dialog_delete_all_content">Sei sicuro di voler cancellare tutte le registrazioni?</string>
+    <string name="dialog_delete_all_no">No</string>
+    <string name="dialog_delete_all_title">Messaggio di avviso</string>
+    <string name="dialog_delete_all_yes">Sì</string>
+    <string name="dialog_no_memory">"Non vi è alcuna scheda di memoria nel dispositivo.
+Si prega di installare uno."</string>
+    <string name="dialog_privacy">Informativa sulla privacy</string>
+    <string name="dialog_privacy_terms">"Si prega di fare clic sui pulsanti qui sotto per vedere le condizioni di utilizzo e l'informativa sulla privacy"</string>
+    <string name="dialog_terms">Condizioni di utilizzo</string>
+    <string name="dialog_welcome_screen">Benvenuto schermo</string>
+    <string name="hello_world">Ciao mondo!</string>
+    <string name="list_erase_your_recordeed_call">cancellare la chiamata registrata</string>
+    <string name="list_play_your_recordeed_call">giocare la chiamata registrata</string>
+    <string name="list_send_your_recordeed_call">inviare la chiamata registrata</string>
+    <string name="menu_Disable_record">Disattiva Record</string>
+    <string name="menu_Enable_record">Abilita Record</string>
+    <string name="menu_about">circa</string>
+    <string name="menu_delete_all">Eliminare tutte le registrazioni</string>
+    <string name="menu_privacy_policy">Informativa sulla privacy</string>
+    <string name="menu_record_is_now_disabled">"L'applicazione è ora non consentono di registrare le chiamate"</string>
+    <string name="menu_record_is_now_enabled">"L'applicazione è ora permettono di registrare le chiamate"</string>
+    <string name="menu_settings">Impostazioni</string>
+    <string name="menu_terms">termini di utilizzo</string>
+    <string name="no_records_message">"Non ci sono registrazioni in questo telefono.
+Per attivare la capacità record di aprire il menu principale e scegliete \"Abilita Record\".
+Dopo che l'applicazione registra tutte le chiamate in entrata e in uscita."</string>
+    <string name="notification_text">Il telefono si ferma la registrazione quando la conversazione si concluderà</string>
+    <string name="notification_ticker">La registrazione è ora di iniziare</string>
+    <string name="notification_title">Il telefono è ora registrando la conversazione</string>
+    <string name="options_delete">cancellare</string>
+    <string name="options_title">Opzioni Titolo</string>
+    <string name="radio_Disable_record">Disattiva Record</string>
+    <string name="radio_Enable_record">Abilita Record</string>
+    <string name="reciever_end_call">Terminare la chiamata di registrazione</string>
+    <string name="reciever_start_call">Avvia una chiamata di registrazione</string>
+    <string name="record_impossible">Purtroppo, non è possibile registrare le chiamate in questo dispositivo.</string>
+    <string name="sendMail_body">Si tratta di un record di chiamata dal telefono</string>
+    <string name="sendMail_subject">Il tuo record dal telefono</string>
+    <string name="send_mail">Inviare e-mail</string>
+    <string name="textview_startup">"Si prega di scegliere se l'applicazione registra le chiamate.
+È sempre possibile modificare la scelta premendo il tasto menu di Android."</string>
+    <string name="title_activity_main">Call Recorder per Android</string>
+    <string name="withheld_number">Numero trattenuti</string>
+</resources>

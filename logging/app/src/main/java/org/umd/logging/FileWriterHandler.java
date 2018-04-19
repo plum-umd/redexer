@@ -192,7 +192,10 @@ public class FileWriterHandler implements Runnable{
                         s_arg = System.identityHashCode(arg) + "&" + arg.getClass().getName() + "@" + System.identityHashCode(arg);
                         //Check if first argument is a string
                     } else if (arg.getClass() == String.class) {
+                        // arg (object) is my string, s_arg is my new string (downcast it like did below, downcast it to class below
                         s_arg = "\"\"";
+                        //      like getextrastring, need to eliminate new lines and other problematic characters (just need to figure out)
+                        //      and limit to 200 characters.
                         //Check if it a class object
                     } else if (arg.getClass() == Class.class) {
                         s_arg = ((Class) arg).getName();

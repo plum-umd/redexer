@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="about_close_button">fermer</string>
+    <string name="about_content">Appelez-enregistreur par Kobi Krasnoff</string>
+    <string name="about_title">Sur</string>
+    <string name="app_name">Call Recorder pour Android</string>
+    <string name="confirm_delete_no">aucun</string>
+    <string name="confirm_delete_text">Êtes-vous sûr de vouloir supprimer cet enregistrement?</string>
+    <string name="confirm_delete_title">Alerte de dialogue</string>
+    <string name="confirm_delete_yes">oui</string>
+    <string name="confirm_play">jouer</string>
+    <string name="confirm_send">envoyer</string>
+    <string name="dialog_close">fermer</string>
+    <string name="dialog_delete_all_content">Etes-vous sûr de vouloir effacer tous vos enregistrements?</string>
+    <string name="dialog_delete_all_no">Non</string>
+    <string name="dialog_delete_all_title">"message d'alerte"</string>
+    <string name="dialog_delete_all_yes">Oui</string>
+    <string name="dialog_no_memory">"Il n'ya pas de carte mémoire dans votre appareil.
+S'il vous plaît installer un."</string>
+    <string name="dialog_privacy">Politique de confidentialité</string>
+    <string name="dialog_privacy_terms">"S'il vous plaît cliquer sur les boutons ci-dessous pour voir les conditions d'utilisation et politique de confidentialité"</string>
+    <string name="dialog_terms">"Conditions d'utilisation"</string>
+    <string name="dialog_welcome_screen">"écran d'accueil"</string>
+    <string name="hello_world">Bonjour tout le monde!</string>
+    <string name="list_erase_your_recordeed_call">effacer votre appel enregistré</string>
+    <string name="list_play_your_recordeed_call">jouer votre appel enregistré</string>
+    <string name="list_send_your_recordeed_call">envoyer votre appel enregistré</string>
+    <string name="menu_Disable_record">Désactiver enregistrement</string>
+    <string name="menu_Enable_record">"Activer l'Enregistrement"</string>
+    <string name="menu_about">Sur</string>
+    <string name="menu_delete_all">Supprimer tous les enregistrements</string>
+    <string name="menu_privacy_policy">Politique de confidentialité</string>
+    <string name="menu_record_is_now_disabled">"L'application est maintenant permet pas d'enregistrer les appels"</string>
+    <string name="menu_record_is_now_enabled">"L'application est maintenant permettre d'enregistrer les appels"</string>
+    <string name="menu_settings">Réglages</string>
+    <string name="menu_terms">"conditions d'utilisation"</string>
+    <string name="no_records_message">"Il n'y a pas d'enregistrements dans ce téléphone.
+Pour activer la capacité d'enregistrement ouvrez le menu principal et choisissez \"Activer l'Enregistrement\".
+Après que l'application va enregistrer tous vos appels entrants et sortants."</string>
+    <string name="notification_text">"Le téléphone arrête l'enregistrement quand la conversation prend fin"</string>
+    <string name="notification_ticker">"L'enregistrement commence maintenant"</string>
+    <string name="notification_title">Le téléphone enregistre actuellement la conversation</string>
+    <string name="options_delete">effacer</string>
+    <string name="options_title">Titre options</string>
+    <string name="radio_Disable_record">désactiver enregistrement</string>
+    <string name="radio_Enable_record">"Activer l'Enregistrement"</string>
+    <string name="reciever_end_call">Fin de la communication enregistrement</string>
+    <string name="reciever_start_call">Démarrer la fiche</string>
+    <string name="record_impossible">"Malheureusement, il n'est pas possible d'enregistrer les appels dans ce dispositif."</string>
+    <string name="sendMail_body">"Il s'agit d'un enregistrement d'appel à partir de votre téléphone"</string>
+    <string name="sendMail_subject">Votre dossier de votre téléphone</string>
+    <string name="send_mail">Envoyer un email</string>
+    <string name="textview_startup">"S'il vous plaît choisir si l'application enregistre vos appels.
+Vous pouvez toujours modifier votre choix en appuyant sur le bouton du menu d'Android."</string>
+    <string name="title_activity_main">Call recorder pour Android</string>
+    <string name="withheld_number">Nombre retenu</string>
+</resources>

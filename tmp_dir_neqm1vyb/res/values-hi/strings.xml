@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="about_close_button">पास</string>
+    <string name="about_content">Kobi Krasnoff द्वारा फोन रिकॉर्डर</string>
+    <string name="about_title">के बारे में</string>
+    <string name="app_name">Android के लिए फोन रिकॉर्डर</string>
+    <string name="confirm_delete_no">नहीं</string>
+    <string name="confirm_delete_text">क्या आप सुनिश्चित करें कि आप इस रिकॉर्डिंग को नष्ट करना चाहते हैं?</string>
+    <string name="confirm_delete_title">संवाद चेतावनी</string>
+    <string name="confirm_delete_yes">हां</string>
+    <string name="confirm_play">करना</string>
+    <string name="confirm_send">भेजें</string>
+    <string name="dialog_close">पास</string>
+    <string name="dialog_delete_all_content">आप अपने रिकॉर्डिंग के सभी को नष्ट करना चाहते हैं?</string>
+    <string name="dialog_delete_all_no">नहीं</string>
+    <string name="dialog_delete_all_title">चेतावनी संदेश</string>
+    <string name="dialog_delete_all_yes">हां</string>
+    <string name="dialog_no_memory">"अपने डिवाइस में कोई स्मृति कार्ड है.
+एक स्थापित करें."</string>
+    <string name="dialog_privacy">गोपनीयता नीति</string>
+    <string name="dialog_privacy_terms">बटन नीचे क्लिक करें उपयोग की शर्तों और गोपनीयता नीति देखें</string>
+    <string name="dialog_terms">תנאי שימוש</string>
+    <string name="dialog_welcome_screen">स्क्रीन में आपका स्वागत है</string>
+    <string name="hello_world">दुनिया नमस्कार!</string>
+    <string name="list_erase_your_recordeed_call">अपने दर्ज की गई कॉल को मिटा</string>
+    <string name="list_play_your_recordeed_call">अपने दर्ज की गई कॉल खेलने</string>
+    <string name="list_send_your_recordeed_call">अपने रिकॉर्ड कॉल भेजने</string>
+    <string name="menu_Disable_record">रिकॉर्ड निष्क्रिय कर देते हैं</string>
+    <string name="menu_Enable_record">रिकॉर्ड सक्षम</string>
+    <string name="menu_about">के बारे में</string>
+    <string name="menu_delete_all">सभी रिकॉर्डिंग हटाएँ</string>
+    <string name="menu_privacy_policy">गोपनीयता नीति</string>
+    <string name="menu_record_is_now_disabled">आवेदन अब सक्षम नहीं है कॉल रिकॉर्ड</string>
+    <string name="menu_record_is_now_enabled">आवेदन अब कॉल रिकॉर्ड के लिए सक्षम है</string>
+    <string name="menu_settings">सेटिंग्स</string>
+    <string name="menu_terms">इस्तेमाल की शर्तें</string>
+    <string name="no_records_message">"इस फोन में कोई रिकॉर्डिंग कर रहे हैं.
+को रिकॉर्ड करने की क्षमता मुख्य मेनू खोलने के लिए और चुन \"रिकॉर्ड सक्षम\".
+उसके बाद आवेदन अपने सभी इनकमिंग और आउटगोइंग कॉल रिकॉर्ड होगा."</string>
+    <string name="notification_text">बातचीत खत्म हो जाएगा जब फोन रिकॉर्डिंग बंद हो जाएगा</string>
+    <string name="notification_ticker">रिकॉर्डिंग अब शुरू है</string>
+    <string name="notification_title">फोन अब बातचीत की रिकॉर्डिंग है</string>
+    <string name="options_delete">हटाना</string>
+    <string name="options_title">विकल्प शीर्षक</string>
+    <string name="radio_Disable_record">रिकॉर्ड निष्क्रिय कर देते हैं</string>
+    <string name="radio_Enable_record">रिकॉर्ड सक्षम</string>
+    <string name="reciever_end_call">रिकॉर्ड कॉल समाप्त</string>
+    <string name="reciever_start_call">रिकॉर्ड कॉल प्रारंभ</string>
+    <string name="record_impossible">दुर्भाग्य से, यह इस डिवाइस में कॉल रिकॉर्ड करने के लिए संभव नहीं है.</string>
+    <string name="sendMail_body">यह अपने फोन से एक कॉल रिकॉर्ड है</string>
+    <string name="sendMail_subject">अपने फ़ोन से रिकॉर्ड</string>
+    <string name="send_mail">मेल भेजें</string>
+    <string name="textview_startup">"कृपया चुनें यदि आवेदन अपने कॉल रिकॉर्ड होगा.
+आप हमेशा Android मेनू बटन दबाकर अपने को चुनने में परिवर्तन कर सकते हैं."</string>
+    <string name="title_activity_main">Android के लिए फोन रिकॉर्डर</string>
+    <string name="withheld_number">रोक लगाई संख्या</string>
+</resources>

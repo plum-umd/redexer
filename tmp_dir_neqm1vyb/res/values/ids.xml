@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item type="id" name="mylist">false</item>
+    <item type="id" name="ScrollView02">false</item>
+    <item type="id" name="txtNoRecords">false</item>
+    <item type="id" name="label_list">false</item>
+    <item type="id" name="label">false</item>
+    <item type="id" name="label_list_2">false</item>
+    <item type="id" name="img_delete">false</item>
+    <item type="id" name="textview_startup">false</item>
+    <item type="id" name="radio_Enable_record">false</item>
+    <item type="id" name="radio_Disable_record">false</item>
+    <item type="id" name="ScrollView03">false</item>
+    <item type="id" name="txtTerms2">false</item>
+    <item type="id" name="menu_Enable_record">false</item>
+    <item type="id" name="menu_Disable_record">false</item>
+    <item type="id" name="menu_about">false</item>
+    <item type="id" name="menu_see_terms">false</item>
+    <item type="id" name="menu_privacy_policy">false</item>
+    <item type="id" name="menu_delete_all">false</item>
+</resources>

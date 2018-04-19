@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="about_close_button">закрывать</string>
+    <string name="about_content">Call Recorder от Коби Краснов</string>
+    <string name="about_title">о</string>
+    <string name="app_name">Call Recorder для Android</string>
+    <string name="confirm_delete_no">нет</string>
+    <string name="confirm_delete_text">Вы уверены, что хотите удалить эту запись?</string>
+    <string name="confirm_delete_title">Сигнал Диалог</string>
+    <string name="confirm_delete_yes">да</string>
+    <string name="confirm_play">играть</string>
+    <string name="confirm_send">послать</string>
+    <string name="dialog_close">близко</string>
+    <string name="dialog_delete_all_content">Вы уверены, что хотите удалить все записи?</string>
+    <string name="dialog_delete_all_no">нет</string>
+    <string name="dialog_delete_all_title">предупреждение</string>
+    <string name="dialog_delete_all_yes">да</string>
+    <string name="dialog_no_memory">"Существует нет карты памяти в устройстве.
+Пожалуйста, установите один."</string>
+    <string name="dialog_privacy">Политика конфиденциальности</string>
+    <string name="dialog_privacy_terms">Пожалуйста, нажмите на кнопку ниже, чтобы увидеть условия использования и политика конфиденциальности</string>
+    <string name="dialog_terms">Условия использования</string>
+    <string name="dialog_welcome_screen">экран приветствия</string>
+    <string name="hello_world">Привет мир!</string>
+    <string name="list_erase_your_recordeed_call">erase your recorded call</string>
+    <string name="list_play_your_recordeed_call">play your recorded call</string>
+    <string name="list_send_your_recordeed_call">send your recorded call</string>
+    <string name="menu_Disable_record">Отключить запись</string>
+    <string name="menu_Enable_record">Включить запись</string>
+    <string name="menu_about">о</string>
+    <string name="menu_delete_all">Удалить все записи</string>
+    <string name="menu_privacy_policy">Политика конфиденциальности</string>
+    <string name="menu_record_is_now_disabled">Приложение теперь не позволяют записывать звонки</string>
+    <string name="menu_record_is_now_enabled">Приложение теперь позволяет записывать звонки</string>
+    <string name="menu_settings">настройки</string>
+    <string name="menu_terms">Условия использования</string>
+    <string name="no_records_message">"Есть никаких записей в этом телефоне.
+Чтобы включить запись способность открыть главное меню и выберите \"Включить запись\".
+После этого приложение будет записывать все входящие и исходящие вызовы."</string>
+    <string name="notification_text">Телефон прекращает запись, когда разговор закончится</string>
+    <string name="notification_ticker">Запись в настоящее время начинает</string>
+    <string name="notification_title">Телефон выполняет запись разговора</string>
+    <string name="options_delete">удалять</string>
+    <string name="options_title">Параметры Название</string>
+    <string name="radio_Disable_record">Отключить запись</string>
+    <string name="radio_Enable_record">Включить запись</string>
+    <string name="reciever_end_call">Конец записи вызова</string>
+    <string name="reciever_start_call">Начало записи вызова</string>
+    <string name="record_impossible">К сожалению, это не возможно записывать звонки в данном устройстве.</string>
+    <string name="sendMail_body">Это запись вызова с телефона</string>
+    <string name="sendMail_subject">Ваша запись с телефона</string>
+    <string name="send_mail">Отправить почту</string>
+    <string name="textview_startup">"Пожалуйста, выберите, если приложение будет записывать ваши звонки.
+Вы всегда можете изменить ваш выбор, нажав на кнопку меню Android."</string>
+    <string name="title_activity_main">Call Recorder для Android</string>
+    <string name="withheld_number">Количество удержанных</string>
+</resources>
