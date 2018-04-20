@@ -191,11 +191,33 @@ public class FileWriterHandler implements Runnable{
                         //s_arg = System.identityHashCode(arg) + "&" + arg.toString();
                         s_arg = System.identityHashCode(arg) + "&" + arg.getClass().getName() + "@" + System.identityHashCode(arg);
                         //Check if first argument is a string
-                    } else if (arg.getClass() == String.class) {
-                        // arg (object) is my string, s_arg is my new string (downcast it like did below, downcast it to class below
-                        s_arg = "\"\"";
-                        //      like getextrastring, need to eliminate new lines and other problematic characters (just need to figure out)
-                        //      and limit to 200 characters.
+                    } else if (arg.getClass() == String.class) { // removes /n, shortens to <200 char
+                        String new_arg = ((String) arg); // now it's a string
+                        int new_argLength = new_arg.length();
+                        String s = "";
+                        String c;
+                        if (new_argLength > 200) { // shortens to strings < 200 chars
+                            new_arg = new_arg.substring(0,201);
+                        }
+                        for (int index = 0; index < new_argLength; index++) {
+                            if (index == new_argLength - 1) { // last character of arg
+                                s += new_arg.substring(index);
+                            }
+                            else {
+                                c = new_arg.substring(index, index+1);
+                                if (c == "/") {
+                                    if (index == new_argLength - 2) { // make sure have a i+2 case
+                                        if (new_arg.substring(index+1) != "n") {
+                                            s += c;
+                                        }
+                                    }
+                                    else if (new_arg.substring(index+1, index+2) == "n") { // then has new line!
+                                        index += 1; // skip these two characters
+                                    }
+                                }
+                            }
+                        }
+                        s_arg = "\"" + s + "\""; // put s within quotes
                         //Check if it a class object
                     } else if (arg.getClass() == Class.class) {
                         s_arg = ((Class) arg).getName();
