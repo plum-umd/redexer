@@ -33,7 +33,7 @@ helpful:
   Internals](http://www.youtube.com/watch?v=ptjedOZEXPM).
 
 - The [Dalvik Executable
-  Format](http://source.android.com/tech/dalvik/dex-format.html)
+  Format](https://source.android.com/devices/tech/dalvik/dex-format)
   document describes the structure of `.dex` files.  This format is
   implemented in redexer, so being familiar with it will help in
   understanding redexer.
