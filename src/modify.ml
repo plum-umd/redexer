@@ -564,6 +564,9 @@ let insrt_insns_under_off dx (citm: D.code_item) cur (insns: I.instr list) =
 *)
 (* insrt_insns_over_off : D.dex -> D.code_item -> cursor -> I.instr list -> cursor *)
 let insrt_insns_over_off dx (citm: D.code_item) cur (insns: I.instr list) =
+  Printf.printf "h1\n";
+  Unparse.print_method dx citm;
+  Printf.printf "h1\n";
   let rest, last = U.rm_last insns, U.get_last insns
   and nxt_cur = next cur
   and off = DA.get citm.D.insns cur in
@@ -585,6 +588,7 @@ let insrt_insns_over_off dx (citm: D.code_item) cur (insns: I.instr list) =
       try_item
   in
   citm.D.tries <- L.map fixup_try citm.D.tries;
+  Unparse.print_method dx citm;
   c
 
 (*(*

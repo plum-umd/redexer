@@ -321,8 +321,8 @@ let arg_specs = A.align
 
     ("-logging",  A.Unit do_logging,
      " instrument logging feature into the given dex");
-    ("-logging-detail", A.Unit (fun () -> Lgg.detail := Lgg.Optimized),
-     " logging more methods (default: false)");
+    ("-logging-detail", A.Unit (fun () -> Lgg.detail := Lgg.Fine),
+     " fine-grained logging (default: false)");
 
     ("-directed", A.Unit do_directed,
      " instrument the dex such that it is directed to certain call sites");

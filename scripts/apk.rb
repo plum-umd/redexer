@@ -34,7 +34,6 @@ class Apk
   require 'yaml'
   require 'tempfile'
   require 'rbconfig'
-  require 'parallel'
 
   THIS_FILE = File.expand_path(__FILE__)
   HERE = File.dirname(THIS_FILE)
@@ -130,7 +129,7 @@ class Apk
     end
     if multi then
       @out << "Using #{NUMPROCS} worker processes"
-      nums = Parallel.map(dexes, in_processes: NUMPROCS) do |s| 
+      nums = dexes.map do |s| 
         s = s.match(/classes(\d+).dex/)
         if s == nil 
         then nil

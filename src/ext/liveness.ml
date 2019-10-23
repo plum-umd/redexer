@@ -125,10 +125,8 @@ let make_dfa (dx: D.dex) (citm: D.code_item) : liveness =
     type l = IS.t
     let bot = all citm.D.registers_size
     let top = IS.empty
-
     let meet = IS.union
     let compare = IS.compare
-
     let to_s l =
       let buf = B.create (IS.cardinal l) in
       B.add_string buf "{ ";
