@@ -693,7 +693,7 @@ class virtual logger (dx: D.dex) =
               let _ =
                 (* If we are to move the return, then *)
                 if ret_moved then
-                  ignore @@ M.insrt_insns_over_off dx cur_citm ext_cursor ext_insns
+                   ignore @@ M.insrt_insns_over_off dx cur_citm ext_cursor ext_insns
                 else (
                   let new_cur = M.insrt_insns dx cur_citm ext_cursor ext_insns - 1 in
                   let inserted_idx = DA.get cur_citm.D.insns new_cur in
