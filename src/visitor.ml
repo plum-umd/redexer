@@ -48,6 +48,9 @@ module IM = I.IM
 
 module L = List
 
+(* Temp module *)
+module I32 = Int32
+
 (***********************************************************************)
 (* Basic Types/Elements                                                *)
 (***********************************************************************)
@@ -141,7 +144,11 @@ let to_be_skipped (cname: string) : bool =
 let rec iter (v: visitor) : unit =
   let dx = v#get_dx () in
   let per_citm (citm: D.code_item) : unit =
-    v#v_citm citm;
+(*     Printf.fprintf stderr "per_citm: code item offset before: 0x%08X\n" (I32.to_int (D.get_off citm.D.debug_info_off));
+ *)    v#v_citm citm;
+(*     Printf.fprintf stderr "per_citm: code item offset after: 0x%08X\n" (I32.to_int (D.get_off citm.D.debug_info_off));
+ *)    (* Printf.fprintf stderr "Forcing crash... eventually\n";
+    D.get_data_item dx (D.to_off 3216823); *)
     L.iter v#v_ins (DA.to_list citm.D.insns);
     L.iter v#v_try citm.D.tries;
     L.iter v#v_hdl citm.D.c_handlers;
@@ -159,7 +166,7 @@ let rec iter (v: visitor) : unit =
       if v#get_skip_mtd () then () else
       if emtd.D.code_off = D.no_off then () else
       match D.get_data_item dx emtd.D.code_off with
-      | D.CODE_ITEM citm -> per_citm citm
+      | D.CODE_ITEM citm -> (* Printf.fprintf stderr "Calling per_citm for emtd: 0x%08X\n" (I32.to_int (D.get_off emtd.D.code_off)); *) per_citm citm
       | _ -> raise (D.Wrong_match "cdat: not CODE_ITEM")
     in
     L.iter v_mtd cdat.D.direct_methods;
