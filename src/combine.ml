@@ -77,8 +77,8 @@ let sft_idx (shift: int) l : D.link =
 (* Combining DEX binaries                                              *)
 (***********************************************************************)
 
-(* combine: D.dex -> D.dex -> D.dex *)
-let rec combine (lx: D.dex) (tx: D.dex) : D.dex =
+(* combine: D.dex -> D.dex -> bool -> D.dex *)
+let rec combine (lx: D.dex) (tx: D.dex) ~only_prototypes : D.dex =
   let dx = D.empty_dex ()
   and sft = {
     str_sz = DA.length lx.D.d_string_ids;
@@ -109,10 +109,10 @@ let rec combine (lx: D.dex) (tx: D.dex) : D.dex =
   (* append field_ids *)
   DA.append lx.D.d_field_ids dx.D.d_field_ids;
   let ff it = {
-    D.f_class_id = sft_idx sft.typ_sz it.D.f_class_id;
-    D.f_type_id  = sft_idx sft.typ_sz it.D.f_type_id;
-    D.f_name_id  = sft_idx sft.str_sz it.D.f_name_id;
-  } in
+      D.f_class_id = sft_idx sft.typ_sz it.D.f_class_id;
+      D.f_type_id  = sft_idx sft.typ_sz it.D.f_type_id;
+      D.f_name_id  = sft_idx sft.str_sz it.D.f_name_id;
+    } in
   DA.append (DA.map ff tx.D.d_field_ids) dx.D.d_field_ids;
   (* append method_ids *)
   DA.append lx.D.d_method_ids dx.D.d_method_ids;
@@ -122,18 +122,31 @@ let rec combine (lx: D.dex) (tx: D.dex) : D.dex =
     D.m_name_id  = sft_idx sft.str_sz it.D.m_name_id;
   } in
   DA.append (DA.map fm tx.D.d_method_ids) dx.D.d_method_ids;
-  (* append class_defs *)
-  DA.append lx.D.d_class_defs dx.D.d_class_defs;
-  let fc it = {
-    it with
-    D.c_class_id    = sft_idx sft.typ_sz it.D.c_class_id;
-    D.superclass    = sft_idx sft.typ_sz it.D.superclass;
-    D.interfaces    = sft_off sft.f_size it.D.interfaces;
-    D.source_file   = sft_idx sft.str_sz it.D.source_file;
-    D.annotations   = sft_off sft.f_size it.D.annotations;
-    D.class_data    = sft_off sft.f_size it.D.class_data;
-    D.static_values = sft_off sft.f_size it.D.static_values;
-  } in
+  (* append class_defs
+     
+     Note: To accomodate a multi-dex setup, redexer can be used to add
+     in only method definitions to each dex file (classesN.dex). To do
+     this, redexer adds everything except for class definitions from
+     (e.g.,) `logging.dex`, so that subsequent traversals can then
+     utilize methods from that library. These methods are left
+     unresolved in each classesN.dex if the {only_prototypes} flag is
+     passed to this method.
+
+   *)
+  if (not only_prototypes) then 
+    DA.append lx.D.d_class_defs dx.D.d_class_defs;
+  let fc it = 
+    {
+      it with
+      D.c_class_id    = sft_idx sft.typ_sz it.D.c_class_id;
+      D.superclass    = sft_idx sft.typ_sz it.D.superclass;
+      D.interfaces    = sft_off sft.f_size it.D.interfaces;
+      D.source_file   = sft_idx sft.str_sz it.D.source_file;
+      D.annotations   = sft_off sft.f_size it.D.annotations;
+      D.class_data    = sft_off sft.f_size it.D.class_data;
+      D.static_values = sft_off sft.f_size it.D.static_values;
+    }
+  in
   DA.append (DA.map fc tx.D.d_class_defs) dx.D.d_class_defs;
   dx.D.d_data <- IM.fold (sft_data sft) tx.D.d_data lx.D.d_data;
   dx

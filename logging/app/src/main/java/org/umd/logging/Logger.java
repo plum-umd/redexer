@@ -49,6 +49,13 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Member;
 
 import java.net.URL;
 
@@ -56,6 +63,8 @@ import java.text.SimpleDateFormat;
 
 import java.io.FileOutputStream;
 import java.io.File;
+import java.io.FileDescriptor;
+import java.io.BufferedOutputStream;
 
 import android.widget.CheckBox;
 import android.widget.RadioButton;
@@ -75,6 +84,8 @@ import android.net.Uri;
 import android.os.Environment;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Parcel;
+import android.os.Parcelable;
 
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
@@ -141,11 +152,48 @@ public class Logger {
       }else if(argCount == 0 && FragmentMapper.getInstance().isFragment(arg.getClass())){
         s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<fragment=true>";
       //Check if first argument is an asynctask object
+      
       }else if(argCount == 0 && arg instanceof AsyncTask){
         s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<atask=true>";
+      }else if(arg.getClass().getName().equals("com.facebook.GraphRequestBatch") && mname.contains("execute")){
+        Class request_batch_c = arg.getClass();
+        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
+        try{
+            //Log.i(tag, "RequestBatch Class Name: " + request_batch_c.getName());
+            for(Field request_batch_f : request_batch_c.getDeclaredFields()){
+                //Log.i(tag, "RequestBatch Declared Field Type: " + request_batch_f.getType().getName());
+                if(request_batch_f.getType().getName().contains("java.util.List")){
+                    request_batch_f.setAccessible(true);
+                    ArrayList<Object> request_list = (ArrayList<Object>)request_batch_f.get(arg);
+                    if(request_list.size() > 0 && request_list.get(0).getClass().getName().equals("com.facebook.GraphRequest")){
+                        for(Object request : request_list){
+                            Class request_c = request.getClass();
+                            Field httpMethod_f = request_c.getDeclaredField("httpMethod");
+                            httpMethod_f.setAccessible(true);
+                            String httpMethod = (String)httpMethod_f.get(request).toString();
+                            Field graphPath_f = request_c.getDeclaredField("graphPath");
+                            graphPath_f.setAccessible(true);
+                            String graphPath = (String)graphPath_f.get(request);
+                            Field parameters_f = request_c.getDeclaredField("parameters");
+                            parameters_f.setAccessible(true);
+                            Bundle parameters = (Bundle)parameters_f.get(request);
+                            s_arg = s_arg + "<httpMethod=" + httpMethod + "><graphPath=" + graphPath + "><fields=" + parameters.getString("fields").replace(',','|') + ">";
+                            //Log.i(tag,"RequestBatch toString(): " + request.toString());
+                        }
+                        break;
+                    }
+                }
+            }
+        } catch(IllegalAccessException|NoSuchFieldException e){
+            Log.i(tag, "AccessException: " + e.getMessage());
+        }
       //Try to annotate all of the arguments
       }else{
         s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
+        
+//        if(arg instanceof String && mname.contains("FACEBOOK")){
+//            s_arg += "<value" + argCount + "=" + arg + ">";
+//        }
         if(arg instanceof View){
           if(argCount == 0 || argCount == 1){
             try{
@@ -214,6 +262,11 @@ public class Logger {
         if(arg instanceof Thread){
           s_arg += "<thread=" + ((Thread)arg).getId() + ">";
         }
+        if(arg instanceof File){
+          File sdcard = Environment.getExternalStorageDirectory();
+          String sdcard_path = sdcard.getAbsolutePath();
+          s_arg += "<file_path=" + ((File)arg).getAbsolutePath() + ">";
+        }
         if(arg instanceof Intent && ((Intent)arg).getAction()!="android.intent.action.VIEW" && ((Intent)arg).getAction()!="android.intent.action.MAIN"){
           s_arg += "<action=" + ((Intent)arg).getAction() + ">";
           s_arg += "<data=" + ((Intent)arg).getDataString() + ">";
@@ -226,7 +279,31 @@ public class Logger {
           s_arg += "<type=" + ((Intent)arg).getType() + ">";
           s_arg += "<filter_hashcode=" + ((Intent)arg).filterHashCode() + ">";
           Bundle bundle = ((Intent)arg).getExtras();
-          if(bundle != null){
+          if(mname.contains("FACEBOOK")){
+//            Bundle parcelable_1 = (Bundle)bundle.get("com.facebook.LoginFragment:Request");
+            Parcelable parcelable = bundle.getParcelable("request");
+            if(parcelable != null){
+                Parcel parcel = Parcel.obtain();
+                parcelable.writeToParcel(parcel,0);
+                parcel.setDataPosition(0);
+                ArrayList<String> permissions = new ArrayList<String>();
+                String loginBehavior = parcel.readString();
+                parcel.readStringList(permissions);
+                String perm_list = "";
+                for (String perm : permissions){
+                    perm_list = perm_list + "|" + perm;
+                }
+                perm_list = perm_list.substring(1);
+                String defaultAudience = parcel.readString();
+                String appID = parcel.readString();
+                String authID = parcel.readString();
+                byte isRequest = parcel.readByte();
+                String deviceRedirectUri = parcel.readString();
+                
+                s_arg += "<loginBehavior=" + loginBehavior + "><permissions=" + perm_list + "><defaultAudience=" + defaultAudience + "><appID=" + appID + "><authID=" + authID + "><isRequest=" + isRequest + "><deviceRedirectUri=" + deviceRedirectUri + ">";
+            }
+          }
+          else if(bundle != null){
               if(!bundle.keySet().contains("umd_Intent_key")){
                   ((Intent)arg).putExtra("umd_Intent_key",System.currentTimeMillis());
                   bundle = ((Intent)arg).getExtras();
@@ -262,7 +339,7 @@ public class Logger {
     String s_args = join(Arrays.asList(args), ", ", mname);
     long threadId = Thread.currentThread().getId();
     String msg = io + " " + threadId + " " + ofJavaTy(cname) + "." + mname + "(" + s_args + ")";
-    Log.i(tag, msg);
+    Log.i(tag, msg.replaceAll("\n"," "));
   }
   
   static void logMethod(String io, Object... args) {
@@ -283,11 +360,163 @@ public class Logger {
   }
   
   public static void logAPIEntry(String cname, String mname, Object... args) {
-    log("Api >", cname, mname, args);
+    Boolean cont = true;
+    if(cname.contains("java/io/File")){
+        cont = false;
+        File sdcard = Environment.getExternalStorageDirectory();
+        String sdcard_path = sdcard.getAbsolutePath();
+        Iterator<Object> iter = Arrays.asList(args).iterator();
+        while (iter.hasNext()) {
+            Object arg = iter.next();
+            if(arg instanceof File){
+                if(((File)arg).getAbsolutePath().startsWith(sdcard_path)){
+                    cont = true;
+                }
+            }
+            else if(arg instanceof String){
+                if(((String)arg).startsWith(sdcard_path)){
+                    cont = true;
+                }
+            }
+        }
+    }
+    if(mname.contains("startActivityForResult")){
+        cont = false;
+        Iterator<Object> iter = Arrays.asList(args).iterator();
+        while (iter.hasNext()) {
+            Object arg = iter.next();
+            if(arg instanceof Intent){
+                String intent_action =((Intent)arg).getAction();
+                if(intent_action=="android.intent.action.GET_CONTENT" || intent_action =="android.intent.action.PICK"){
+                    Bundle bundle = ((Intent)arg).getExtras();
+                    if(bundle != null){
+                        if(!bundle.keySet().contains("android.intent.extra.LOCAL_ONLY")){
+                            mname = mname + "CONTENT";
+                            cont = true;
+                            break;
+                        }
+                    }
+                }
+                else if(intent_action=="android.media.action.IMAGE_CAPTURE"){
+                    mname = mname + "CAMERA";
+                    cont = true;
+                    break;
+                }
+                else if(intent_action=="NATIVE_WITH_FALLBACK"){
+                    mname = mname + "FACEBOOK";
+                    cont = true;
+                }
+            }
+        }
+    }
+    if(mname.contains("build") && cname.contains("com.google.android.gms.common.api.GoogleApiClient")){
+    	cont = false;
+	try{
+		Object builder = (ArrayList<Object>)Arrays.asList(args).get(0);
+		Class c = builder.getClass();
+		Field apiMap_f = c.getField("zzagn");
+		Map apiMap = (Map)apiMap_f.get(builder);
+		ArrayList<String> apis = new ArrayList<String>();
+		for(Object key : apiMap.keySet()){
+			Class key_c = key.getClass();
+			Field api_f = key_c.getField("mName");
+			apis.add((String)api_f.get(key));
+		}
+		log("Api >", cname, mname, apis);
+	} catch(IllegalAccessException|NoSuchFieldException e){
+		Log.i(tag, "Exception: " + e.getMessage());
+	}
+    }
+    if(mname.contains("query") && cname.contains("Api") && cname.contains("com.google.android.gms")){
+	cont = false;
+	try{
+		Object query = (ArrayList<Object>)Arrays.asList(args).get(2);
+		Class query_c = query.getClass();
+		Field logicalFilter_f = query_c.getField("zzatV");
+		Object logicalFilter = logicalFilter_f.get(query);
+		Class logicalFilter_c = logicalFilter.getClass();
+		Field filterList_f = logicalFilter_c.getField("zzaua");
+		List<Object> filterList = (List<Object>)filterList_f.get(logicalFilter);
+		ArrayList<String> filters = new ArrayList<String>();
+		for(Object filter : filterList){
+			Class filter_c = filter.getClass();
+			Field operator_f = filter_c.getField("zzaug");
+			Object operator = operator_f.get(filter);
+			Class operator_c = operator.getClass();
+			Field tag_f = operator_c.getField("mTag");
+			String tag = (String)tag_f.get(operator);
+		
+			Field metadatabundle_f = filter_c.getField("zzauh");
+			Object metadatabundle = metadatabundle_f.get(filter);
+			Class metadatabundle_c = metadatabundle.getClass();
+			Field bundle_f = metadatabundle_c.getField("zzasQ");
+			Bundle bundle = (Bundle)bundle_f.get(metadatabundle);
+			String bundle_text = bundle.toString();
+			filters.add("Operator: " + tag + ", Filter: " + bundle_text); 
+		}
+		log("Api >", cname, mname, filters);
+	} catch(IllegalAccessException|NoSuchFieldException e){
+		Log.i(tag, "Exception: " + e.getMessage());
+	}
+    }
+    if(cont){
+        log("Api >", cname, mname, args);
+    }
   }
   
   public static void logAPIExit(String cname, String mname, Object... args) {
-    log("Api <", cname, mname, args);
+    Boolean cont = true;
+    if(cname.contains("java/io/File")){
+        cont = false;
+        File sdcard = Environment.getExternalStorageDirectory();
+        String sdcard_path = sdcard.getAbsolutePath();
+        Iterator<Object> iter = Arrays.asList(args).iterator();
+        while (iter.hasNext()) {
+            Object arg = iter.next();
+            if(arg instanceof File){
+                if(((File)arg).getAbsolutePath().startsWith(sdcard_path)){
+                    cont = true;
+                }
+            }
+            else if(arg instanceof String){
+                if(((String)arg).startsWith(sdcard_path)){
+                    cont = true;
+                }
+            }
+        }
+    }
+    if(mname.contains("startActivityForResult")){
+        cont = false;
+        Iterator<Object> iter = Arrays.asList(args).iterator();
+        while (iter.hasNext()) {
+            Object arg = iter.next();
+            if(arg instanceof Intent){
+                String intent_action =((Intent)arg).getAction();
+                if(intent_action=="android.intent.action.GET_CONTENT" || intent_action=="android.intent.action.PICK"){
+                    Bundle bundle = ((Intent)arg).getExtras();
+                    if(bundle != null){
+                        if(!bundle.keySet().contains("android.intent.extra.LOCAL_ONLY")){
+                            mname = mname + "CONTENT";
+                            cont = true;
+                            break;
+                        }
+                    }
+                }
+                else if(intent_action=="android.media.action.IMAGE_CAPTURE"){
+                    mname = mname + "CAMERA";
+                    cont = true;
+                    break;
+                }
+                else if(intent_action=="NATIVE_WITH_FALLBACK"){
+                    mname = mname + "FACEBOOK";
+                    cont = true;
+                }
+            }
+        }
+    }
+    if(cont){
+        log("Api <", cname, mname, args);
+    }
   }
 
   private static String processDialog(Dialog dialog){
@@ -345,55 +574,59 @@ public class Logger {
     }
     return dateString;
   }
-
-  private static String takeScreenshot(Dialog diag, String addon_text) {
-    Date now = new Date();
-    SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
-
-    String dateString = "";
-    try{
-      // getLocationOnScreen
-      dateString = sdfr.format(now);
-    } catch (Throwable e) {
-      // Several error may come out with file handling or OOM
-      ;//e.printStackTrace();
-      return "";
-    }
-    try {
-      // image naming and path  to include sd card  appending name you choose for file
-      String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
-
-      // create bitmap screen capture
-      View v1;
-      if(diag != null){
-        v1 = diag.getWindow().getDecorView().getRootView();
-      }else if(current_activity != null){
-        v1 = current_activity.getWindow().getDecorView().getRootView();
-      }else{
-        return "";
-      }
-
-      v1.setDrawingCacheEnabled(true);
-      Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
-      v1.setDrawingCacheEnabled(false);
-      if(!addon_text.equals("")){
-        bitmap = drawText(addon_text, bitmap);
-      }
-
-      File imageFile = new File(mPath);
-
-      FileOutputStream outputStream = new FileOutputStream(imageFile);
-      int quality = 90;
-      bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
-      outputStream.flush();
-      outputStream.close();
-    } catch (Throwable e) {
-      // Several error may come out with file handling or OOM
-      ;//e.printStackTrace();
-      return "";
-    }
-    return dateString;
+  
+  private static String takeScreenshot(Dialog diag, String addon_text){
+    return "";
   }
+
+//  private static String takeScreenshot(Dialog diag, String addon_text) {
+//    Date now = new Date();
+//    SimpleDateFormat sdfr = new SimpleDateFormat("yyyy-MM-dd_hh:mm:ss.SSS");
+//
+//    String dateString = "";
+//    try{
+//      // getLocationOnScreen
+//      dateString = sdfr.format(now);
+//    } catch (Throwable e) {
+//      // Several error may come out with file handling or OOM
+//      ;//e.printStackTrace();
+//      return "";
+//    }
+//    try {
+//      // image naming and path  to include sd card  appending name you choose for file
+//      String mPath = Environment.getExternalStorageDirectory().toString() + "/" + dateString + ".jpg";
+//
+//      // create bitmap screen capture
+//      View v1;
+//      if(diag != null){
+//        v1 = diag.getWindow().getDecorView().getRootView();
+//      }else if(current_activity != null){
+//        v1 = current_activity.getWindow().getDecorView().getRootView();
+//      }else{
+//        return "";
+//      }
+//
+//      v1.setDrawingCacheEnabled(true);
+//      Bitmap bitmap = Bitmap.createBitmap(v1.getDrawingCache());
+//      v1.setDrawingCacheEnabled(false);
+//      if(!addon_text.equals("")){
+//        bitmap = drawText(addon_text, bitmap);
+//      }
+//
+//      File imageFile = new File(mPath);
+//
+//      FileOutputStream outputStream = new FileOutputStream(imageFile);
+//      int quality = 90;
+//      bitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream);
+//      outputStream.flush();
+//      outputStream.close();
+//    } catch (Throwable e) {
+//      // Several error may come out with file handling or OOM
+//      ;//e.printStackTrace();
+//      return "";
+//    }
+//    return dateString;
+//  }
 
   private static Bitmap drawText(String text, Bitmap bitmap){
     android.graphics.Bitmap.Config bitmapConfig =

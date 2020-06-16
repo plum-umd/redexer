@@ -1198,8 +1198,47 @@ object
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
     cur_citm <- citm
-
+                  
   method v_ins (ins: D.link) : unit =
+    (* Get the sort of register definition for a given point. 
+       
+       In various places, we need to choose which sort of move
+       instruction to use. For example, if we need to move v19 to v1,
+       we need to know whether or not to use a regular move, or
+       move-object instruction.
+
+       We do this by running a reaching definitions analysis for a
+       given point, and then looking up that instruction to see which
+       sort it uses. For plain instructions, we can ascertain from the
+       instruction type which sort it is. Under some circumstances, no
+       instruction definitions may reach a point, but a parameter
+       will. In this case, we use the method definition to look up the
+       register sort.
+
+       This function takes in {d}, the instruction that is the
+       reaching definition (provided from the result of the reaching
+       definitions analysis) and {r}, the register of interest.  *)
+    let get_def_sort (d: D.link) (r: int) : I.reg_sort =
+      if D.is_ins dx d then L.hd (get_sort (D.get_ins dx d) [r])
+      else if D.is_param cur_citm r then
+        (* parameters won't have def; rather, refer to method sig *)
+        let argv = D.get_argv dx (D.get_mit dx cur_mid) in
+        let argv = if is_static then argv else
+                     (* including *this* unless static methods *)
+                     let cur_cid = D.get_cid_from_mid dx cur_mid in cur_cid :: argv
+        in
+        let p_finder (i, sort) arg =
+          let tname = J.of_type_descr (D.get_ty_str dx arg) in
+          let i' = if L.mem tname [J.j; J.d] then i + 2 else i + 1 in
+          let sort' = if i <> r then sort else
+                        if L.mem tname [J.j; J.d] then I.R_WIDE
+                        else if L.mem tname J.shorties then I.R_NORMAL
+                        else I.R_OBJ
+          in (i', sort')
+        in
+        snd (L.fold_left p_finder (D.calc_this cur_citm, I.R_OBJ) argv)
+      else I.R_NORMAL
+    in
     let overwrite (inss: I.instr list) : unit =
       let cursor = get_cursor cur_citm ins in
       D.insrt_ins dx ins (L.hd inss);
@@ -1260,6 +1299,30 @@ object
         overwrite inss
       )
 
+      (* registers for filled-new-array *)
+      | I.OP_FILLED_NEW_ARRAY, l -> 
+         (* Calculate reaching definitions for this point. Then use
+            that analysis to lookup the register sorts for each
+            instruction that needs to be moved. *)
+         let (I.OPR_INDEX cid)::l = L.rev l in 
+         let l = L.rev l in
+         let dfa = St.time "reach" (Rc.make_dfa dx) cur_citm in
+         let module DFA = (val dfa: Dataflow.ANALYSIS
+                               with type st = D.link and type l = (D.link IM.t))
+         in
+         St.time "reach" DFA.fixed_pt ();
+         let inn = St.time "reach" DFA.inn ins in
+         (* Put each argument in {v0,...,v4} (at most) *)
+         let mov_instrs = L.mapi (fun i (I.OPR_REGISTER reg) -> 
+                              let sort = get_def_sort (IM.find reg inn) reg in
+                              let op = mv_op sort in
+                              I.new_move (mv_op sort) i reg) l in
+         (* [0; ..; 4] *)
+         let args = (U.range 0 (L.length l - 1) []) in
+         let farr_instr = [I.new_filled_arr args cid] in
+         let inss = mov_instrs @ farr_instr in
+         overwrite inss
+                  
       (* registers for new-array *)
       | I.OP_NEW_ARRAY, I.OPR_REGISTER a :: I.OPR_REGISTER s :: I.OPR_INDEX cid :: []
       when a >= low || s >= low ->
@@ -1299,27 +1362,6 @@ object
         in
         St.time "reach" DFA.fixed_pt ();
         let inn = St.time "reach" DFA.inn ins in
-        let get_def_sort (d: D.link) (r: int) : I.reg_sort =
-          if D.is_ins dx d then L.hd (get_sort (D.get_ins dx d) [r])
-          (* parameters won't have def; rather, refer to method sig *)
-          else if D.is_param cur_citm r then
-            let argv = D.get_argv dx (D.get_mit dx cur_mid) in
-            let argv = if is_static then argv else
-              (* including *this* unless static methods *)
-              let cur_cid = D.get_cid_from_mid dx cur_mid in cur_cid :: argv
-            in
-            let p_finder (i, sort) arg =
-              let tname = J.of_type_descr (D.get_ty_str dx arg) in
-              let i' = if L.mem tname [J.j; J.d] then i + 2 else i + 1 in
-              let sort' = if i <> r then sort else
-                if L.mem tname [J.j; J.d] then I.R_WIDE
-                else if L.mem tname J.shorties then I.R_NORMAL
-                else I.R_OBJ
-              in (i', sort')
-            in
-            snd (L.fold_left p_finder (D.calc_this cur_citm, I.R_OBJ) argv)
-          else I.R_NORMAL
-        in
         let sort_a = get_def_sort (IM.find a inn) a
         and sort_b = get_def_sort (IM.find b inn) b in
         let op_a = mv_op sort_a
