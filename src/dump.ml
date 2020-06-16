@@ -236,7 +236,7 @@ let l2l (map: D.link array option) (msg: string) l : D.link =
 (* link compare *)
 let lc (l1: D.link) (l2: D.link) : int =
   let i1 = D.of_idx l1 and i2 = D.of_idx l2
-  in Pervasives.compare i1 i2
+  in Stdlib.compare i1 i2
 
 (* string_data compare *)
 let sc (o1, s1) (o2, s2) =
@@ -381,9 +381,9 @@ let write_idx16 (l: D.link) : char CL.clist =
 
 (* char CL.clist -> string *)
 let to_str (cl: char CL.clist) : string =
-  let str = S.create (CL.length cl) in
-  let setter i c = str.[i] <- c; (i+1)
-  in ignore (CL.fold_left setter 0 cl); str
+  let str = Bytes.create (CL.length cl) in
+  let setter i c = Bytes.set str i c; (i+1)
+  in ignore (CL.fold_left setter 0 cl); Bytes.to_string str
 
 (* hex string -> char list *)
 let to_bytes (s: string) : char CL.clist =

@@ -63,6 +63,9 @@ module Pf = Printf
 
 module Js = Yojson.Safe
 
+(* Temp module *)
+module I32 = Int32
+
 (***********************************************************************)
 (* Basic Types/Elements                                                *)
 (***********************************************************************)
@@ -175,6 +178,15 @@ object
   method finish () : unit =
     (* 2x : super(); return-*; *)
     Log.i ("# of method overriding(s): "^(Log.of_i (!override_cnt * 2)))
+
+  (* TODO: See modify.ml 613. This is a stopgap solution to not updating the registers in debug_info_off.
+   * Instead, we just remove all debug_info_off from the dex *)
+  method v_citm (citm: D.code_item) : unit =
+    if citm.D.debug_info_off <> D.no_off then
+    (
+      D.rm_data dx citm.D.debug_info_off;
+      citm.D.debug_info_off <- D.no_off
+    )
 
 end
 
@@ -774,6 +786,8 @@ let modify (dx: D.dex) : unit =
   in
   St.time "transition" add_transition dx;
   (* log API uses and entry/exit of all methods, except for Logger itself *)
+  Printf.fprintf stderr "Before 'instrument'\n";
   St.time "instrument" V.iter (logging : logger :> V.visitor  );
+  Printf.fprintf stderr "After 'instrument'\n";
   St.time "expand-opr" M.expand_opr dx
 

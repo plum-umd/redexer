@@ -45,7 +45,7 @@ module Js = Yojson.Safe
 module IntKey =
 struct
   type t = int
-  let compare = Pervasives.compare
+  let compare = Stdlib.compare
 end
 
 module IS = Set.Make(IntKey)
@@ -105,11 +105,11 @@ let explode s =
   expl (S.length s - 1) []
     
 let implode l =
-  let result = S.create (L.length l) in
+  let result = Bytes.create (L.length l) in
   let rec imp i = function
     | [] -> result
-    | c :: l -> result.[i] <- c; imp (i + 1) l in
-  imp 0 l
+    | c :: l -> Bytes.set result i c; imp (i + 1) l in
+  Bytes.to_string (imp 0 l)
 
 (* str_rev : string -> string *)
 let str_rev s =

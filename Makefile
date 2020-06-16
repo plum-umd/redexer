@@ -8,6 +8,7 @@ redexer: main.native
 
 # debugging code targets; could also (more likely) build *.d.byte separately
 debug: main.d.byte
+	cp main.d.byte redexer
 
 # auxiliary targets
 doc:
@@ -32,7 +33,7 @@ allclean: clean
 
 # x.d.byte or x.byte
 %.byte:
-	ocamlbuild $@
+	ocamlbuild -use-ocamlfind $@
 
 .PHONY: doc debug all model test clean modelclean allclean default
 
