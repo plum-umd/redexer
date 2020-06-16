@@ -179,15 +179,6 @@ object
     (* 2x : super(); return-*; *)
     Log.i ("# of method overriding(s): "^(Log.of_i (!override_cnt * 2)))
 
-  (* TODO: See modify.ml 613. This is a stopgap solution to not updating the registers in debug_info_off.
-   * Instead, we just remove all debug_info_off from the dex *)
-  method v_citm (citm: D.code_item) : unit =
-    if citm.D.debug_info_off <> D.no_off then
-    (
-      D.rm_data dx citm.D.debug_info_off;
-      citm.D.debug_info_off <- D.no_off
-    )
-
 end
 
 let add_transition (dx: D.dex) : unit =
