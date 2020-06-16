@@ -2183,6 +2183,11 @@ let new_arr (dst: int) (sz: int) (typ: int) : instr =
   let hx = op_to_hx OP_NEW_ARRAY in
   refer_last hx [dst; sz; typ]
 
+(* new_filled_arr : int -> int list -> int -> instr *)
+let new_filled_arr (srcs: int list) (typ: int) : instr = 
+  let hx = op_to_hx OP_FILLED_NEW_ARRAY in
+  refer_last hx (srcs @ [typ])
+
 (* new_goto : int -> offset -> instr *)
 let new_goto (hx: int) (dst: offset) : instr =
   let op = hx_to_op hx

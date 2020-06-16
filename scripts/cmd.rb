@@ -70,9 +70,6 @@ option_parser = OptionParser.new do |opts|
   opts.on("--logging-fine", "turn on fine grained logging") do
     detail = :fine
   end    
-  opts.on("--logging-regex", "turn on regex based logging") do
-    detail = :regex
-  end    
   opts.on("--cmd command", cmds, cmds.join(", ")) do |c|
     cmd = c
   end

@@ -98,13 +98,15 @@ let dump_json (tx : D.dex) : unit =
 	  ) ()
 
 let lib = ref "data/logging.dex"
+let onlyprotos = ref false
 
 let combine (tx: D.dex) : unit =
  try (
     let chan' = open_in_bin !lib in
     let libdx = St.time "parse" P.parse chan' in
     close_in chan';
-    St.time "dump" (Dp.dump !dex) (St.time "merge" (Cm.combine libdx) tx)
+    St.time "dump" (Dp.dump !dex) (St.time "merge" (fun _ -> 
+                                             Cm.combine libdx tx ~only_prototypes:!onlyprotos) ())
   )
   with End_of_file -> prerr_endline "EOF"
 
@@ -200,27 +202,30 @@ let act = ref "activity.txt"
 
 let instrument_logging (tx: D.dex) : unit =
   let rnm = !dat^"/rename" in
-try (
-  (* parse logging library *)
-  let chan = open_in_bin !lib in
-  let liblog = P.parse chan in
-  close_in chan;
-  (* merge the external dex file *)
-  let cx = St.time "merge" (Cm.combine liblog) tx in
-  (* seed new addresses for modification *)
-  Md.seed_addr cx.D.header.D.file_size;
-  (* modify target dex accordingly *)
-  St.time "logging" Lgg.modify cx;
-  (* rename specific classes *)
-  let rnm' = rnm ^ "." ^ "cls" in
-  let ch = open_in rnm' in
-  let res = U.read_lines ch in
-  close_in ch;
-  St.time "rename" (Md.rename_cls cx) res;
-  (* finally, dump the rewritten dex *)
-  St.time "dump" (Dp.dump !dex) cx
-)
-with End_of_file -> prerr_endline "EOF"
+  try begin
+      (* parse logging library *)
+      let chan = open_in_bin !lib in
+      let liblog = P.parse chan in
+      close_in chan;
+      (* merge the external dex file *)
+      let cx = St.time "merge"
+                       (fun _ -> Cm.combine liblog tx
+                                            ~only_prototypes:!onlyprotos) ()
+      in
+      (* seed new addresses for modification *)
+      Md.seed_addr cx.D.header.D.file_size;
+      (* modify target dex accordingly *)
+      St.time "logging" Lgg.modify cx;
+      (* rename specific classes *)
+      let rnm' = rnm ^ "." ^ "cls" in
+      let ch = open_in rnm' in
+      let res = U.read_lines ch in
+      close_in ch;
+      St.time "rename" (Md.rename_cls cx) res;
+      (* finally, dump the rewritten dex *)
+      St.time "dump" (Dp.dump !dex) cx
+    end
+  with End_of_file -> prerr_endline "EOF"
 
 let rewrite_directed (tx: D.dex) : unit =
   let apis = !dat^"/directed.txt" in
@@ -236,10 +241,6 @@ try (
 with End_of_file -> prerr_endline "EOF"
 | D.Wrong_dex msg -> prerr_endline msg
                        
-(* Extract regular expressions from a file *)
-(*let log_regex f : Lgg.detail = ()*)
-  (*Lgg.Regex (U.read_lines (open_in f))*)
-    
 (***********************************************************************)
 (* Arguments                                                           *)
 (***********************************************************************)
@@ -297,6 +298,8 @@ let arg_specs = A.align
 
     ("-lib",     A.Set_string lib,  " library dex name (default: "^(!lib)^")");
     ("-combine", A.Unit do_combine, " combine two dex files");
+    ("-onlyprotos", A.Set onlyprotos, 
+     " when combining files, only include prototypes, not implementations (useful for multidex)");
 
     ("-cls",  A.Set_string cls, " target class name");
     ("-mtd",  A.Set_string mtd, " target method name");
@@ -318,9 +321,7 @@ let arg_specs = A.align
 
     ("-logging",  A.Unit do_logging,
      " instrument logging feature into the given dex");
-    (*("-logging-regex", A.String (fun f -> Lgg.detail := log_regex f),
-     " log methods with regular expressions drawn from a file");*)
-    ("-logging-detail", A.Unit (fun () -> Lgg.detail := Fine),
+    ("-logging-detail", A.Unit (fun () -> Lgg.detail := Lgg.Fine),
      " logging more methods (default: false)");
 
     ("-directed", A.Unit do_directed,
