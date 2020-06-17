@@ -32,7 +32,7 @@ allclean: clean
 
 # x.d.byte or x.byte
 %.byte:
-	ocamlbuild $@
+	ocamlbuild -use-ocamlfind $@
 
 .PHONY: doc debug all model test clean modelclean allclean default
 
