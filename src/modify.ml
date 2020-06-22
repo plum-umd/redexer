@@ -649,7 +649,8 @@ let shift_reg_cond dx (citm: D.code_item) (sft: int) cond : unit =
   in
   DA.iter ins_iter citm.D.insns;
   citm.D.registers_size <- citm.D.registers_size + sft;
-  (* TODO: should also update register occurrences in debug_info *)
+  (* TODO: should also update register occurrences in debug_info. When updated, modify TODO on
+   * line 1248 as well *)
   (* stopgap: just delete debug_info if modified *)
   if citm.D.debug_info_off <> D.no_off then
   (
@@ -1245,6 +1246,18 @@ object
   val mutable cur_citm = D.empty_citm ()
                                       
   method v_citm (citm: D.code_item) : unit =
+    (* Crude solution to the implications of the TODO at line 652 *)
+    (* TODO: Probably a crude use of a try as well *)
+    let check_dbg = 
+      if citm.D.debug_info_off <> D.no_off then
+      try 
+        D.get_data_item dx citm.D.debug_info_off;
+        ();
+      with D.Wrong_dex str -> 
+        citm.D.debug_info_off <- D.no_off;
+        ();
+    in
+    check_dbg;
     cur_citm <- citm;
     (*Unparse.print_method dx citm;
     ignore (Rc.make_dfa dx cur_citm)*)
