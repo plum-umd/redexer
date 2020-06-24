@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout android:layout_width="fill_parent" android:layout_height="fill_parent"
+  xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto">
+    <Button android:id="@id/button2" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginRight="148.0dip" android:layout_marginBottom="442.0dip" android:text="Where am I?" android:onClick="handleLocationRequest" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="parent" />
+    <Button android:id="@id/button3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginRight="120.0dip" android:layout_marginBottom="228.0dip" android:text="Log in to Facebook" android:onClick="fbLogin" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="parent" />
+    <EditText android:id="@id/editText" android:layout_width="0.0dip" android:layout_height="wrap_content" android:layout_marginBottom="532.0dip" android:text="Your location will show up here..." android:ems="10" android:inputType="textPersonName" app:layout_constraintBottom_toBottomOf="parent" app:layout_constraintEnd_toEndOf="parent" app:layout_constraintHorizontal_bias="0.0" app:layout_constraintStart_toStartOf="parent" />
+</androidx.constraintlayout.widget.ConstraintLayout>
