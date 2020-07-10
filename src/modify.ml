@@ -587,6 +587,24 @@ let insrt_insns_over_off dx (citm: D.code_item) cur (insns: I.instr list) =
   citm.D.tries <- L.map fixup_try citm.D.tries;
   c
 
+
+(* insrt_insns_meth_entry : D.dex -> D.code_item -> I.instr list -> cursor *)
+let insrt_insns_meth_entry dx (citm: D.code_item) (insns: I.instr list) =
+  let cur = get_fst_cursor () in
+  let off = DA.get citm.D.insns cur in
+  let new_c = insrt_insns dx citm cur insns in
+  let new_off = DA.get citm.D.insns new_c in
+  let fixup_try try_item =
+    if try_item.D.start_addr = off then
+      { try_item with D.start_addr = new_off }
+    else 
+      try_item
+  in
+  citm.D.tries <- L.map fixup_try citm.D.tries;
+  new_c
+
+
+
 (*(*
                                               +---------+
                                        off -> |  instr  |

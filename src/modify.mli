@@ -253,6 +253,9 @@ v}
  *)
 val insrt_insns_over_off : Dex.dex -> Dex.code_item -> cursor -> Instr.instr list -> cursor
 
+(* insrt_insns_meth_entry : D.dex -> D.code_item -> I.instr list -> cursor *)
+val insrt_insns_meth_entry : Dex.dex -> Dex.code_item -> Instr.instr list -> cursor
+
 (** insert {!Instr.instr}s before the start of {!Dex.code_item} *)
 val insrt_insns_before_start : Dex.dex -> Dex.code_item -> Instr.instr list -> cursor
 

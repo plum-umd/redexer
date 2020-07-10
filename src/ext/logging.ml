@@ -604,7 +604,7 @@ class virtual logger (dx: D.dex) =
             @+ fst (L.fold_left copy_argv (CL.empty, (4, 0)) argv)
             @+ CL.fromList rest
           ) in
-        let _ = M.insrt_insns_before_start dx citm ent_insns in
+        let _ = M.insrt_insns_meth_entry dx citm ent_insns in
         in_out_cnt := !in_out_cnt + (L.length ent_insns);
         M.update_reg_usage dx citm
 
