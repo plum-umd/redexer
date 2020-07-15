@@ -1325,13 +1325,13 @@ object
       D.insrt_ins dx ins (L.hd inss);
       let cur = insrt_insns dx cur_citm (next cursor) (L.tl inss) - 1 in
       let inserted_idx = DA.get cur_citm.D.insns cur in
-      let cleanup_pesky_try (try_itm:D.try_item) = 
+      let cleanup_try (try_itm:D.try_item) = 
         if try_itm.D.end_addr = ins then
           { try_itm with D.end_addr = inserted_idx }
         else
           try_itm
       in
-      cur_citm.D.tries <- L.map cleanup_pesky_try (cur_citm.D.tries);
+      cur_citm.D.tries <- L.map cleanup_try (cur_citm.D.tries);
       exp_cnt := !exp_cnt + (L.length inss)
     in
     if D.is_ins dx ins then

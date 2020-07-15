@@ -369,21 +369,21 @@ let cleanup_pesky_try cursor_before cursor_after citm (try_itm:D.try_item) =
   let s = M.get_cursor citm try_itm.D.start_addr in
   let e = M.get_cursor citm try_itm.D.end_addr in
   if s <= cursor_before && cursor_before <= e then
-     let snd = 
-       let fresh_addr2 = DA.get citm.D.insns cursor_after in
-       { try_itm with 
+     let snd = if cursor_after == e then [] else
+       let fresh_addr2 = DA.get citm.D.insns (M.next cursor_after) in
+       [{ try_itm with 
          D.start_addr = fresh_addr2;
          D.end_addr   = try_itm.D.end_addr
-       }
+       }]
      in
      if s <= cursor_before-1 then
        (* Include the first try block *)
        { try_itm with 
          D.start_addr = try_itm.D.start_addr;
          D.end_addr   = DA.get citm.D.insns (cursor_before-1)
-       }::[snd]
+       }::snd
      else
-       [snd]
+       snd
   else
     [try_itm]
 
@@ -690,25 +690,15 @@ class virtual logger (dx: D.dex) =
                               @ (if ret_moved then copy_ret vr vx else [])
                               @ [ins2; ins3; ins4] in
               (* not to alter the control-flow, use ..._over_off *)
-              let _ =
+              let ext_block_end =
                 (* If we are to move the return, then *)
                 if ret_moved then
-                   ignore @@ M.insrt_insns_over_off dx cur_citm ext_cursor ext_insns
-                else (
-                  let new_cur = M.insrt_insns dx cur_citm ext_cursor ext_insns - 1 in
-                  let inserted_idx = DA.get cur_citm.D.insns new_cur in
-                  let cleanup_pesky_try (try_itm:D.try_item) =
-                    (
-                      (*Pf.printf "found a try that ends at %x and we're at %x\n" (D.of_off try_itm.end_addr) (D.of_off ins);*)
-                      if try_itm.D.end_addr = ins then
-                        (*(Pf.printf "Cleaning up pesky try... Instruction was at %x and is now moved to %x\n" (D.of_off ins) (D.of_off inserted_idx);*)
-                        { try_itm with D.end_addr = inserted_idx }
-                      else
-                        try_itm)
-                  in
-                  cur_citm.D.tries <- L.map cleanup_pesky_try (cur_citm.D.tries);
-                  cur_citm.D.tries_size <- L.length cur_citm.D.tries)
+                  M.insrt_insns_over_off dx cur_citm ext_cursor ext_insns
+                else
+                  M.insrt_insns dx cur_citm ext_cursor ext_insns
               in
+              let ext_block_start = if ret_moved then ext_cursor + 1 else ext_cursor in
+              cleanup_tries ext_block_start ext_block_end cur_citm;
               api_cnt := !api_cnt + (L.length ext_insns)
             in
             (match !detail with
@@ -754,7 +744,8 @@ class virtual logger (dx: D.dex) =
               @+ CL.fromList [ins2; ins3; ins4]
             ) in
             (* not to alter the control-flow, use ..._under_off *)
-            M.insrt_insns_under_off dx cur_citm ent_cursor ent_insns;
+            let ent_block_end = M.prev (M.insrt_insns_under_off dx cur_citm ent_cursor ent_insns) in
+            cleanup_tries ent_cursor ent_block_end cur_citm;
             api_cnt := !api_cnt + (L.length ent_insns);
             M.update_reg_usage dx cur_citm
           )
