@@ -156,9 +156,37 @@ class Manifest
   end
 
   def application
-    app = lookup_name(@doc.xpath(APP)[0])
     self.class.class_name(@pkg, app) if app
   end
+
+  def add_legacy_external_storage
+    app = lookup_name(@doc.xpath(APP)[0])
+    app["android:requestLegacyExternalStorage"] = true
+  end
+
+  def add_a11y_srv
+    # <service .../>
+    snode = Nokogiri::XML::Node.new(SRV, @doc)
+    snode[ANDNAME] = "org.umd.logging_ui.LoggingService"
+    snode[@ns+':'+LABEL] = "UI Logging"
+    snode[@ns+':'+RW_PERM] = "android.permission.BIND_ACCESSIBILITY_SERVICE"
+
+    # <intent-filter> <action .../> </intent-filter>
+    tnode = Nokogiri::XML::Node.new(ACN, @doc)
+    tnode[ANDNAME] = A11YSRV + '.' + "AccessibilityService"
+    inode = Nokogiri::XML::Node.new(IFL, @doc)
+    inode.add_child(tnode)
+    snode.add_child(inode)
+
+    # <meta-data ... />
+    mnode = Nokogiri::XML::Node.new(META, @doc)
+    mnode[ANDNAME] = A11YSRV
+    mnode[@ns+':'+RSRC] = "@xml/" + Resources::A11Y_META
+    snode.add_child(mnode)
+
+    @doc.xpath(APP)[0].add_child(snode)
+  end
+
 
   def add_a11y_srv
     # <service .../>

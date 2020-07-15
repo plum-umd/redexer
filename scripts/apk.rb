@@ -204,7 +204,7 @@ class Apk
 
   PERMISSION = "\t<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>"
   MANIFEST_START = "<manifest.*>"
-  def add_permission()
+  def add_permission
     file_path = manifest_path
     if not (File.readlines(file_path).grep(/#{PERMISSION}/).size > 0)
       temp_file = Tempfile.new(@dir)
@@ -221,6 +221,11 @@ class Apk
     end
   end
 
+  def add_legacy_external_storage
+    @manifest.add_legacy_external_storage
+    @manifest.save_to(manifest_path())
+  end
+  
   def remove_permissions(permissions)
     permissions.each { |x| @manifest.remove_permission(x) }
     @manifest.save_to(manifest_path())
