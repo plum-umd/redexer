@@ -162,6 +162,7 @@ def finish_repackaging(apk,fn,to,res)
     raise "rewriting dex failed"
   end
   if $logging then
+    apk.add_legacy_external_storage
     apk.add_permission
   end
   if to
