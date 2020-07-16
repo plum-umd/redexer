@@ -156,11 +156,12 @@ class Manifest
   end
 
   def application
+    app = lookup_name(@doc.xpath(APP)[0])
     self.class.class_name(@pkg, app) if app
   end
 
   def add_legacy_external_storage
-    app = lookup_name(@doc.xpath(APP)[0])
+    app = @doc.xpath(APP)[0]
     app["android:requestLegacyExternalStorage"] = true
   end
 
