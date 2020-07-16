@@ -1,0 +1,28 @@
+!!brut.androlib.meta.MetaInfo
+apkFileName: minimal-correct.apk
+compressionType: false
+doNotCompress:
+- resources.arsc
+- png
+isFrameworkApk: false
+packageInfo:
+  forcedPackageId: '127'
+  renameManifestPackage: null
+sdkInfo:
+  minSdkVersion: '15'
+  targetSdkVersion: '29'
+sharedLibrary: false
+sparseResources: false
+unknownFiles:
+  play-services-base.properties: '8'
+  play-services-basement.properties: '8'
+  play-services-maps.properties: '8'
+  play-services-tasks.properties: '8'
+usesFramework:
+  ids:
+  - 1
+  tag: null
+version: 2.4.1
+versionInfo:
+  versionCode: '1'
+  versionName: '1.0'
