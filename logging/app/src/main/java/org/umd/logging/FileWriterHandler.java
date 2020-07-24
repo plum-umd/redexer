@@ -26,8 +26,9 @@ import java.lang.Thread;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.io.BufferedWriter;
 import java.io.FileDescriptor;
+import java.io.FileOutputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
@@ -41,6 +42,8 @@ import android.widget.CheckBox;
 import android.widget.RadioButton;
 import android.widget.TextView;
 
+import ProtoDefs.LogStructure;
+
 public class FileWriterHandler implements Runnable{
     
     // This concurrentLinkedQueue allows highly efficient
@@ -50,7 +53,7 @@ public class FileWriterHandler implements Runnable{
     
     // A hash map that holds--for each thread ID--a file to which to
     // write the output
-    private HashMap<Long, BufferedWriter> outs;
+    private HashMap<Long, BufferedOutputStream> outs;
 
     final static String tag = Logger.class.getPackage().getName();
     
@@ -75,8 +78,8 @@ public class FileWriterHandler implements Runnable{
         pipe = p;
         try{
             File f = getFileName(1);
-            FileWriter lw = new FileWriter(f, true);
-            BufferedWriter out = new BufferedWriter(lw, 65536);
+            FileOutputStream fos = new FileOutputStream(f);
+            BufferedOutputStream out = new BufferedOutputStream(fos, 65536);
             outs = new HashMap();
             outs.put(new Long(1),out);
         }catch(IOException e){
@@ -135,6 +138,8 @@ public class FileWriterHandler implements Runnable{
      * thread.
      */
     public void run() {
+        LogStructure.Line.Builder curLine = LogStructure.Line.newBuilder();
+        LogStructure.Param.Builder curParam = LogStructure.Param.newBuilder();
         while(true){
             // Block background thread and wait for data to process.
             try {
@@ -149,18 +154,22 @@ public class FileWriterHandler implements Runnable{
                 if(!outs.containsKey(id)){
                     try{
                         File f = getFileName(id);
-                        FileWriter LogWriter = new FileWriter(f, true);
-                        BufferedWriter out = new BufferedWriter(LogWriter, 65536);
+                        FileOutputStream fos = new FileOutputStream(f);
+                        BufferedOutputStream out = new BufferedOutputStream(fos, 65536);
                         outs.put(new Long(id),out);
                     } catch(IOException e){
                         Log.i(tag, "logging error");
                         e.printStackTrace();
                     }
                 }
+                // curLine.setLogicalOrder(someVar);
                 // Block entry
                 if (io == "b") {
-                    outs.get(id).write("BBEntry " + id + " " + args[4]);
-                    outs.get(id).newLine();
+                    curLine.setBBloc((Long) args[4]);
+                    
+                    curLine.build().writeTo(outs.get(id));
+                    outs.get(id).write(0x0a); //Adds newline character for end of line
+                    curLine.clear();
                     continue;
                 }
                 //String fullname = (String)args[1];
@@ -169,16 +178,20 @@ public class FileWriterHandler implements Runnable{
                 //String cname = ofJavaTy(parts[0]);
                 //String mname = parts[1];
                 else if (io == "m") {
-                    outs.get(id).write("Method > " + id + " " + cname + "." + mname + "(");
-                    //out.write("Method " + cname + "." + mname + "(");
+                    curLine.setIsUserMethod(true);
+                    curLine.setIsCall2(true);
                 } else if (io == "e") {
-                    outs.get(id).write("Method < " + id + " " + cname + "." + mname + "(");
+                    curLine.setIsUserMethod(true);
+                    curLine.setIsCall2(false);
                 } else if (io == "a") {
-                    outs.get(id).write("API > " + id + " " + cname + "." + mname + "(");
-                    //out.write("API " + cname + "." + mname + "(");
+                    curLine.setIsUserMethod(false);
+                    curLine.setIsCall2(true);
                 } else {
-                    outs.get(id).write("API < " + id + " " + cname + "." + mname + "(");
+                    curLine.setIsUserMethod(true);
+                    curLine.setIsCall2(false);
                 }
+
+                curLine.setMethodName(cname + "." + mname);
                 
                 // Method entry / API call
                 for (int i = 4; i < args.length; i++) {
@@ -189,7 +202,7 @@ public class FileWriterHandler implements Runnable{
                         s_arg = "null";
                     } else if (isWrapperType(arg.getClass())) {
                         //s_arg = System.identityHashCode(arg) + "&" + arg.toString();
-                        s_arg = System.identityHashCode(arg) + "&" + arg.getClass().getName() + "@" + System.identityHashCode(arg);
+                        s_arg = arg + "&" + arg.getClass().getName() + "@" + System.identityHashCode(arg);
                         //Check if first argument is a string
                     } else if (arg.getClass() == String.class) {
                         s_arg = "\"\"";
@@ -198,7 +211,9 @@ public class FileWriterHandler implements Runnable{
                         s_arg = ((Class) arg).getName();
                         //Check if first argument is an activity
                     }else if(argCount == 0 && arg instanceof Activity){
-                        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<activity=true>";
+                        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
+                        curParam.setType("activity");
+                        curParam.addValue("true");
                         
                         // We used to take screenshots when the
                         // activity was changed, but we don't anymore.
@@ -210,10 +225,14 @@ public class FileWriterHandler implements Runnable{
                         }
                         //Check if first argument is a fragment
                     }else if(argCount == 0 && FragmentMapper.getInstance().isFragment(arg.getClass())){
-                        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<fragment=true>";
+                        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
+                        curParam.setType("fragment");
+                        curParam.addValue("true");
                         //Check if first argument is an asynctask object
                     }else if(argCount == 0 && arg instanceof AsyncTask){
-                        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg) + "<atask=true>";
+                        s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
+                        curParam.setType("atask");
+                        curParam.addValue("true");
                         //Try to annotate all of the arguments
                     } else {
                         s_arg = arg.getClass().getName() + "@" + System.identityHashCode(arg);
@@ -225,72 +244,77 @@ public class FileWriterHandler implements Runnable{
                         //          }
                         //        }
                         if(arg instanceof Thread){
-                            s_arg += "<thread=" + ((Thread)arg).getId() + ">";
+                            curParam.setType("thread");
+                            curParam.addValue(String.valueOf(((Thread)arg).getId()));
                         }
                         if(arg instanceof File){
                             File sdcard = Environment.getExternalStorageDirectory();
                             String sdcard_path = sdcard.getAbsolutePath();
-                            s_arg += "<file_path=" + ((File)arg).getAbsolutePath() + ">";
+                            curParam.setType("file_path");
+                            curParam.addValue(((File)arg).getAbsolutePath());
                         }
                         if (arg.getClass().isArray()) {
-                            s_arg += "<array_length=" + Array.getLength(arg) + ">";
+                            // NEEDS WORK: Want to print whole array soon
+                            curParam.setType("array_length");
+                            curParam.addValue(String.valueOf(Array.getLength(arg)));
                         }
-                        if(arg instanceof Intent && ((Intent)arg).getAction()!="android.intent.action.VIEW" && ((Intent)arg).getAction()!="android.intent.action.MAIN"){
-                            s_arg += "<action=" + ((Intent) arg).getAction() + ">";
-                            //                                s_arg += "<data=" + ((Intent) arg).getDataString() + ">";
-                            s_arg += "<package=" + ((Intent) arg).getPackage() + ">";
-                            ComponentName comp_name = (ComponentName) ((Intent) arg).getComponent();
-                            if (comp_name != null)
-                                s_arg += "<component=" + ((ComponentName) ((Intent) arg).getComponent()).flattenToShortString() + ">";
-                            else
-                                s_arg += "<component=null>";
-                            s_arg += "<type=" + ((Intent) arg).getType() + ">";
-                            s_arg += "<filter_hashcode=" + ((Intent) arg).filterHashCode() + ">";
-                            Bundle bundle = ((Intent) arg).getExtras();
-                            if(mname.contains("FACEBOOK")){
-                                //          Bundle parcelable_1 = (Bundle)bundle.get("com.facebook.LoginFragment:Request");
-                                Parcelable parcelable = bundle.getParcelable("request");
-                                if(parcelable != null){
-                                    Parcel parcel = Parcel.obtain();
-                                    parcelable.writeToParcel(parcel,0);
-                                    parcel.setDataPosition(0);
-                                    ArrayList<String> permissions = new ArrayList<String>();
-                                    String loginBehavior = parcel.readString();
-                                    parcel.readStringList(permissions);
-                                    String perm_list = "";
-                                    for (String perm : permissions){
-                                        perm_list = perm_list + "|" + perm;
-                                    }
-                                    perm_list = perm_list.substring(1);
-                                    String defaultAudience = parcel.readString();
-                                    String appID = parcel.readString();
-                                    String authID = parcel.readString();
-                                    byte isRequest = parcel.readByte();
-                                    String deviceRedirectUri = parcel.readString();
+                        // if(arg instanceof Intent && ((Intent)arg).getAction()!="android.intent.action.VIEW" && ((Intent)arg).getAction()!="android.intent.action.MAIN"){
+                            
+                        //     s_arg += "<action=" + ((Intent) arg).getAction() + ">";
+                        //     //                                s_arg += "<data=" + ((Intent) arg).getDataString() + ">";
+                        //     s_arg += "<package=" + ((Intent) arg).getPackage() + ">";
+                        //     ComponentName comp_name = (ComponentName) ((Intent) arg).getComponent();
+                        //     if (comp_name != null)
+                        //         s_arg += "<component=" + ((ComponentName) ((Intent) arg).getComponent()).flattenToShortString() + ">";
+                        //     else
+                        //         s_arg += "<component=null>";
+                        //     s_arg += "<type=" + ((Intent) arg).getType() + ">";
+                        //     s_arg += "<filter_hashcode=" + ((Intent) arg).filterHashCode() + ">";
+                        //     Bundle bundle = ((Intent) arg).getExtras();
+                        //     if(mname.contains("FACEBOOK")){
+                        //         //          Bundle parcelable_1 = (Bundle)bundle.get("com.facebook.LoginFragment:Request");
+                        //         Parcelable parcelable = bundle.getParcelable("request");
+                        //         if(parcelable != null){
+                        //             Parcel parcel = Parcel.obtain();
+                        //             parcelable.writeToParcel(parcel,0);
+                        //             parcel.setDataPosition(0);
+                        //             ArrayList<String> permissions = new ArrayList<String>();
+                        //             String loginBehavior = parcel.readString();
+                        //             parcel.readStringList(permissions);
+                        //             String perm_list = "";
+                        //             for (String perm : permissions){
+                        //                 perm_list = perm_list + "|" + perm;
+                        //             }
+                        //             perm_list = perm_list.substring(1);
+                        //             String defaultAudience = parcel.readString();
+                        //             String appID = parcel.readString();
+                        //             String authID = parcel.readString();
+                        //             byte isRequest = parcel.readByte();
+                        //             String deviceRedirectUri = parcel.readString();
                                         
-                                    s_arg += "<loginBehavior=" + loginBehavior + "><permissions=" + perm_list + "><defaultAudience=" + defaultAudience + "><appID=" + appID + "><authID=" + authID + "><isRequest=" + isRequest + "><deviceRedirectUri=" + deviceRedirectUri + ">";
-                                }
-                            }
-                            if (bundle != null) {
-                                if (!bundle.keySet().contains("umd_Intent_key")) {
-                                    //Log.i(tag,"Bundle = " + getExtraString(((Intent) arg).getExtras()));
-                                    ((Intent) arg).putExtra("umd_Intent_key", mIntentKey.getAndIncrement());
-                                    bundle = ((Intent) arg).getExtras();
-                                }
-                                s_arg += getExtraString(bundle);
-                            } else {
-                                ((Intent) arg).putExtra("umd_Intent_key", mIntentKey.getAndIncrement());
-                                s_arg += getExtraString(((Intent) arg).getExtras());
-                            }
-                        }
+                        //             s_arg += "<loginBehavior=" + loginBehavior + "><permissions=" + perm_list + "><defaultAudience=" + defaultAudience + "><appID=" + appID + "><authID=" + authID + "><isRequest=" + isRequest + "><deviceRedirectUri=" + deviceRedirectUri + ">";
+                        //         }
+                        //     }
+                        //     if (bundle != null) {
+                        //         if (!bundle.keySet().contains("umd_Intent_key")) {
+                        //             //Log.i(tag,"Bundle = " + getExtraString(((Intent) arg).getExtras()));
+                        //             ((Intent) arg).putExtra("umd_Intent_key", mIntentKey.getAndIncrement());
+                        //             bundle = ((Intent) arg).getExtras();
+                        //         }
+                        //         s_arg += getExtraString(bundle);
+                        //     } else {
+                        //         ((Intent) arg).putExtra("umd_Intent_key", mIntentKey.getAndIncrement());
+                        //         s_arg += getExtraString(((Intent) arg).getExtras());
+                        //     }
+                        // }
                     }
-                    outs.get(id).write(s_arg);
-                    if(i<args.length-1){
-                        outs.get(id).write(",");
-                    }
+                    curParam.setObject(s_arg);
+                    curLine.addParameters(argCount, curParam);
+                    curParam.clear();
                 }
-                outs.get(id).write(")");
-                outs.get(id).newLine();
+                curLine.build().writeTo(outs.get(id));
+                outs.get(id).write(0x0a); // Adding newline character for end of line
+                curLine.clear();
             } catch(IOException e){
                 Log.i(tag, "logging error");
                 e.printStackTrace();

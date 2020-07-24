@@ -22,4 +22,8 @@ android {
     lintOptions {
         abortOnError false
     }
+
+    dependencies {
+        compile 'com.google.protobuf:protobuf-javalite:3.8.0'
+    }
 }

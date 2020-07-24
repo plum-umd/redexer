@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option optimize_for = SPEED;
+
+package ProtoDefs;
+
+message Line {
+  uint64 logical_order = 1;
+  bool is_user_method = 2;
+  bool is_call2 = 3;
+  string method_name = 5;
+  repeated Param parameters = 6;
+  uint64 BBloc = 7;
+}
+
+message Param {
+    string object = 1;
+    string type = 2;
+    repeated string value = 3;
+}
