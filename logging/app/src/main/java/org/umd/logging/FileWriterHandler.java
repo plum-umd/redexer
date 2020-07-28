@@ -11,6 +11,7 @@ import java.lang.reflect.Array;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 import android.app.Activity;
 import android.content.ComponentName;
@@ -63,6 +64,8 @@ public class FileWriterHandler implements Runnable{
     // track them and associate them with the place in which they were
     // sent into the framework.
     static AtomicInteger mIntentKey = new AtomicInteger();
+
+    private static AtomicInteger inc = new AtomicInteger();
     
     /** 
      * Returns a File handle unique to this thread and time.
@@ -147,6 +150,7 @@ public class FileWriterHandler implements Runnable{
                 if (args == null) {
                     continue;
                 }
+                int lorder = inc.getAndIncrement();
                 String io = (String) args[0];
                 long id = (Long)args[1];
                 String cname = ofJavaTy((String)args[2]);
@@ -162,13 +166,11 @@ public class FileWriterHandler implements Runnable{
                         e.printStackTrace();
                     }
                 }
-                // curLine.setLogicalOrder(someVar);
+                curLine.setLogicalOrder(lorder);
                 // Block entry
                 if (io == "b") {
                     curLine.setBBloc((Long) args[4]);
-                    
-                    curLine.build().writeTo(outs.get(id));
-                    outs.get(id).write(0x0a); //Adds newline character for end of line
+                    curLine.build().writeDelimitedTo(outs.get(id));
                     curLine.clear();
                     continue;
                 }
@@ -187,7 +189,7 @@ public class FileWriterHandler implements Runnable{
                     curLine.setIsUserMethod(false);
                     curLine.setIsCall2(true);
                 } else {
-                    curLine.setIsUserMethod(true);
+                    curLine.setIsUserMethod(false);
                     curLine.setIsCall2(false);
                 }
 
@@ -201,11 +203,9 @@ public class FileWriterHandler implements Runnable{
                     if (arg == null) {
                         s_arg = "null";
                     } else if (isWrapperType(arg.getClass())) {
-                        //s_arg = System.identityHashCode(arg) + "&" + arg.toString();
-                        s_arg = arg + "&" + arg.getClass().getName() + "@" + System.identityHashCode(arg);
-                        //Check if first argument is a string
-                    } else if (arg.getClass() == String.class) {
-                        s_arg = "\"\"";
+                        s_arg = "@" + System.identityHashCode(arg);
+                        curParam.setType(arg.getClass().getName());
+                        curParam.addValue(arg.toString());
                         //Check if it a class object
                     } else if (arg.getClass() == Class.class) {
                         s_arg = ((Class) arg).getName();
@@ -257,6 +257,13 @@ public class FileWriterHandler implements Runnable{
                             // NEEDS WORK: Want to print whole array soon
                             curParam.setType("array_length");
                             curParam.addValue(String.valueOf(Array.getLength(arg)));
+                        }
+                        if (arg instanceof List && ((List)arg).size() > 0 && ((List)arg).get(0) instanceof String) {
+                            List list_arg = (List)arg;
+                            curParam.setType("string_list");
+                            for (int j = 0; j < list_arg.size(); j++) {
+                                curParam.addValue((String)list_arg.get(j));
+                            }
                         }
                         // if(arg instanceof Intent && ((Intent)arg).getAction()!="android.intent.action.VIEW" && ((Intent)arg).getAction()!="android.intent.action.MAIN"){
                             
@@ -312,8 +319,7 @@ public class FileWriterHandler implements Runnable{
                     curLine.addParameters(argCount, curParam);
                     curParam.clear();
                 }
-                curLine.build().writeTo(outs.get(id));
-                outs.get(id).write(0x0a); // Adding newline character for end of line
+                curLine.build().writeDelimitedTo(outs.get(id));
                 curLine.clear();
             } catch(IOException e){
                 Log.i(tag, "logging error");

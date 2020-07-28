@@ -8,9 +8,9 @@ message Line {
   uint64 logical_order = 1;
   bool is_user_method = 2;
   bool is_call2 = 3;
-  string method_name = 5;
-  repeated Param parameters = 6;
-  uint64 BBloc = 7;
+  string method_name = 4;
+  repeated Param parameters = 5;
+  uint64 BBloc = 6;
 }
 
 message Param {

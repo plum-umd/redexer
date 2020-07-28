@@ -31,33 +31,33 @@ public final class LogStructure {
     boolean getIsCall2();
 
     /**
-     * <code>string method_name = 5;</code>
+     * <code>string method_name = 4;</code>
      * @return The methodName.
      */
     java.lang.String getMethodName();
     /**
-     * <code>string method_name = 5;</code>
+     * <code>string method_name = 4;</code>
      * @return The bytes for methodName.
      */
     com.google.protobuf.ByteString
         getMethodNameBytes();
 
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     java.util.List<ProtoDefs.LogStructure.Param> 
         getParametersList();
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     ProtoDefs.LogStructure.Param getParameters(int index);
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     int getParametersCount();
 
     /**
-     * <code>uint64 BBloc = 7;</code>
+     * <code>uint64 BBloc = 6;</code>
      * @return The bBloc.
      */
     long getBBloc();
@@ -152,10 +152,10 @@ public final class LogStructure {
       isCall2_ = false;
     }
 
-    public static final int METHOD_NAME_FIELD_NUMBER = 5;
+    public static final int METHOD_NAME_FIELD_NUMBER = 4;
     private java.lang.String methodName_;
     /**
-     * <code>string method_name = 5;</code>
+     * <code>string method_name = 4;</code>
      * @return The methodName.
      */
     @java.lang.Override
@@ -163,7 +163,7 @@ public final class LogStructure {
       return methodName_;
     }
     /**
-     * <code>string method_name = 5;</code>
+     * <code>string method_name = 4;</code>
      * @return The bytes for methodName.
      */
     @java.lang.Override
@@ -172,7 +172,7 @@ public final class LogStructure {
       return com.google.protobuf.ByteString.copyFromUtf8(methodName_);
     }
     /**
-     * <code>string method_name = 5;</code>
+     * <code>string method_name = 4;</code>
      * @param value The methodName to set.
      */
     private void setMethodName(
@@ -182,14 +182,14 @@ public final class LogStructure {
       methodName_ = value;
     }
     /**
-     * <code>string method_name = 5;</code>
+     * <code>string method_name = 4;</code>
      */
     private void clearMethodName() {
       
       methodName_ = getDefaultInstance().getMethodName();
     }
     /**
-     * <code>string method_name = 5;</code>
+     * <code>string method_name = 4;</code>
      * @param value The bytes for methodName to set.
      */
     private void setMethodNameBytes(
@@ -199,38 +199,38 @@ public final class LogStructure {
       
     }
 
-    public static final int PARAMETERS_FIELD_NUMBER = 6;
+    public static final int PARAMETERS_FIELD_NUMBER = 5;
     private com.google.protobuf.Internal.ProtobufList<ProtoDefs.LogStructure.Param> parameters_;
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     @java.lang.Override
     public java.util.List<ProtoDefs.LogStructure.Param> getParametersList() {
       return parameters_;
     }
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     public java.util.List<? extends ProtoDefs.LogStructure.ParamOrBuilder> 
         getParametersOrBuilderList() {
       return parameters_;
     }
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     @java.lang.Override
     public int getParametersCount() {
       return parameters_.size();
     }
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     @java.lang.Override
     public ProtoDefs.LogStructure.Param getParameters(int index) {
       return parameters_.get(index);
     }
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     public ProtoDefs.LogStructure.ParamOrBuilder getParametersOrBuilder(
         int index) {
@@ -245,7 +245,7 @@ public final class LogStructure {
     }
 
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     private void setParameters(
         int index, ProtoDefs.LogStructure.Param value) {
@@ -254,7 +254,7 @@ public final class LogStructure {
       parameters_.set(index, value);
     }
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     private void addParameters(ProtoDefs.LogStructure.Param value) {
       value.getClass();
@@ -262,7 +262,7 @@ public final class LogStructure {
       parameters_.add(value);
     }
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     private void addParameters(
         int index, ProtoDefs.LogStructure.Param value) {
@@ -271,7 +271,7 @@ public final class LogStructure {
       parameters_.add(index, value);
     }
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     private void addAllParameters(
         java.lang.Iterable<? extends ProtoDefs.LogStructure.Param> values) {
@@ -280,23 +280,23 @@ public final class LogStructure {
           values, parameters_);
     }
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     private void clearParameters() {
       parameters_ = emptyProtobufList();
     }
     /**
-     * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+     * <code>repeated .ProtoDefs.Param parameters = 5;</code>
      */
     private void removeParameters(int index) {
       ensureParametersIsMutable();
       parameters_.remove(index);
     }
 
-    public static final int BBLOC_FIELD_NUMBER = 7;
+    public static final int BBLOC_FIELD_NUMBER = 6;
     private long bBloc_;
     /**
-     * <code>uint64 BBloc = 7;</code>
+     * <code>uint64 BBloc = 6;</code>
      * @return The bBloc.
      */
     @java.lang.Override
@@ -304,7 +304,7 @@ public final class LogStructure {
       return bBloc_;
     }
     /**
-     * <code>uint64 BBloc = 7;</code>
+     * <code>uint64 BBloc = 6;</code>
      * @param value The bBloc to set.
      */
     private void setBBloc(long value) {
@@ -312,7 +312,7 @@ public final class LogStructure {
       bBloc_ = value;
     }
     /**
-     * <code>uint64 BBloc = 7;</code>
+     * <code>uint64 BBloc = 6;</code>
      */
     private void clearBBloc() {
       
@@ -499,7 +499,7 @@ public final class LogStructure {
       }
 
       /**
-       * <code>string method_name = 5;</code>
+       * <code>string method_name = 4;</code>
        * @return The methodName.
        */
       @java.lang.Override
@@ -507,7 +507,7 @@ public final class LogStructure {
         return instance.getMethodName();
       }
       /**
-       * <code>string method_name = 5;</code>
+       * <code>string method_name = 4;</code>
        * @return The bytes for methodName.
        */
       @java.lang.Override
@@ -516,7 +516,7 @@ public final class LogStructure {
         return instance.getMethodNameBytes();
       }
       /**
-       * <code>string method_name = 5;</code>
+       * <code>string method_name = 4;</code>
        * @param value The methodName to set.
        * @return This builder for chaining.
        */
@@ -527,7 +527,7 @@ public final class LogStructure {
         return this;
       }
       /**
-       * <code>string method_name = 5;</code>
+       * <code>string method_name = 4;</code>
        * @return This builder for chaining.
        */
       public Builder clearMethodName() {
@@ -536,7 +536,7 @@ public final class LogStructure {
         return this;
       }
       /**
-       * <code>string method_name = 5;</code>
+       * <code>string method_name = 4;</code>
        * @param value The bytes for methodName to set.
        * @return This builder for chaining.
        */
@@ -548,7 +548,7 @@ public final class LogStructure {
       }
 
       /**
-       * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+       * <code>repeated .ProtoDefs.Param parameters = 5;</code>
        */
       @java.lang.Override
       public java.util.List<ProtoDefs.LogStructure.Param> getParametersList() {
@@ -556,20 +556,20 @@ public final class LogStructure {
             instance.getParametersList());
       }
       /**
-       * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+       * <code>repeated .ProtoDefs.Param parameters = 5;</code>
        */
       @java.lang.Override
       public int getParametersCount() {
         return instance.getParametersCount();
       }/**
-       * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+       * <code>repeated .ProtoDefs.Param parameters = 5;</code>
        */
       @java.lang.Override
       public ProtoDefs.LogStructure.Param getParameters(int index) {
         return instance.getParameters(index);
       }
       /**
-       * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+       * <code>repeated .ProtoDefs.Param parameters = 5;</code>
        */
       public Builder setParameters(
           int index, ProtoDefs.LogStructure.Param value) {
@@ -578,7 +578,7 @@ public final class LogStructure {
         return this;
       }
       /**
-       * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+       * <code>repeated .ProtoDefs.Param parameters = 5;</code>
        */
       public Builder setParameters(
           int index, ProtoDefs.LogStructure.Param.Builder builderForValue) {
@@ -588,7 +588,7 @@ public final class LogStructure {
         return this;
       }
       /**
-       * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+       * <code>repeated .ProtoDefs.Param parameters = 5;</code>
        */
       public Builder addParameters(ProtoDefs.LogStructure.Param value) {
         copyOnWrite();
@@ -596,7 +596,7 @@ public final class LogStructure {
         return this;
       }
       /**
-       * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+       * <code>repeated .ProtoDefs.Param parameters = 5;</code>
        */
       public Builder addParameters(
           int index, ProtoDefs.LogStructure.Param value) {
@@ -605,7 +605,7 @@ public final class LogStructure {
         return this;
       }
       /**
-       * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+       * <code>repeated .ProtoDefs.Param parameters = 5;</code>
        */
       public Builder addParameters(
           ProtoDefs.LogStructure.Param.Builder builderForValue) {
@@ -614,7 +614,7 @@ public final class LogStructure {
         return this;
       }
       /**
-       * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+       * <code>repeated .ProtoDefs.Param parameters = 5;</code>
        */
       public Builder addParameters(
           int index, ProtoDefs.LogStructure.Param.Builder builderForValue) {
@@ -624,7 +624,7 @@ public final class LogStructure {
         return this;
       }
       /**
-       * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+       * <code>repeated .ProtoDefs.Param parameters = 5;</code>
        */
       public Builder addAllParameters(
           java.lang.Iterable<? extends ProtoDefs.LogStructure.Param> values) {
@@ -633,7 +633,7 @@ public final class LogStructure {
         return this;
       }
       /**
-       * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+       * <code>repeated .ProtoDefs.Param parameters = 5;</code>
        */
       public Builder clearParameters() {
         copyOnWrite();
@@ -641,7 +641,7 @@ public final class LogStructure {
         return this;
       }
       /**
-       * <code>repeated .ProtoDefs.Param parameters = 6;</code>
+       * <code>repeated .ProtoDefs.Param parameters = 5;</code>
        */
       public Builder removeParameters(int index) {
         copyOnWrite();
@@ -650,7 +650,7 @@ public final class LogStructure {
       }
 
       /**
-       * <code>uint64 BBloc = 7;</code>
+       * <code>uint64 BBloc = 6;</code>
        * @return The bBloc.
        */
       @java.lang.Override
@@ -658,7 +658,7 @@ public final class LogStructure {
         return instance.getBBloc();
       }
       /**
-       * <code>uint64 BBloc = 7;</code>
+       * <code>uint64 BBloc = 6;</code>
        * @param value The bBloc to set.
        * @return This builder for chaining.
        */
@@ -668,7 +668,7 @@ public final class LogStructure {
         return this;
       }
       /**
-       * <code>uint64 BBloc = 7;</code>
+       * <code>uint64 BBloc = 6;</code>
        * @return This builder for chaining.
        */
       public Builder clearBBloc() {
@@ -702,8 +702,8 @@ public final class LogStructure {
               "bBloc_",
             };
             java.lang.String info =
-                "\u0000\u0006\u0000\u0000\u0001\u0007\u0006\u0000\u0001\u0000\u0001\u0003\u0002\u0007" +
-                "\u0003\u0007\u0005\u0208\u0006\u001b\u0007\u0003";
+                "\u0000\u0006\u0000\u0000\u0001\u0006\u0006\u0000\u0001\u0000\u0001\u0003\u0002\u0007" +
+                "\u0003\u0007\u0004\u0208\u0005\u001b\u0006\u0003";
             return newMessageInfo(DEFAULT_INSTANCE, info, objects);
         }
         // fall through

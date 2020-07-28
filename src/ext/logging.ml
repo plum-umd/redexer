@@ -452,7 +452,7 @@ class virtual logger (dx: D.dex) =
     cid <- cdef.D.c_class_id;
     let cname = D.get_ty_str dx cid in
     (* to avoid the Logger class as well as libraries *)
-    skip_cls <- U.begins_with cname logging; (*|| is_library cname;*)
+    skip_cls <- U.begins_with cname logging;
     skip_cls <- skip_cls || self#skip_class cname;
     let yesno = if skip_cls then "Skipping log" else "Log" in
     Log.i (Pf.sprintf "%s of class: %s\n" yesno cname)
