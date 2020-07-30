@@ -43,6 +43,9 @@ import android.widget.CheckBox;
 import android.widget.RadioButton;
 import android.widget.TextView;
 
+import com.google.protobuf.CodedOutputStream;
+import com.google.protobuf.CodedOutputStream;
+
 import ProtoDefs.LogStructure;
 
 public class FileWriterHandler implements Runnable{
@@ -54,7 +57,7 @@ public class FileWriterHandler implements Runnable{
     
     // A hash map that holds--for each thread ID--a file to which to
     // write the output
-    private HashMap<Long, BufferedOutputStream> outs;
+    private HashMap<Long, CodedOutputStream> outs;
 
     final static String tag = Logger.class.getPackage().getName();
     
@@ -77,18 +80,24 @@ public class FileWriterHandler implements Runnable{
         return f;
     }
 
+    static void writeDelimToPB(CodedOutputStream cos, LogStructure.Line msg_out) throws IOException {
+        final int serialized = msg_out.getSerializedSize();
+        cos.writeUInt32NoTag(serialized);
+        msg_out.writeTo(cos);
+    }
+
     public FileWriterHandler(ConcurrentLinkedQueue<Object[]> p){
         pipe = p;
-        try{
-            File f = getFileName(1);
-            FileOutputStream fos = new FileOutputStream(f);
-            BufferedOutputStream out = new BufferedOutputStream(fos, 65536);
-            outs = new HashMap();
-            outs.put(new Long(1),out);
-        }catch(IOException e){
-                Log.i(tag, "logging error");
-                e.printStackTrace();
-        }
+        // try{
+        //     File f = getFileName(1);
+        //     FileOutputStream fos = new FileOutputStream(f);
+        //     CodedOutputStream out = CodedOutputStream.newInstance(fos, 65536);
+        //     outs = new HashMap();
+        //     outs.put(new Long(1), out);
+        // }catch(IOException e){
+        //         Log.i(tag, "logging error");
+        //         e.printStackTrace();
+        // }
     }
 
     static final Set<Class> WRAPPER_TYPES = new HashSet(Arrays.asList(
@@ -159,7 +168,7 @@ public class FileWriterHandler implements Runnable{
                     try{
                         File f = getFileName(id);
                         FileOutputStream fos = new FileOutputStream(f);
-                        BufferedOutputStream out = new BufferedOutputStream(fos, 65536);
+                        CodedOutputStream out = CodedOutputStream.newInstance(fos, 65536);
                         outs.put(new Long(id),out);
                     } catch(IOException e){
                         Log.i(tag, "logging error");
@@ -170,7 +179,7 @@ public class FileWriterHandler implements Runnable{
                 // Block entry
                 if (io == "b") {
                     curLine.setBBloc((Long) args[4]);
-                    curLine.build().writeDelimitedTo(outs.get(id));
+                    writeDelimToPB(outs.get(id), curLine.build());
                     curLine.clear();
                     continue;
                 }
@@ -319,7 +328,7 @@ public class FileWriterHandler implements Runnable{
                     curLine.addParameters(argCount, curParam);
                     curParam.clear();
                 }
-                curLine.build().writeDelimitedTo(outs.get(id));
+                writeDelimToPB(outs.get(id), curLine.build());
                 curLine.clear();
             } catch(IOException e){
                 Log.i(tag, "logging error");

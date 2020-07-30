@@ -1,2 +1,3 @@
 android.support
+com.google.protobuf
 ProtoDefs
