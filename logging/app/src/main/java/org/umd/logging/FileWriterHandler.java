@@ -88,6 +88,7 @@ public class FileWriterHandler implements Runnable{
 
     public FileWriterHandler(ConcurrentLinkedQueue<Object[]> p){
         pipe = p;
+        outs = new HashMap();
         // try{
         //     File f = getFileName(1);
         //     FileOutputStream fos = new FileOutputStream(f);
