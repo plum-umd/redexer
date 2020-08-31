@@ -1,3 +1,4 @@
 android.support
 com.google.protobuf
 ProtoDefs
+com.facebook.GraphRequestBatch

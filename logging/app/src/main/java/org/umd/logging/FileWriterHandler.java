@@ -44,7 +44,6 @@ import android.widget.RadioButton;
 import android.widget.TextView;
 
 import com.google.protobuf.CodedOutputStream;
-import com.google.protobuf.CodedOutputStream;
 
 import ProtoDefs.LogStructure;
 
@@ -253,6 +252,10 @@ public class FileWriterHandler implements Runnable{
                         //            s_arg += processDialog((Dialog)arg);
                         //          }
                         //        }
+                        if (arg instanceof String && cname.equals("android.os.Bundle")) {
+                            curParam.setType("string");
+                            curParam.addValue((String)arg);
+                        }
                         if(arg instanceof Thread){
                             curParam.setType("thread");
                             curParam.addValue(String.valueOf(((Thread)arg).getId()));

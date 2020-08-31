@@ -454,8 +454,6 @@ class virtual logger (dx: D.dex) =
     (* to avoid the Logger class as well as libraries *)
     skip_cls <- U.begins_with cname logging;
     skip_cls <- skip_cls || self#skip_class cname;
-    let yesno = if skip_cls then "Skipping log" else "Log" in
-    Log.i (Pf.sprintf "%s of class: %s\n" yesno cname)
 
   val mutable mid = D.no_idx
 

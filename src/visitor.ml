@@ -48,6 +48,8 @@ module IM = I.IM
 
 module L = List
 
+module Pf = Printf
+
 (***********************************************************************)
 (* Basic Types/Elements                                                *)
 (***********************************************************************)
@@ -135,7 +137,7 @@ let set_skip_pkgs (pkgs: string list) : unit =
 (* to_be_skipped : string -> bool *)
 let to_be_skipped (cname: string) : bool =
   let cname = J.of_java_ty cname in
-  L.exists (fun pkg -> U.begins_with cname pkg) !skips
+  L.exists (fun pkg -> if (U.begins_with cname pkg || cname = pkg) then (Log.i (Pf.sprintf "Skipping... %s begins with %s" cname pkg); true) else (Log.i (Pf.sprintf "Logging... %s does not begin with %s" cname pkg); false)) !skips
 
 (* iter: visitor -> unit *)
 let rec iter (v: visitor) : unit =
@@ -177,12 +179,12 @@ let rec iter (v: visitor) : unit =
     );
     iter_anno_dir dx v#v_anno cdef.D.annotations;
     let cname = D.get_ty_str dx cdef.D.c_class_id in
-    if to_be_skipped cname then () else
-    if v#get_skip_cls () then () else
+    if to_be_skipped cname then (Log.i (Pf.sprintf "Skip of class from skip file: %s\n" cname)) else
+    if v#get_skip_cls () then (Log.i (Pf.sprintf "Skip of class from visitor: %s\n" cname)) else
     if cdef.D.class_data = D.no_off then () else
     (
       match D.get_data_item dx cdef.D.class_data with
-      | D.CLASS_DATA cdat -> per_cdat cdat
+      | D.CLASS_DATA cdat -> (Log.i (Pf.sprintf "Log of class: %s\n" cname)); per_cdat cdat
       | _ -> raise (D.Wrong_match "cdef: not CLASS_DATA")
     )
   in

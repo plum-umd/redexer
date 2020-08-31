@@ -263,6 +263,7 @@ private
   @@online = true
 
   def self.runcmd(cmd)
+    puts cmd
     @@out = ""
     cmd = "#{cmd} #{@@opt}" if @@opt
     @@out << cmd + "\n"

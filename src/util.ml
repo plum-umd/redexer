@@ -147,7 +147,12 @@ let begins_with (str: string) (prefix: string) : bool =
       | hd' :: tl' -> if hd' = hd then h tl tl' else false
       | [] -> true
     )
-    | _ -> false
+    | [] -> 
+    (
+      match b with
+      | [] -> true
+      | _  -> false
+    )
   in
   h (explode str) (explode prefix)
 
