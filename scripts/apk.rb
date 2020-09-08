@@ -251,6 +251,10 @@ class Apk
     @res.fragments
   end
 
+  def update_fb_id(dir)
+    @res.update_fb_id(dir)
+  end
+
   def buttons
     Dex.listener(dex, @manifest.pkg)
     out = Dex.out

@@ -162,6 +162,7 @@ def finish_repackaging(apk,fn,to,res)
     raise "rewriting dex failed"
   end
   if $logging then
+    apk.update_fb_id($tmp_dir)
     apk.add_legacy_external_storage
     apk.add_permission
   end
@@ -184,6 +185,8 @@ def finish_repackaging(apk,fn,to,res)
     system("mv -f #{rewritten} #{res}") if apk.succ
   end
   puts apk.out if apk.succ
+
+  puts "Launcher is: " + apk.launcher.to_s
 end
 
 case cmd
