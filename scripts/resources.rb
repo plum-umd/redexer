@@ -164,12 +164,13 @@ class Resources
   end
 
   def update_fb_id
-    f = File.open(@dir + "/values/strings.xml", 'r+')
+    f = File.open(@dir + "/values/strings.xml", 'r')
     doc = Nokogiri::XML(f)
     fb_id = doc.at_xpath("//string[@name='facebook_app_id']")
     fb_scheme = doc.at_xpath("//string[@name='fb_login_protocol_scheme']")
     fb_id.content = FACEBOOK_ID
     fb_scheme.content = FACEBOOK_SCHEME
+    f = File.open(@dir + "/values/strings.xml", 'w')
     f.puts doc.to_xml
     f.close
 

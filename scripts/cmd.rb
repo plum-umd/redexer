@@ -162,7 +162,7 @@ def finish_repackaging(apk,fn,to,res)
     raise "rewriting dex failed"
   end
   if $logging then
-    apk.update_fb_id($tmp_dir)
+    apk.update_fb_id
     apk.add_legacy_external_storage
     apk.add_permission
   end
