@@ -162,9 +162,14 @@ def finish_repackaging(apk,fn,to,res)
     raise "rewriting dex failed"
   end
   if $logging then
-    apk.update_fb_id
-    apk.add_legacy_external_storage
-    apk.add_permission
+    begin
+      apk.update_fb_id
+      apk.add_legacy_external_storage
+      apk.add_permission
+    rescue
+      $stderr.puts "******** Failed to alter apk-level attributes. Check the facebook_app_id, " + 
+      "legacy_external_storage, and permission.external_storage attributes in the apk ********"
+    end
   end
   if to
     apk.repack(to)
