@@ -487,9 +487,11 @@ class virtual logger (dx: D.dex) =
                    (try ignore (D.get_data_item dx emtd.D.code_off); true
                     with _ -> false);
     if log_entry then
-      Log.i ("Log of method body: "^full)
+      ()
+      (* Log.i ("Log of method body: "^full) *)
     else
-      Log.i ("Skipping log of method body: "^full);
+      ();
+      (* Log.i ("Skipping log of method body: "^full); *)
     let mit = D.get_mit dx mid in
     argv <- D.get_argv dx mit;
     if (not (D.is_static emtd.D.m_access_flag)) then
@@ -500,7 +502,7 @@ class virtual logger (dx: D.dex) =
   (* to log API usage *)
   val mutable cur_citm = D.empty_citm ()
   method v_citm (citm: D.code_item) : unit =
-    Log.i (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid));
+    (* Log.i (Pf.sprintf "visit: %s" (D.get_mtd_full_name dx mid)); *)
     let mname = D.get_mtd_name dx mid in 
     let cname = D.get_ty_str dx cid in
     let str_lname = D.of_idx (D.find_str dx cname) in
@@ -642,10 +644,11 @@ class virtual logger (dx: D.dex) =
           
           (* This can be optimized. -- How? *)
           if (not do_logging) then
-            Log.i (Printf.sprintf "Skipping log of method call %s %x " full (D.of_off ins))
+            ()
+            (* Log.i (Printf.sprintf "Skipping log of method call %s %x " full (D.of_off ins)) *)
           else
           (
-            Log.i  (Printf.sprintf "Log of method call %s %x " full (D.of_off ins));
+            (* Log.i  (Printf.sprintf "Log of method call %s %x " full (D.of_off ins)); *)
             let vx::vy::vz::[] = vxyz 0 in
             let ent_cursor = M.get_cursor cur_citm ins in
             let ext_cursor = M.next ent_cursor in
@@ -1024,5 +1027,6 @@ let modify (dx: D.dex) : unit =
   in
   (*St.time "transition" add_transition dx;*)
   (* log API uses and entry/exit of all methods, except for Logger itself *)
+  Pf.eprintf "**** Beginning instrument\n%!";
   St.time "instrument" V.iter (logging : logger :> V.visitor  );
   St.time "expand-opr" M.expand_opr dx;

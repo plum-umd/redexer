@@ -50,6 +50,8 @@ module L = List
 
 module Pf = Printf
 
+module Thread = Thread
+
 (***********************************************************************)
 (* Basic Types/Elements                                                *)
 (***********************************************************************)
@@ -129,6 +131,9 @@ end
 (***********************************************************************)
 
 let skips = ref ([]: string list)
+let started_logging = ref true
+let start_name = ref ""
+let timeout = ref (-1.)
 
 (* set_skip_pkgs : string list -> unit *)
 let set_skip_pkgs (pkgs: string list) : unit =
@@ -137,7 +142,12 @@ let set_skip_pkgs (pkgs: string list) : unit =
 (* to_be_skipped : string -> bool *)
 let to_be_skipped (cname: string) : bool =
   let cname = J.of_java_ty cname in
-  L.exists (fun pkg -> if (U.begins_with cname pkg || cname = pkg) then (Log.i (Pf.sprintf "Skipping... %s begins with %s" cname pkg); true) else (Log.i (Pf.sprintf "Logging... %s does not begin with %s" cname pkg); false)) !skips
+  L.exists (fun pkg -> U.begins_with cname pkg || cname = pkg) !skips
+
+let is_before_start (cname: string) : bool =
+  let cname = J.of_java_ty cname in
+  let _ = started_logging := (!started_logging || cname = !start_name) in
+  not !started_logging
 
 (* iter: visitor -> unit *)
 let rec iter (v: visitor) : unit =
@@ -157,7 +167,9 @@ let rec iter (v: visitor) : unit =
     L.iter v#v_efld cdat.D.static_fields;
     L.iter v#v_efld cdat.D.instance_fields;
     let v_mtd (emtd: D.encoded_method) : unit =
+      let mname = D.get_mtd_name dx emtd.D.method_idx in
       v#v_emtd emtd;
+
       if v#get_skip_mtd () then () else
       if emtd.D.code_off = D.no_off then () else
       match D.get_data_item dx emtd.D.code_off with
@@ -168,6 +180,33 @@ let rec iter (v: visitor) : unit =
     L.iter v_mtd cdat.D.virtual_methods
   in
   let per_cdef (cdef: D.class_def_item) : unit =
+    let call_with_timeout (d:float) (cname:string) (f: unit -> 'a):'a =
+      let success = ref false in
+      let l = Mutex.create () in
+      let timer () =
+        (for v = 1 to 10 do
+          let _ = Thread.delay (d /. 10.) in
+          let _ = Mutex.lock l in
+          if (!success) then
+            let _ = Mutex.unlock l in
+            Thread.exit ()
+          else
+            Mutex.unlock l
+        done);
+        let _ = Mutex.lock l in
+          if not (!success) then begin
+            Printf.eprintf "\n\n\n\n\n\n\n\n\n****************** Alert ******************\n\n====================== Timeout on logging class %s ======================\n\n****************** Alert ******************\n\n\n\n\n\n\n\n\n%!" cname;
+            flush stderr;
+            exit 1
+        end
+      in
+      let _ = Thread.create timer () in
+      let r = f () in
+      let _ = Mutex.lock l in
+      let _ = success := true in
+      let _ = Mutex.unlock l in
+      r
+    in
     v#v_cdef cdef;
     let stt_off = cdef.D.static_values in
     if stt_off <> D.no_off then
@@ -179,15 +218,26 @@ let rec iter (v: visitor) : unit =
     );
     iter_anno_dir dx v#v_anno cdef.D.annotations;
     let cname = D.get_ty_str dx cdef.D.c_class_id in
-    if to_be_skipped cname then (Log.i (Pf.sprintf "Skip of class from skip file: %s\n" cname)) else
-    if v#get_skip_cls () then (Log.i (Pf.sprintf "Skip of class from visitor: %s\n" cname)) else
+    (* Implement the 'start at method' here *)
+    if to_be_skipped cname then () else
+    if v#get_skip_cls () then () else
+    if is_before_start cname then () else
     if cdef.D.class_data = D.no_off then () else
     (
       match D.get_data_item dx cdef.D.class_data with
-      | D.CLASS_DATA cdat -> (Log.i (Pf.sprintf "Log of class: %s\n" cname)); per_cdat cdat
+      | D.CLASS_DATA cdat ->  if !timeout < 0. then 
+                                per_cdat cdat
+                              else
+                                Pf.eprintf "TIMING Log of class: %s\n%!" cname;
+                                let start_time = (Unix.times ()).Unix.tms_utime in 
+                                let _ = call_with_timeout !timeout cname (fun () -> per_cdat cdat) in
+                                let end_time = (Unix.times ()).Unix.tms_utime in
+                                if (end_time -. start_time) > 10. then
+                                  Pf.eprintf "\t\tTime = %5.3f\n%!" (end_time -. start_time)
       | _ -> raise (D.Wrong_match "cdef: not CLASS_DATA")
     )
   in
+  if !start_name <> "" then started_logging := false else ();
   DA.iter v#v_fit  dx.D.d_field_ids;
   DA.iter v#v_mit  dx.D.d_method_ids;
   DA.iter per_cdef dx.D.d_class_defs;

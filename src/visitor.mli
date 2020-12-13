@@ -101,6 +101,9 @@ object
   method finish : unit -> unit
 end
 
+val start_name : string ref
+val timeout : float ref
+
 (** iterator *)
 class iterator : Dex.dex -> visitor
 

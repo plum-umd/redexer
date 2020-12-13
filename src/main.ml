@@ -339,6 +339,8 @@ let arg_specs = A.align
      " file containing activity names (default: "^(!act)^")");
     ("-pkg", A.Set_string pkg,
      " specify the package name of the app");
+    ("-start_on_class", A.Set_string V.start_name, " specify the class to start logging on");
+    ("-run_with_timeout", A.Set_float V.timeout, " specify the class to start logging on");
 
   ]
 
@@ -387,5 +389,4 @@ let main () =
     prerr_endline ("Exception: "^(Printexc.to_string e));
     Printexc.print_backtrace stderr
 ;;
-
 main ();;
