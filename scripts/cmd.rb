@@ -157,6 +157,7 @@ end
 
 def finish_repackaging(apk,fn,to,res)
   if not apk.succ
+    puts "******** Encountered error. flushing the output buffer"
     puts apk.out
     close(apk)
     raise "rewriting dex failed"
@@ -177,6 +178,7 @@ def finish_repackaging(apk,fn,to,res)
     apk.repack
   end
   if not apk.succ
+    puts "******** Encountered error. flushing the output buffer"
     puts apk.out
     close(apk)
     raise "repacking apk failed"
@@ -189,7 +191,10 @@ def finish_repackaging(apk,fn,to,res)
     rewritten = File.basename(fn)
     system("mv -f #{rewritten} #{res}") if apk.succ
   end
-  puts apk.out if apk.succ
+  if apk.succ
+    puts "Success. flushing the output buffer"
+    puts apk.out
+  end
 
   puts "Launcher is: " + apk.launcher.to_s
 end

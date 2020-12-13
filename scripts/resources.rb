@@ -164,9 +164,10 @@ class Resources
   end
 
   def update_fb_id
-    f = File.open(@dir + "/values/strings.xml", 'r+')
+    f = File.open(@dir + "/values/strings.xml", 'r')
     doc = Nokogiri::XML(f)
     fb_id = doc.at_xpath("//string[@name='facebook_app_id']")
+    fb_scheme = doc.at_xpath("//string[@name='fb_login_protocol_scheme']")
     if (not fb_id.nil?)
       fb_id.content = FACEBOOK_ID
     else
@@ -178,6 +179,7 @@ class Resources
     else
       puts "Facebook App ID Scheme unable to be updated. String not found"
     end
+    f.close()
     f = File.open(@dir + "/values/strings.xml", 'w')
     f.puts doc.to_xml
     f.close
