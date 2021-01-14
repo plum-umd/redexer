@@ -225,15 +225,15 @@ let rec iter (v: visitor) : unit =
     if cdef.D.class_data = D.no_off then () else
     (
       match D.get_data_item dx cdef.D.class_data with
-      | D.CLASS_DATA cdat ->  if !timeout < 0. then 
+      | D.CLASS_DATA cdat ->  if (!timeout < 0.) then
                                 per_cdat cdat
                               else
-                                Pf.eprintf "TIMING Log of class: %s\n%!" cname;
+                                (Pf.eprintf "TIMING Log of class: %s\n%!" cname;
                                 let start_time = (Unix.times ()).Unix.tms_utime in 
                                 let _ = call_with_timeout !timeout cname (fun () -> per_cdat cdat) in
                                 let end_time = (Unix.times ()).Unix.tms_utime in
                                 if (end_time -. start_time) > 10. then
-                                  Pf.eprintf "\t\tTime = %5.3f\n%!" (end_time -. start_time)
+                                  Pf.eprintf "\t\tTime = %5.3f\n%!" (end_time -. start_time))
       | _ -> raise (D.Wrong_match "cdef: not CLASS_DATA")
     )
   in
