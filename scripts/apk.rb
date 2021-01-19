@@ -114,12 +114,14 @@ class Apk
 
   def logging(detail)
     if dexes.length > 1 then
-      dxs = dexes 
+      dxs = dexes
       multi = true
     else 
       dxs = [dex]
       multi = false
     end
+    multi = true
+    # set multi = true to test, even with a single dex file (say)
     dxs.each do |dex|
       @out << "rewriting #{dex}\n"
       Dex.logging(dex,detail,multi,dex)
@@ -128,7 +130,6 @@ class Apk
       if (not @succ) then return end
     end
     if multi then
-      @out << "Using #{NUMPROCS} worker processes"
       nums = dexes.map do |s| 
         s = s.match(/classes(\d+).dex/)
         if s == nil 

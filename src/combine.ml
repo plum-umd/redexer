@@ -40,6 +40,7 @@ module DA = DynArray
 
 module I  = Instr
 module D  = Dex
+module U  = Util
 
 module IM = I.IM
 
@@ -77,51 +78,85 @@ let sft_idx (shift: int) l : D.link =
 (* Combining DEX binaries                                              *)
 (***********************************************************************)
 
-(* combine: D.dex -> D.dex -> bool -> D.dex *)
-let rec combine (lx: D.dex) (tx: D.dex) ~only_prototypes : D.dex =
+(* combine: D.dex -> D.dex -> string -> D.dex *)
+let rec combine (srcdex: D.dex) (todex: D.dex) ~proto_whitelist : D.dex =
+  (* If whitelist is being used, determine which protos / methods to include *)
+  let (included_proto_ids, included_mtd_ids) =
+    try
+      let ch = open_in proto_whitelist in
+      let whitelist = U.read_lines ch in
+      close_in ch;
+      let protos = DA.copy srcdex.D.d_proto_ids in
+      let mids   = DA.copy srcdex.D.d_method_ids in
+      let filter_proto_whitelist (it : D.method_id_item) : bool =
+        if proto_whitelist != "" then
+          try
+            let cname = D.get_ty_str srcdex it.D.m_class_id in
+            let mname = D.get_str srcdex it.D.m_name_id in
+            let full_name = cname^"."^mname in
+            (* Check method name against whitelist *)
+            L.exists (function (whitelist_entry) -> U.begins_with full_name whitelist_entry) whitelist
+          with _ -> (* Can't find name to filter, just include it.. *) true
+        else
+          (* If not using whitelist, just include everything *)
+          true
+      in
+      DA.filter filter_proto_whitelist mids;
+      (* For now, just pass through protos, maybe eventually filter those, too? *)
+      (protos, mids)
+    with Sys_error msg -> 
+      prerr_endline ("Error opening / parsing whitelist file " ^ proto_whitelist ^ ", " ^ msg);
+      (srcdex.D.d_proto_ids, srcdex.D.d_method_ids)
+  in
+  let excluded_size_protos = DA.length srcdex.D.d_proto_ids - DA.length included_proto_ids in
+  let struct_size = 16 in
+  let excluded_size_mtds = (DA.length srcdex.D.d_method_ids) - (DA.length included_mtd_ids) in
+  let difference = excluded_size_protos * struct_size + excluded_size_mtds * struct_size in
   let dx = D.empty_dex ()
   and sft = {
-    str_sz = DA.length lx.D.d_string_ids;
-    typ_sz = DA.length lx.D.d_type_ids;
-    pro_sz = DA.length lx.D.d_proto_ids;
-    fld_sz = DA.length lx.D.d_field_ids;
-    mtd_sz = DA.length lx.D.d_method_ids;
-    cls_sz = DA.length lx.D.d_class_defs;
-    f_size = lx.D.header.D.file_size;
+    str_sz = DA.length srcdex.D.d_string_ids;
+    typ_sz = DA.length srcdex.D.d_type_ids;
+    pro_sz = DA.length included_proto_ids;
+    fld_sz = DA.length srcdex.D.d_field_ids;
+    mtd_sz = DA.length included_mtd_ids;
+    cls_sz = DA.length srcdex.D.d_class_defs;
+    f_size = srcdex.D.header.D.file_size;
   } in
-  dx.D.header.D.file_size <- lx.D.header.D.file_size + tx.D.header.D.file_size;
+  dx.D.header.D.file_size <- srcdex.D.header.D.file_size + todex.D.header.D.file_size - difference;
   (* append string_ids *)
-  DA.append lx.D.d_string_ids dx.D.d_string_ids;
+  DA.append srcdex.D.d_string_ids dx.D.d_string_ids;
   let fs it = sft_off sft.f_size it in
-  DA.append (DA.map fs tx.D.d_string_ids) dx.D.d_string_ids;
+  DA.append (DA.map fs todex.D.d_string_ids) dx.D.d_string_ids;
   (* append type_ids *)
-  DA.append lx.D.d_type_ids dx.D.d_type_ids;
+  DA.append srcdex.D.d_type_ids dx.D.d_type_ids;
   let ft it = sft_idx sft.str_sz it in
-  DA.append (DA.map ft tx.D.d_type_ids) dx.D.d_type_ids;
+  DA.append (DA.map ft todex.D.d_type_ids) dx.D.d_type_ids;
   (* append proto_ids *)
-  DA.append lx.D.d_proto_ids dx.D.d_proto_ids;
+  DA.append srcdex.D.d_proto_ids dx.D.d_proto_ids;
   let fp it = {
     D.shorty        = sft_idx sft.str_sz it.D.shorty;
     D.return_type   = sft_idx sft.typ_sz it.D.return_type;
     D.parameter_off = sft_off sft.f_size it.D.parameter_off;
   } in
-  DA.append (DA.map fp tx.D.d_proto_ids) dx.D.d_proto_ids;
+  DA.append (DA.map fp included_proto_ids) dx.D.d_proto_ids;
   (* append field_ids *)
-  DA.append lx.D.d_field_ids dx.D.d_field_ids;
+  DA.append srcdex.D.d_field_ids dx.D.d_field_ids;
   let ff it = {
       D.f_class_id = sft_idx sft.typ_sz it.D.f_class_id;
       D.f_type_id  = sft_idx sft.typ_sz it.D.f_type_id;
       D.f_name_id  = sft_idx sft.str_sz it.D.f_name_id;
     } in
-  DA.append (DA.map ff tx.D.d_field_ids) dx.D.d_field_ids;
+  DA.append (DA.map ff todex.D.d_field_ids) dx.D.d_field_ids;
   (* append method_ids *)
-  DA.append lx.D.d_method_ids dx.D.d_method_ids;
+  DA.append srcdex.D.d_method_ids dx.D.d_method_ids;
   let fm it = {
     D.m_class_id = sft_idx sft.typ_sz it.D.m_class_id;
     D.m_proto_id = sft_idx sft.pro_sz it.D.m_proto_id;
     D.m_name_id  = sft_idx sft.str_sz it.D.m_name_id;
   } in
-  DA.append (DA.map fm tx.D.d_method_ids) dx.D.d_method_ids;
+  let shifted_mids = (DA.map fm todex.D.d_method_ids) in
+  Printf.printf "including %d method prototypes from source .dex file\n%!" (DA.length included_mtd_ids);
+  DA.append included_mtd_ids dx.D.d_method_ids;
   (* append class_defs
      
      Note: To accomodate a multi-dex setup, redexer can be used to add
@@ -133,9 +168,10 @@ let rec combine (lx: D.dex) (tx: D.dex) ~only_prototypes : D.dex =
      passed to this method.
 
    *)
-  if (not only_prototypes) then 
-    DA.append lx.D.d_class_defs dx.D.d_class_defs;
-  let fc it = 
+  if (proto_whitelist = "") then
+    (* Copy class definitions, too *)
+    DA.append srcdex.D.d_class_defs dx.D.d_class_defs;
+  let fc it =
     {
       it with
       D.c_class_id    = sft_idx sft.typ_sz it.D.c_class_id;
@@ -147,8 +183,8 @@ let rec combine (lx: D.dex) (tx: D.dex) ~only_prototypes : D.dex =
       D.static_values = sft_off sft.f_size it.D.static_values;
     }
   in
-  DA.append (DA.map fc tx.D.d_class_defs) dx.D.d_class_defs;
-  dx.D.d_data <- IM.fold (sft_data sft) tx.D.d_data lx.D.d_data;
+  DA.append (DA.map fc todex.D.d_class_defs) dx.D.d_class_defs;
+  dx.D.d_data <- IM.fold (sft_data sft) todex.D.d_data srcdex.D.d_data;
   dx
 
 and sft_data sft (k: I.offset) (it: D.data_item) acc =

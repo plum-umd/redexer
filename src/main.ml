@@ -98,15 +98,16 @@ let dump_json (tx : D.dex) : unit =
 	  ) ()
 
 let lib = ref "data/logging.dex"
-let onlyprotos = ref false
+let protowhitelist = ref ""
 
 let combine (tx: D.dex) : unit =
  try (
     let chan' = open_in_bin !lib in
     let libdx = St.time "parse" P.parse chan' in
     close_in chan';
-    St.time "dump" (Dp.dump !dex) (St.time "merge" (fun _ -> 
-                                             Cm.combine libdx tx ~only_prototypes:!onlyprotos) ())
+    (* TODO *)
+    St.time "dump" (Dp.dump !dex) (St.time "merge" (fun _ ->
+                                             Cm.combine libdx tx ~proto_whitelist:!protowhitelist) ())
   )
   with End_of_file -> prerr_endline "EOF"
 
@@ -209,8 +210,7 @@ let instrument_logging (tx: D.dex) : unit =
       close_in chan;
       (* merge the external dex file *)
       let cx = St.time "merge"
-                       (fun _ -> Cm.combine liblog tx
-                                            ~only_prototypes:!onlyprotos) ()
+                 (fun _ -> Cm.combine liblog tx ~proto_whitelist:!protowhitelist) ()
       in
       (* seed new addresses for modification *)
       Md.seed_addr cx.D.header.D.file_size;
@@ -298,8 +298,8 @@ let arg_specs = A.align
 
     ("-lib",     A.Set_string lib,  " library dex name (default: "^(!lib)^")");
     ("-combine", A.Unit do_combine, " combine two dex files");
-    ("-onlyprotos", A.Set onlyprotos, 
-     " when combining files, only include prototypes, not implementations (useful for multidex)");
+    ("-protowhitelist", A.Set_string protowhitelist,
+     " combine files, include only method protoypes (not data) whose fully-qualified method name begin with entries on this whitelist");
 
     ("-cls",  A.Set_string cls, " target class name");
     ("-mtd",  A.Set_string mtd, " target method name");
