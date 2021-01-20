@@ -175,7 +175,7 @@ def finish_repackaging(apk,fn,to,res)
   if to
     apk.repack(to)
   else
-    apk.repack
+    apk.repack(res + "/" + fn) # Needs work... may not work on windows
   end
   if not apk.succ
     puts "******** Encountered error. flushing the output buffer"
@@ -183,14 +183,7 @@ def finish_repackaging(apk,fn,to,res)
     close(apk)
     raise "repacking apk failed"
   end
-  # for debugging, leave rewritten dex and xml files
-  system("cp -f #{File.join($tmp_dir, "classes.dex")} #{res}")
-  system("cp -f #{File.join($tmp_dir, "AndroidManifest.xml")} #{res}")
-  # and move the rewritten apk
-  if not to
-    rewritten = File.basename(fn)
-    system("mv -f #{rewritten} #{res}") if apk.succ
-  end
+
   if apk.succ
     puts "Success. flushing the output buffer"
     puts apk.out
