@@ -487,11 +487,9 @@ class virtual logger (dx: D.dex) =
                    (try ignore (D.get_data_item dx emtd.D.code_off); true
                     with _ -> false);
     if log_entry then
-      ()
-      (* Log.i ("Log of method body: "^full) *)
+      Log.v ("Log of method body: "^full)
     else
-      ();
-      (* Log.i ("Skipping log of method body: "^full); *)
+      Log.v ("Skipping log of method body: "^full);
     let mit = D.get_mit dx mid in
     argv <- D.get_argv dx mit;
     if (not (D.is_static emtd.D.m_access_flag)) then
