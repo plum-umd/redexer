@@ -175,7 +175,7 @@ def finish_repackaging(apk,fn,to,res)
   if to
     apk.repack(to)
   else
-    apk.repack(res + "/" + fn) # Needs work... may not work on windows
+    apk.repack(File.join(res,fn))
   end
   if not apk.succ
     puts "******** Encountered error. flushing the output buffer"
