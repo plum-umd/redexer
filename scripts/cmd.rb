@@ -65,6 +65,7 @@ perms = []
 detail = :none
 outputdir = nil
 $logging = false
+forking = false
 
 option_parser = OptionParser.new do |opts|
   opts.banner = "Usage: ruby #{__FILE__} target.(apk|dex) [options]"
@@ -103,6 +104,9 @@ option_parser = OptionParser.new do |opts|
   end
   opts.on("--perms permissions", "comma-separated list of permissions") do |p|
     perms = p.split(',')
+  end
+  opts.on("--fork", "Enable concurrent calls to redexer through child processes") do
+    forking = true
   end
   opts.on_tail("-h", "--help", "show this message") do
     puts opts
@@ -307,7 +311,7 @@ when "custom_views", "fragments", "buttons"
   end
 when "logging", "logging_ui"
   $logging = true
-  apk.send(cmd.to_sym,detail)
+  apk.send(cmd.to_sym,detail, forking)
   finish_repackaging(apk,fn,to,RES)
 when "directed"
   apk.directed

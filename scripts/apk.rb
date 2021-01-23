@@ -112,7 +112,7 @@ class Apk
     @manifest == nil
   end
 
-  def logging(detail)
+  def logging(detail, forking)
     if dexes.length > 1 then
       dxs = dexes
       multi = true
@@ -122,13 +122,45 @@ class Apk
     end
     multi = true
     # set multi = true to test, even with a single dex file (say)
-    dxs.each do |dex|
-      @out << "rewriting #{dex}\n"
-      Dex.logging(dex,detail,multi,dex)
-      @out << Dex.out
-      @succ = @succ && Dex.succ
-      if (not @succ) then return end
+    if (forking)
+      pids = Array.new
+      dxs.each_with_index do |dex, idx|
+        @out << "rewriting #{dex}\n"
+        pids[idx] = fork do
+          Dex.logging(dex,detail,multi,dex)
+          out << Dex.out # Needs work: Think of something creative to do with this output.
+          succ = @succ && Dex.succ
+          if (!succ)
+            exit 1
+          else
+            exit 0
+          end
+        end # end of fork body
+      end
+
+      # Wait on all processes here. Need to update @succ appropriately at some point
+      while(!pids.empty?)
+        pid_out = Process.wait
+        pids.delete(pid_out)
+        if (!$?.exited? || $?.exitstatus > 0)
+          puts "Error: System call on pid #{pid_out} did not execute properly"
+          @succ = false
+          pids.each do |pid|
+            Process.kill(:TERM, pid)
+          end
+          break
+        end
+      end
+    else
+        dxs.each do |dex|
+        @out << "rewriting #{dex}\n"
+        Dex.logging(dex,detail,multi,dex)
+        @out << Dex.out
+        @succ = @succ && Dex.succ
+        if (not @succ) then return end
+      end
     end
+
     if multi then
       nums = dexes.map do |s| 
         s = s.match(/classes(\d+).dex/)
