@@ -120,7 +120,7 @@ let rec combine (srcdex: D.dex) (todex: D.dex) ~proto_whitelist : D.dex =
     fld_sz = DA.length srcdex.D.d_field_ids;
     mtd_sz = DA.length included_mtd_ids;
     cls_sz = DA.length srcdex.D.d_class_defs;
-    f_size = srcdex.D.header.D.file_size;
+    f_size = srcdex.D.header.D.file_size; (* Should this be file_size - difference? *)
   } in
   dx.D.header.D.file_size <- srcdex.D.header.D.file_size + todex.D.header.D.file_size - difference;
   (* append string_ids *)
@@ -132,13 +132,13 @@ let rec combine (srcdex: D.dex) (todex: D.dex) ~proto_whitelist : D.dex =
   let ft it = sft_idx sft.str_sz it in
   DA.append (DA.map ft todex.D.d_type_ids) dx.D.d_type_ids;
   (* append proto_ids *)
-  DA.append srcdex.D.d_proto_ids dx.D.d_proto_ids;
+  DA.append included_proto_ids dx.D.d_proto_ids;
   let fp it = {
     D.shorty        = sft_idx sft.str_sz it.D.shorty;
     D.return_type   = sft_idx sft.typ_sz it.D.return_type;
     D.parameter_off = sft_off sft.f_size it.D.parameter_off;
   } in
-  DA.append (DA.map fp included_proto_ids) dx.D.d_proto_ids;
+  DA.append (DA.map fp todex.D.d_proto_ids) dx.D.d_proto_ids;
   (* append field_ids *)
   DA.append srcdex.D.d_field_ids dx.D.d_field_ids;
   let ff it = {
@@ -148,15 +148,15 @@ let rec combine (srcdex: D.dex) (todex: D.dex) ~proto_whitelist : D.dex =
     } in
   DA.append (DA.map ff todex.D.d_field_ids) dx.D.d_field_ids;
   (* append method_ids *)
-  DA.append srcdex.D.d_method_ids dx.D.d_method_ids;
+  Printf.printf "including %d method prototypes from source .dex file\n%!" (DA.length included_mtd_ids);
+  DA.append included_mtd_ids dx.D.d_method_ids;
   let fm it = {
     D.m_class_id = sft_idx sft.typ_sz it.D.m_class_id;
     D.m_proto_id = sft_idx sft.pro_sz it.D.m_proto_id;
     D.m_name_id  = sft_idx sft.str_sz it.D.m_name_id;
   } in
   let shifted_mids = (DA.map fm todex.D.d_method_ids) in
-  Printf.printf "including %d method prototypes from source .dex file\n%!" (DA.length included_mtd_ids);
-  DA.append included_mtd_ids dx.D.d_method_ids;
+  DA.append shifted_mids dx.D.d_method_ids;
   (* append class_defs
      
      Note: To accomodate a multi-dex setup, redexer can be used to add
