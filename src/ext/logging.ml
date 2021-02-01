@@ -405,8 +405,8 @@ class virtual logger (dx: D.dex) =
   and objs = M.new_ty dx (J.to_java_ty ("["^JL.obj))
   and ty_void = D.find_ty_str dx (J.to_type_descr J.v) in
   let c_map = SM.map (fun cname -> M.new_ty dx cname) descr_to_class
-  and get_v_of descr cid =
-    fst (D.get_the_mtd_shorty dx cid JL.v_of ("L"^descr))
+  and get_v_of descr cid = 
+      M.new_sig dx cid JL.v_of (D.get_ty_str dx cid) [descr]
   in
   let v_of_map = SM.mapi get_v_of c_map in
 
