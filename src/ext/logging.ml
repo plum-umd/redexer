@@ -406,7 +406,7 @@ class virtual logger (dx: D.dex) =
   and ty_void = D.find_ty_str dx (J.to_type_descr J.v) in
   let c_map = SM.map (fun cname -> M.new_ty dx cname) descr_to_class
   and get_v_of descr cid = 
-      M.new_sig dx cid JL.v_of (D.get_ty_str dx cid) [descr]
+      M.new_sig dx ~is_relaxed:true ~cid:cid ~mname:JL.v_of ~rety:(D.get_ty_str dx cid) ~argv:[descr]
   in
   let v_of_map = SM.mapi get_v_of c_map in
 
@@ -427,7 +427,6 @@ class virtual logger (dx: D.dex) =
     (* use invoke-*-range to support registers whose index is over 1 byte *)
     I.new_invoke stt_rnge (args @ [D.of_idx v_of])
   in
-  
   object(self)
   inherit V.iterator dx
 
@@ -1027,4 +1026,6 @@ let modify (dx: D.dex) : unit =
   (* log API uses and entry/exit of all methods, except for Logger itself *)
   Pf.eprintf "**** Beginning instrument\n%!";
   St.time "instrument" V.iter (logging : logger :> V.visitor  );
+  Pf.eprintf "**** Done instrument\n%!";
   St.time "expand-opr" M.expand_opr dx;
+  Pf.eprintf "**** Done expand_opr\n%!";

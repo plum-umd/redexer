@@ -346,10 +346,10 @@ let find_or_new_proto (dx: D.dex) (rety: string) (args: string list) : D.link =
     pid
 
 (* method signature exists? *)
-let mtd_sig_exists (dx: D.dex) (cid: D.link) (mname: string) : D.link =
+let mtd_sig_exists ?(is_relaxed=false) (dx: D.dex) (cid: D.link) (mname: string) : D.link =
   try
     let mid, _ = D.get_the_mtd dx cid mname in
-    if D.own_the_mtd dx cid mid then mid else D.no_idx
+    if ((D.own_the_mtd dx cid mid) || is_relaxed) then mid else D.no_idx
   with D.Wrong_dex _ -> D.no_idx
 
 (* method implementation exists? *)
@@ -365,10 +365,10 @@ let make_method_overridable (dx: D.dex) ~(cid: D.link) ~(mid: D.link) : unit =
   let emtd = D.get_emtd dx cid mid in
   emtd.D.m_access_flag <- wipe_off_final emtd.D.m_access_flag
 
-(* new_sig : D.dex -> D.link -> string -> string -> string list -> D.link *)
-let new_sig (dx: D.dex) ~(cid: D.link) ~(mname: string)
+(* new_sig : boolean -> D.dex -> D.link -> string -> string -> string list -> D.link *)
+let new_sig (dx: D.dex) ?(is_relaxed=false) ~(cid: D.link) ~(mname: string)
             ~(rety: string) ~(argv: string list) : D.link =
-  let old = mtd_sig_exists dx cid mname in
+  let old = mtd_sig_exists ~is_relaxed:is_relaxed dx cid mname in
   if old <> D.no_idx then old else
   (
     let nid = D.to_idx (DA.length dx.D.d_method_ids)

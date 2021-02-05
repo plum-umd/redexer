@@ -103,7 +103,7 @@ val new_field : Dex.dex -> cid:Dex.link -> fname:string
 
 (** add a new method signature;
  pass class id, its name, return type, and arguments *)
-val new_sig : Dex.dex -> cid:Dex.link -> mname:string
+val new_sig :  Dex.dex -> ?is_relaxed:bool -> cid:Dex.link -> mname:string
  -> rety:string -> argv:string list -> Dex.link
 
 (** add a new method definition, along with empty body;
