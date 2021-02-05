@@ -122,7 +122,7 @@ let rec combine (srcdex: D.dex) (todex: D.dex) ~proto_whitelist : D.dex =
     cls_sz = DA.length srcdex.D.d_class_defs;
     f_size = srcdex.D.header.D.file_size; (* Should this be file_size - difference? *)
   } in
-  dx.D.header.D.file_size <- srcdex.D.header.D.file_size + todex.D.header.D.file_size - difference;
+  dx.D.header.D.file_size <- srcdex.D.header.D.file_size + todex.D.header.D.file_size;(* - difference;*)
   (* append string_ids *)
   DA.append srcdex.D.d_string_ids dx.D.d_string_ids;
   let fs it = sft_off sft.f_size it in
