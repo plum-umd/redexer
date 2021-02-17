@@ -162,7 +162,7 @@ end
 def finish_repackaging(apk,fn,to,res)
   if not apk.succ
     puts "******** Encountered error. flushing the output buffer"
-    puts apk.out
+    puts apk.out if not $logging
     close(apk)
     raise "rewriting dex failed"
   end
@@ -183,17 +183,19 @@ def finish_repackaging(apk,fn,to,res)
   end
   if not apk.succ
     puts "******** Encountered error. flushing the output buffer"
-    puts apk.out
+    puts apk.out if not $logging
     close(apk)
     raise "repacking apk failed"
   end
 
   if apk.succ
     puts "Success. flushing the output buffer"
-    puts apk.out
+    puts apk.out if not $logging
   end
 
-  puts "Launcher is: " + apk.launcher.to_s
+  if (apk)
+    puts "Launcher is: " + apk.launcher.to_s
+  end
 end
 
 case cmd
@@ -311,7 +313,7 @@ when "custom_views", "fragments", "buttons"
   end
 when "logging", "logging_ui"
   $logging = true
-  apk.send(cmd.to_sym,detail, forking)
+  apk.send(cmd.to_sym,detail,forking)
   finish_repackaging(apk,fn,to,RES)
 when "directed"
   apk.directed

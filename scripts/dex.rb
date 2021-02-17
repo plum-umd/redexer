@@ -99,7 +99,7 @@ class Dex
       str += " -logging-detail"
     end
     
-    self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging #{str} #{TOO}")
+    self.runcmdloud("#{REDEXER} #{opt} #{dex_name} -logging #{str} #{TOO}")
   end
 
   def self.directed(dex_name, acts, pkg, *out_name)
@@ -263,13 +263,20 @@ private
   @@online = true
 
   def self.runcmd(cmd)
-    puts cmd
     @@out = ""
     cmd = "#{cmd} #{@@opt}" if @@opt
     @@out << cmd + "\n"
+    puts cmd
     @@out << `#{cmd}`
     @@succ = $?.exitstatus == 0
   end
+
+  def self.runcmdloud(cmd)
+    cmd = "#{cmd} #{@@opt}" if @@opt
+    puts cmd
+    system(cmd)
+    @@succ = $?.exitstatus == 0
+  end      
 
   def self.out_opt(out_name)
     if out_name.length > 0

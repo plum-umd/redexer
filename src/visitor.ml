@@ -218,10 +218,9 @@ let rec iter (v: visitor) : unit =
     );
     iter_anno_dir dx v#v_anno cdef.D.annotations;
     let cname = D.get_ty_str dx cdef.D.c_class_id in
-    (* Implement the 'start at method' here *)
+    if is_before_start cname then () else
     if to_be_skipped cname then () else
     if v#get_skip_cls () then () else
-    if is_before_start cname then () else
     if cdef.D.class_data = D.no_off then () else
     (
       match D.get_data_item dx cdef.D.class_data with

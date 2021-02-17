@@ -122,13 +122,13 @@ class Apk
     end
     multi = true
     # set multi = true to test, even with a single dex file (say)
+    # warning: multi has implications for code after invoking redexer
     if (forking)
       pids = Array.new
       dxs.each_with_index do |dex, idx|
-        @out << "rewriting #{dex}\n"
+        puts "rewriting #{dex}"
         pids[idx] = fork do
           Dex.logging(dex,detail,multi,dex)
-          out << Dex.out # Needs work: Think of something creative to do with this output.
           succ = @succ && Dex.succ
           if (!succ)
             exit 1
@@ -138,7 +138,7 @@ class Apk
         end # end of fork body
       end
 
-      # Wait on all processes here. Need to update @succ appropriately at some point
+      # Wait on all processes here.
       while(!pids.empty?)
         pid_out = Process.wait
         pids.delete(pid_out)
@@ -148,14 +148,13 @@ class Apk
           pids.each do |pid|
             Process.kill(:TERM, pid)
           end
-          break
+          return
         end
       end
     else
         dxs.each do |dex|
-        @out << "rewriting #{dex}\n"
+        puts "rewriting #{dex}"
         Dex.logging(dex,detail,multi,dex)
-        @out << Dex.out
         @succ = @succ && Dex.succ
         if (not @succ) then return end
       end
@@ -173,7 +172,7 @@ class Apk
       max = nums.max || 1
       file = File.join(@dir, "classes" + (max + 1).to_s + ".dex")
       logging = File.join(HOME,"data/logging.dex")
-      @out << "multi-dex setup. Moving logging file to #{file}\n"
+      puts "multi-dex setup. Moving logging file to #{file}"
       `cp #{logging} #{file}`
     end
   end
@@ -312,7 +311,9 @@ private
     puts cmd
     @out = "" if not @out
     @out << cmd + "\n"
-    @out << `#{cmd} 2>&1`
+    cmd_out =  `#{cmd} 2>&1`
+    puts cmd_out
+    @out << cmd_out
     @succ = $?.exitstatus == 0
   end
 
