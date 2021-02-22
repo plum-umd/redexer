@@ -112,6 +112,12 @@ let rec combine (srcdex: D.dex) (todex: D.dex) ~proto_whitelist : D.dex =
   let struct_size = 16 in
   let excluded_size_mtds = (DA.length srcdex.D.d_method_ids) - (DA.length included_mtd_ids) in
   let difference = excluded_size_protos * struct_size + excluded_size_mtds * struct_size in
+  (* Filter out bad fields. Hard coding for now *)
+  let field_filter (it : D.field_id_item) : bool =
+    let cls_str = D.get_ty_str srcdex it.D.f_class_id in
+    cls_str = "Lorg/umd/logging/Logger;"
+  in
+  DA.filter field_filter srcdex.D.d_field_ids;
   let dx = D.empty_dex ()
   and sft = {
     str_sz = DA.length srcdex.D.d_string_ids;
@@ -155,8 +161,7 @@ let rec combine (srcdex: D.dex) (todex: D.dex) ~proto_whitelist : D.dex =
     D.m_proto_id = sft_idx sft.pro_sz it.D.m_proto_id;
     D.m_name_id  = sft_idx sft.str_sz it.D.m_name_id;
   } in
-  let shifted_mids = (DA.map fm todex.D.d_method_ids) in
-  DA.append shifted_mids dx.D.d_method_ids;
+  DA.append (DA.map fm todex.D.d_method_ids) dx.D.d_method_ids;
   (* append class_defs
      
      Note: To accomodate a multi-dex setup, redexer can be used to add
@@ -168,9 +173,32 @@ let rec combine (srcdex: D.dex) (todex: D.dex) ~proto_whitelist : D.dex =
      passed to this method.
 
    *)
-  if (proto_whitelist = "") then
-    (* Copy class definitions, too *)
-    DA.append srcdex.D.d_class_defs dx.D.d_class_defs;
+
+  (* Commenting out the conditional because for now, we want to always copy
+   * class definitions. *)
+  (* if (proto_whitelist <> "") then *)
+  (* Hard code a solution just to test filtering the class definitions *)
+  let cd_filter (it : D.class_def_item) : bool =
+    (* If class is Lorg/umd/logging/Logger;, allow. Otherwise, remove *)
+    let cls_str = D.get_ty_str srcdex it.D.c_class_id in
+    D.rm_data srcdex it.D.class_data;
+    cls_str = "Lorg/umd/logging/Logger;"
+  in
+  let cd_map (it : D.class_def_item) =
+    {
+      it with
+      D.c_class_id    = it.D.c_class_id;
+      D.superclass    = it.D.superclass;
+      D.interfaces    = it.D.interfaces;
+      D.source_file   = it.D.source_file;
+      D.annotations   = it.D.annotations;
+      D.class_data    = D.to_off 0;
+      D.static_values = it.D.static_values;
+    }
+  in
+  (* Copy class definitions, too *)
+  DA.filter cd_filter srcdex.D.d_class_defs;
+  DA.append (DA.map cd_map srcdex.D.d_class_defs) dx.D.d_class_defs;
   let fc it =
     {
       it with
