@@ -82,9 +82,14 @@ class Dex
   
   LOGREGEXES = File.join(DAT, "logging-regexes.txt")
 
-  def self.logging(dex_name=DEX, detail=:none, multi=:false, *out_name)
+  def self.logging(dex_name=DEX, detail=:none, multi=:false, start_class=nil, *out_name)
     opt = self.out_opt(out_name)
     str = ""
+
+    if (!start_class.nil?)
+        str += " -start_on_class " + start_class
+        puts "Starting on class: " + start_class
+    end
 
     # If multi-dex setup, only rewrite each dex file with prototypes,
     # not class definitions.

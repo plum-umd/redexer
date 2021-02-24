@@ -112,7 +112,7 @@ class Apk
     @manifest == nil
   end
 
-  def logging(detail, forking)
+  def logging(detail, forking, start_dex=nil, start_class=nil)
     if dexes.length > 1 then
       dxs = dexes
       multi = true
@@ -128,7 +128,11 @@ class Apk
       dxs.each_with_index do |dex, idx|
         puts "rewriting #{dex}"
         pids[idx] = fork do
-          Dex.logging(dex,detail,multi,dex)
+          if (File.basename(dex).eql?(start_dex))
+            Dex.logging(dex,detail,multi,start_class,out_name=dex)
+          else
+            Dex.logging(dex,detail,multi,out_name=dex)
+          end
           succ = @succ && Dex.succ
           if (!succ)
             exit 1
@@ -152,11 +156,18 @@ class Apk
         end
       end
     else
+        puts "starting dex=" + start_dex
+        puts "starting class=" + start_class
         dxs.each do |dex|
-        puts "rewriting #{dex}"
-        Dex.logging(dex,detail,multi,dex)
-        @succ = @succ && Dex.succ
-        if (not @succ) then return end
+          puts "rewriting #{dex}"
+          if (File.basename(dex).eql?(start_dex))
+            puts "Apk.rb... starting dex " + start_dex + " on class " + start_class
+            Dex.logging(dex,detail,multi,start_class,dex)
+          else
+            Dex.logging(dex,detail,multi,nil,dex)
+          end
+          @succ = @succ && Dex.succ
+          if (not @succ) then return end
       end
     end
 

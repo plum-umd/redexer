@@ -66,6 +66,8 @@ detail = :none
 outputdir = nil
 $logging = false
 forking = false
+start_dex = nil
+start_class = nil
 
 option_parser = OptionParser.new do |opts|
   opts.banner = "Usage: ruby #{__FILE__} target.(apk|dex) [options]"
@@ -107,6 +109,10 @@ option_parser = OptionParser.new do |opts|
   end
   opts.on("--fork", "Enable concurrent calls to redexer through child processes") do
     forking = true
+  end
+  opts.on("--start_on_class dex,class", "Start on a specific class in the specified dex file") do |pair|
+      start_dex = pair.split(',')[0]
+      start_class = pair.split(',')[1]
   end
   opts.on_tail("-h", "--help", "show this message") do
     puts opts
@@ -313,7 +319,11 @@ when "custom_views", "fragments", "buttons"
   end
 when "logging", "logging_ui"
   $logging = true
-  apk.send(cmd.to_sym,detail,forking)
+  if (start_dex.nil?)  
+    apk.send(cmd.to_sym,detail,forking)
+  else
+    apk.send(cmd.to_sym,detail,forking,start_dex,start_class)
+  end
   finish_repackaging(apk,fn,to,RES)
 when "directed"
   apk.directed

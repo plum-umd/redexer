@@ -31,15 +31,16 @@ TIMEOUT = ARGV[0].to_i
 TEMP_FILE = ".timeoutTemp.txt"
 TIMEOUT_REPORT = "Timeout on logging class "
 PIPEFAIL = "set -o pipefail; "
-CLASS_TO_START_WITH = nil
-# CLASS_TO_START_WITH = "androidx.constraintlayout.widget.ConstraintLayout"
+DEX_CLASS_TO_START_WITH = nil
+# DEX_CLASS_TO_START_WITH = "classes.dex,androidx.constraintlayout.widget.ConstraintLayout"
 SKIP = File.join(HOME, "data/skip.txt")
 SKIP_TEMP = File.join(HERE, ".skipTemp.txt")
+PERFORMANCE_REPORT = "redexer performance statistics"
 
 
 # Function to print stdout and stderr as it comes, but also gather into one variable to be returned.
 # Returns a string containing all output from the command and the exit status of the command. If
-# system call does not exit properly, default status value is -1
+# system call does not exit properly, default status value is -1.
 # DEV: This function uses tee so that output goes to the terminal and can still be collected
 # afterwards. It is a bit of a hacky solution but runtime did not need to be a consideration.
 # Elegant solution would be to use select() to collect stdout/stderr and forward to terminal at the
@@ -77,11 +78,11 @@ args[-1] = ""
 
 # Run redexer once. If it fails, go into the loop until it does terminate,
 # otherwise terminate happily
-if (CLASS_TO_START_WITH.nil?)
+if (DEX_CLASS_TO_START_WITH.nil?)
     opt_str = OPT_DEX + " \"" + timeout_string + "\"" # options must be wrapped in quotes
     sys_cmd = CMD + " " + opt_str + " " + args
 else
-    opt_str = OPT_DEX + " \"" + START_ON_CLASS + " " + CLASS_TO_START_WITH + " " + timeout_string + "\""
+    opt_str = OPT_DEX + " \"" + START_ON_CLASS + " " + DEX_CLASS_TO_START_WITH + " " + timeout_string + "\""
     sys_cmd = CMD + " " + opt_str + " " + args
 end
 
@@ -89,8 +90,9 @@ out, status = system_tee(sys_cmd)
 puts "From script: redexer complete. status is " + status.to_s
 succ = status == 0
 
-    
+next_classesN = 1
 
+cur_dex = "classes.dex"
 skip_moved = false
 # Loop until we exit Redexer successfully
 while (!succ)
@@ -100,6 +102,20 @@ while (!succ)
         skip_moved = true
     end
     # Parse output of the call to redexer
+    # First, determine how many classesN.dex have successfully been instrumented
+    some_class_succ = false
+    rend_idx = out.index(PERFORMANCE_REPORT)
+    while (!rend_idx.nil?)
+        puts "rend_idx not nil, equals " + rend_idx.to_s
+        next_classesN += 1
+        some_class_succ = true
+        rend_idx = out.index(PERFORMANCE_REPORT, rend_idx+1)
+    end
+
+    if (some_class_succ)
+        cur_dex = "classes" + next_classesN.to_s + ".dex"
+    end
+
     tidx = out.index(TIMEOUT_REPORT)
     if (tidx.nil?)
         raise "Failed execution not due to a timeout. There should be an above error with" +
@@ -113,7 +129,8 @@ while (!succ)
     failed_class = out[cls_idx_start..cls_idx_end]
     # Cut off the 'L' and ';', then swap all '/' for '.', as conversion Android -> Java type
     failed_class = failed_class[1..-2].gsub(/\//, '.')
-    opt_str = OPT_DEX + " \"" + START_ON_CLASS + " " + failed_class + " " + timeout_string + "\""
+    redexer_start = cur_dex + "," + failed_class
+    opt_str = OPT_DEX + " \"" + START_ON_CLASS + " " + redexer_start + " " + timeout_string + "\""
     puts "From script: Failing class is " + failed_class
 
     # Add class to skip file
