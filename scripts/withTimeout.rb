@@ -145,10 +145,10 @@ while (!succ)
 end
 puts "From script: Success. Moving skip file to alternative location and terminating"
 
+# Move the skip file back, and put the generated skip file somewhere safe
 if (skip_moved)
-    # NEEDS WORK: I want the resulting skip file to be related to the apk name, but there is no
-    # 'good' way to get the name of the apk right now. When inputs are reconsidered, this should
-    # become clearer
-    FileUtils.mv(SKIP, "timeoutSkipResult.txt")
+    apk = File.basename(THIS_APK, ".apk")
+    new_skip_file = File.join(HOME, apk + "-skip.txt")
+    FileUtils.mv(SKIP, new_skip_file)
     FileUtils.mv(SKIP_TEMP, SKIP)
 end
