@@ -1,3 +1,4 @@
+
 (*
  * Copyright (c) 2010-2014,
  *  Jinseong Jeon <jsjeon@cs.umd.edu>
@@ -69,14 +70,18 @@ module Js = Yojson.Safe
 (***********************************************************************)
 
 (* opcodes *)
+let sget_obj = I.op_to_hx I.OP_SGET_OBJECT
 let mv_r_obj = I.op_to_hx I.OP_MOVE_RESULT_OBJECT
 let cnst_str = I.op_to_hx I.OP_CONST_STRING
 let aput_obj = I.op_to_hx I.OP_APUT_OBJECT
-let call_stt = I.op_to_hx I.OP_INVOKE_STATIC
-let stt_rnge = I.op_to_hx I.OP_INVOKE_STATIC_RANGE
+let call_interface = I.op_to_hx I.OP_INVOKE_INTERFACE
+let interface_range = I.op_to_hx I.OP_INVOKE_INTERFACE_RANGE
+let stt_range = I.op_to_hx I.OP_INVOKE_STATIC_RANGE
 
 let logging = "Lorg/umd/logging"
-let logger = logging^"/Logger;"
+let loggerI = logging^"/LoggerI;"
+let loggerShim = logging^"/LoggerShim;"
+let loggerObject = "theLogger"
 let logBBEnter = "logBasicBlockEntry"
 let logMEnt = "logMethodEntry"
 let logMExt = "logMethodExit"
@@ -341,6 +346,7 @@ let log_call (string) : bool =
   &&
     (not ((U.begins_with string "Ljava/lang")
           && (U.ends_with string "valueOf")))
+  && (not (U.begins_with string logging))
 
 let adr_relevant dx (cid: D.link) regexes : bool =
   let ext_or_impl (cid': D.link) : bool =
@@ -362,8 +368,8 @@ let has_monitors dx (citm: D.code_item) : bool =
   in
   [] <> L.filter is_monitor_instr (DA.to_list citm.D.insns)
 
-let vxyz (s: int) : int list =
-  L.map (fun i -> i mod 16) (U.range s (s + 2) [])
+let vwxyz (s: int) : int list =
+  L.map (fun i -> i mod 16) (U.range s (s + 3) [])
 
 let cleanup_pesky_try cursor_before cursor_after citm (try_itm:D.try_item) =
   let s = M.get_cursor citm try_itm.D.start_addr in
@@ -395,7 +401,9 @@ let cleanup_tries c_before (c_after) (citm) : unit =
 (* The logger class is virtual so we can implement different behavior
    for each type of configuration. *)
 class virtual logger (dx: D.dex) =
-  let logger_cid = D.get_cid dx logger in
+  let logger_shim_cid = D.get_cid dx loggerShim in
+  let logger_fid = D.of_idx (fst (D.get_the_fld dx logger_shim_cid loggerObject)) in
+  let logger_cid = D.get_cid dx loggerI in
   let m_ent_mid, _ = D.get_the_mtd dx logger_cid logMEnt
   and m_ext_mid, _ = D.get_the_mtd dx logger_cid logMExt
   and a_ent_mid, _ = D.get_the_mtd dx logger_cid logAEnt
@@ -406,10 +414,14 @@ class virtual logger (dx: D.dex) =
   and ty_void = D.find_ty_str dx (J.to_type_descr J.v) in
   let c_map = SM.map (fun cname -> M.new_ty dx cname) descr_to_class
   and get_v_of descr cid =
-    fst (D.get_the_mtd_shorty dx cid JL.v_of ("L"^descr))
+      M.new_sig dx ~is_relaxed:true ~cid:cid ~mname:JL.v_of ~rety:(J.of_type_descr (D.get_ty_str dx cid)) ~argv:[descr]
   in
   let v_of_map = SM.mapi get_v_of c_map in
-
+  let map_iter descr mid =
+    Printf.eprintf "For type %s, the valueOf is...\n%!" descr;
+    Printf.eprintf "%s\n%!" (D.get_mtd_sig dx mid)
+  in
+  let _ = SM.iter map_iter v_of_map in
   let uri_ids = L.map (fun x -> D.find_ty_str dx x) ["Landroid/net/Uri;";
                                                      "Ljava/net/Uri;";
                                                      "[Landroid/net/Uri;";
@@ -425,7 +437,7 @@ class virtual logger (dx: D.dex) =
     (* long or double *)
     let args = if J.is_wide tname then [r; r+1] else [r; r] in
     (* use invoke-*-range to support registers whose index is over 1 byte *)
-    I.new_invoke stt_rnge (args @ [D.of_idx v_of])
+    I.new_invoke stt_range (args @ [D.of_idx v_of])
   in
   
   object(self)
@@ -509,8 +521,8 @@ class virtual logger (dx: D.dex) =
     let str_mname = D.of_idx (D.find_str dx mname) in
     cur_citm <- citm;
     (* to secure at least three registers for logging *)
-    (* 3 is minimum, but 5 here to expand invoke-* operands *)
-    M.shift_reg_usage dx citm 5;
+    (* 3 is minimum, but 6 here to expand invoke-* operands *)
+    M.shift_reg_usage dx citm 6;
     let this = D.calc_this citm in
     (* code snippet for method exits *)
     (* to calc the last ins correctly, do this part first *)
@@ -532,13 +544,14 @@ class virtual logger (dx: D.dex) =
               | I.OP_THROW, I.OPR_REGISTER r :: [] -> (thrw, r)
               | _, _ -> raise (D.Wrong_match "is_void")
           in
-          let vx::vy::vz::[] = vxyz 0 in
-          let ins0 = I.new_const vz 4
-          and ins1 = I.new_arr vz vz (D.of_idx objs)
+          let vw::vx::vy::vz::[] = vwxyz 0 in
+          let ins0 = I.new_stt_fld sget_obj vw logger_fid
+          and ins1 = I.new_const vz 4
+          and ins2 = I.new_arr vz vz (D.of_idx objs)
           and rest = 
             [I.new_const_id cnst_str vx str_lname;
              I.new_const_id cnst_str vy str_mname;
-             I.new_invoke stt_rnge [vx; vz; D.of_idx m_ext_mid] ]
+             I.new_invoke interface_range [vw; vz; D.of_idx m_ext_mid] ]
           and copy_ret vr vx =
             let ins_c = I.new_const vy 0
             and ins_a =
@@ -554,7 +567,7 @@ class virtual logger (dx: D.dex) =
           in
           let ext_insns =
             CL.toList (
-                CL.fromList [ins0; ins1]
+                CL.fromList [ins0; ins1; ins2]
                 @+ CL.fromList rest)
           in
           let cursor = M.get_cursor citm instr_link in
@@ -570,7 +583,7 @@ class virtual logger (dx: D.dex) =
       do_exit();
       
       (* code snippet for method entries *)
-      let vx::vy::vz::[] = vxyz 0 in
+      let vw::vx::vy::vz::[] = vwxyz 0 in
         let argn = 
           if mname = J.init || mname = J.clinit then 0 
           else
@@ -578,12 +591,13 @@ class virtual logger (dx: D.dex) =
         in
         if mname = J.init || mname = J.clinit then 
           argv <- [];
-        let ins0 = I.new_const vz (argn+4)
-        and ins1 = I.new_arr vz vz (D.of_idx objs)
+        let ins0 = I.new_stt_fld sget_obj vw logger_fid
+        and ins1 = I.new_const vz (argn+4)
+        and ins2 = I.new_arr vz vz (D.of_idx objs)
         and rest = 
           [I.new_const_id cnst_str vx str_lname;
            I.new_const_id cnst_str vy str_mname;
-           I.new_invoke stt_rnge [vx; vz; D.of_idx m_ent_mid]]
+           I.new_invoke interface_range [vw; vz; D.of_idx m_ent_mid]]
         and copy_argv (acc, (arr_i, r_i)) ty =
           let tname = D.get_ty_str dx ty in
           let ins_c = I.new_const vy arr_i
@@ -600,7 +614,7 @@ class virtual logger (dx: D.dex) =
           (arr_i + 1, if J.is_wide tname then r_i + 2 else r_i + 1)
         in
         let ent_insns = CL.toList (
-            CL.fromList [ins0; ins1]
+            CL.fromList [ins0; ins1; ins2]
             @+ fst (L.fold_left copy_argv (CL.empty, (4, 0)) argv)
             @+ CL.fromList rest
           ) in
@@ -649,7 +663,7 @@ class virtual logger (dx: D.dex) =
           else
           (
             (* Log.i  (Printf.sprintf "Log of method call %s %x " full (D.of_off ins)); *)
-            let vx::vy::vz::[] = vxyz 0 in
+            let vw::vx::vy::vz::[] = vwxyz 0 in
             let ent_cursor = M.get_cursor cur_citm ins in
             let ext_cursor = M.next ent_cursor in
             let str_lname = D.of_idx (D.find_str dx lname)
@@ -669,11 +683,12 @@ class virtual logger (dx: D.dex) =
                   | _, _ -> D.no_index
               in
               let ret_moved = vr <> D.no_index in
-              let ins0 = I.new_const vz (if ret_moved then 5 else 4)
-              and ins1 = I.new_arr vz vz (D.of_idx objs)
-              and ins2 = I.new_const_id cnst_str vx str_lname
-              and ins3 = I.new_const_id cnst_str vy str_mname
-              and ins4 = I.new_invoke stt_rnge [vx; vz; D.of_idx a_ext_mid]
+              let ins0 = I.new_stt_fld sget_obj vw logger_fid
+              and ins1 = I.new_const vz (if ret_moved then 5 else 4)
+              and ins2 = I.new_arr vz vz (D.of_idx objs)
+              and ins3 = I.new_const_id cnst_str vx str_lname
+              and ins4 = I.new_const_id cnst_str vy str_mname
+              and ins5 = I.new_invoke interface_range [vw; vz; D.of_idx a_ext_mid]
               and copy_ret vr vx =
                 let ins_c = I.new_const vy 4
                 and ins_a =
@@ -687,9 +702,9 @@ class virtual logger (dx: D.dex) =
                 in
                 (ins_c::ins_a)
               in
-              let ext_insns = [ins0; ins1]
+              let ext_insns = [ins0; ins1; ins2]
                               @ (if ret_moved then copy_ret vr vx else [])
-                              @ [ins2; ins3; ins4] in
+                              @ [ins3; ins4; ins5] in
               (* not to alter the control-flow, use ..._over_off *)
               let ext_block_end =
                 (* If we are to move the return, then *)
@@ -711,11 +726,12 @@ class virtual logger (dx: D.dex) =
               then argv else lid :: argv
             in
             let argn = L.length argv in
-            let ins0 = I.new_const vz (argn+4)
-            and ins1 = I.new_arr vz vz (D.of_idx objs)
-            and ins2 = I.new_const_id cnst_str vx str_lname
-            and ins3 = I.new_const_id cnst_str vy str_mname
-            and ins4 = I.new_invoke stt_rnge [vx; vz; D.of_idx a_ent_mid]
+            let ins0 = I.new_stt_fld sget_obj vw logger_fid
+            and ins1 = I.new_const vz (argn+4)
+            and ins2 = I.new_arr vz vz (D.of_idx objs)
+            and ins3 = I.new_const_id cnst_str vx str_lname
+            and ins4 = I.new_const_id cnst_str vy str_mname
+            and ins5 = I.new_invoke interface_range [vw; vz; D.of_idx a_ent_mid]
             and copy_argv (acc, (arr_i, params)) ty =
               let tname = D.get_ty_str dx ty
               and r_i::tl = params in
@@ -740,9 +756,9 @@ class virtual logger (dx: D.dex) =
               | _  -> fst (L.fold_left copy_argv (CL.empty, (4, params)) argv)
             in
             let ent_insns = CL.toList (
-              CL.fromList [ins0; ins1]
+              CL.fromList [ins0; ins1; ins2]
               @+ copy_argv_instrs
-              @+ CL.fromList [ins2; ins3; ins4]
+              @+ CL.fromList [ins3; ins4; ins5]
             ) in
             (* not to alter the control-flow, use ..._under_off *)
             let ent_block_end = M.prev (M.insrt_insns_under_off dx cur_citm ent_cursor ent_insns) in
@@ -786,7 +802,9 @@ class default_logger (dx: D.dex) =
 
  *)
 class fine_logger (dx: D.dex) =
-  let logger_cid       = D.get_cid dx logger in
+  let logger_shim_cid = D.get_cid dx loggerShim in
+  let logger_fid = D.of_idx (fst (D.get_the_fld dx logger_shim_cid loggerObject)) in
+  let logger_cid       = D.get_cid dx loggerI in
   let m_bbenter, _     = D.get_the_mtd dx logger_cid logBBEnter in
 
   object (self)
@@ -830,11 +848,12 @@ class fine_logger (dx: D.dex) =
         let instrument_bbentry (cursor,link) =
           (* The instructions to really add to the method.. *)
           (* The number of instructions we add. Update when inss changes *)
-          let numinsns = 2 in
+          let numinsns = 3 in
           let index = D.of_off link + numinsns * !i in
-          let ins0 = I.new_const 0 index in
-          let ins1 = I.new_invoke call_stt [0; D.of_idx m_bbenter] in
-          let inss = [ins0; ins1] in
+          let ins0 = I.new_stt_fld sget_obj 1 logger_fid in
+          let ins1 = I.new_const 0 index in
+          let ins2 = I.new_invoke call_interface [1; 0; D.of_idx m_bbenter] in
+          let inss = [ins0; ins1; ins2] in
           let rec advance i c = match i with
             | 0 -> c
             | n -> advance (i-1) (M.next c)

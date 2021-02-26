@@ -39,16 +39,17 @@ import android.os.Bundle;
 import android.widget.TextView;
 
 public class BogusActivity extends Activity {
+  Logger theLogger = new Logger();
   /** Called when the activity is first created. */
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     TextView tv = new TextView(this);
     Object[] o = {"","","","","Hello, Logging"};
-    Logger.logAPIEntry(TextView.class.getName(), "setText", o);
+    theLogger.logAPIEntry(TextView.class.getName(), "setText", o);
     tv.setText("Hello, Logging");
     setContentView(tv);
-    Logger.logAPIExit(this.getClass().getSuperclass().getName(), "XXX",new Object[]{"","","","","setContentView"});
+    theLogger.logAPIExit(this.getClass().getSuperclass().getName(), "XXX",new Object[]{"","","","","setContentView"});
 
     boolean b = true;
     char c = 'A';
@@ -58,7 +59,7 @@ public class BogusActivity extends Activity {
     long l = 2L;
     float f = 3.14f;
     double d = 4.0;
-    Logger.logMethodEntry("XXX", "XXX", new Object[]{this, b, c, bt, s, i, l, f, d});
+    theLogger.logMethodEntry("XXX", "XXX", new Object[]{this, b, c, bt, s, i, l, f, d});
     
     Intent intent = new Intent(this, DisplayActivity.class);
     String message = "Hello, another Activity";

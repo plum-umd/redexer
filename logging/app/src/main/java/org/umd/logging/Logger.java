@@ -59,7 +59,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.lang.System;
 import android.util.Log;
 
-public class Logger {
+public class Logger implements LoggerI {
   final static String tag = Logger.class.getPackage().getName();
   static final Set<Class> WRAPPER_TYPES = new HashSet(Arrays.asList(
                                     Boolean.class, Character.class, Byte.class, Short.class, Integer.class,
@@ -73,7 +73,7 @@ public class Logger {
     return WRAPPER_TYPES.contains(clazz);
   }
 
-  public static void logPut(Object[] params) {
+  public void logPut(Object[] params) {
     if(pipe == null){
         pipe = new ConcurrentLinkedQueue<Object[]>();
     }
@@ -85,7 +85,7 @@ public class Logger {
     pipe.add(params);
   }
   
-  static void log(String io, String additional, String cname, String mname, Object... args) {
+  void log(String io, String additional, String cname, String mname, Object... args) {
     long threadId = Thread.currentThread().getId();
     Object[] p_args = {io,additional,threadId,cname,mname};
     Object[] combinedArray = new Object[p_args.length + args.length];
@@ -94,7 +94,7 @@ public class Logger {
     logPut(combinedArray);
   }
   
-  static void logMethod(String io, Object... args) {
+  void logMethod(String io, Object... args) {
     StackTraceElement elts[] = (new Throwable ()).getStackTrace();
     // 0 : org.umd.logging.Logger.logMethod
     // 1 : org.umd.logging.Logger.logMethod(Entry|Exit)
@@ -108,7 +108,7 @@ public class Logger {
    * 
    * @param arg The basic block ID that occurred.
    */
-  public static void logBasicBlockEntry(int arg) {
+  public void logBasicBlockEntry(int arg) {
     Object[] params = {"b","","","",String.valueOf(arg)};
     if(pipe == null){
       pipe = new ConcurrentLinkedQueue<Object[]>();
@@ -129,7 +129,7 @@ public class Logger {
    * the top of this file. In this case it holds the method return
    * value.
    */
-  public static void logMethodEntry(String cname, String mname, Object[] args) {
+  public void logMethodEntry(String cname, String mname, Object[] args) {
     //logMethod(">", args);
     //Log.i(tag,"Method arg length = " + args.length);
     args[0] = "m";
@@ -154,7 +154,7 @@ public class Logger {
    * the top of this file. In this case it holds the method return
    * value.
    */
-  public static void logMethodExit(String cname, String mname, Object[] args) {
+  public void logMethodExit(String cname, String mname, Object[] args) {
     //logMethod(">", args);
     //Log.i(tag,"Method arg length = " + args.length);
     args[0] = "e";
@@ -178,7 +178,7 @@ public class Logger {
    * @param args An Object[] array of the required length, see note at
    * the top of this file.
    */
-  public static void logAPIEntry(String cname, String mname, Object[] args) {
+  public void logAPIEntry(String cname, String mname, Object[] args) {
     //logMethod(">", args);
     //Log.i(tag,"API arg length = " + args.length);
     args[0] = "a";
@@ -212,7 +212,7 @@ public class Logger {
     pipe.add(args);
   }
   
-  public static void logAPIExit(String cname, String mname, Object[] args) {
+  public void logAPIExit(String cname, String mname, Object[] args) {
       // four null values followed by nothing else, or four nulls followed by the return value
       //    writeLog("Api < " + cname + mname);
       //Log.i(tag,"API Exit arg length = " + args.length);

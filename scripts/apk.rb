@@ -139,7 +139,7 @@ class Apk
       nums.select! { |s| s }
       max = nums.max || 1
       file = File.join(@dir, "classes" + (max + 1).to_s + ".dex")
-      logging = File.join(HOME,"data/logging.dex")
+      logging = File.join(HOME,"data/loggingFull.dex")
       @out << "multi-dex setup. Moving logging file to #{file}\n"
       `cp #{logging} #{file}`
     end
