@@ -6,5 +6,5 @@ $JAVA_COMPILE
 D8_CONVERT="d8 --release --no-desugaring src/*.class"
 echo $D8_CONVERT
 $D8_CONVERT
-cp classes.dex ../data/logging.dex.fakeTemp
+cp classes.dex ../data/logging.dex
 rm src/*.class
