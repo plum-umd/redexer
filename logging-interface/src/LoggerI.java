@@ -17,7 +17,7 @@
  * 3. The names of the contributors may not be used to endorse or promote
  * products derived from this software without specific prior written
  * permission.
-
+ 
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -30,42 +30,12 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
 package org.umd.logging;
 
-import android.app.Activity;
-import android.content.Intent;
-import android.os.Bundle;
-import android.widget.TextView;
-
-public class BogusActivity extends Activity {
-  Logger theLogger = new Logger();
-  /** Called when the activity is first created. */
-  @Override
-  public void onCreate(Bundle savedInstanceState) {
-    super.onCreate(savedInstanceState);
-    TextView tv = new TextView(this);
-    Object[] o = {"","","","","Hello, Logging"};
-    theLogger.logAPIEntry(TextView.class.getName(), "setText", o);
-    tv.setText("Hello, Logging");
-    setContentView(tv);
-    theLogger.logAPIExit(this.getClass().getSuperclass().getName(), "XXX",new Object[]{"","","","","setContentView"});
-
-    boolean b = true;
-    char c = 'A';
-    byte bt = 0xA;
-    short s = 0xAA;
-    int i = 1;
-    long l = 2L;
-    float f = 3.14f;
-    double d = 4.0;
-    theLogger.logMethodEntry("XXX", "XXX", new Object[]{this, b, c, bt, s, i, l, f, d});
-    
-    Intent intent = new Intent(this, DisplayActivity.class);
-    String message = "Hello, another Activity";
-    intent.putExtra(DisplayActivity.EXTRA_MESSAGE, message);
-    startActivity(intent);
-    finish();
-  }
-
+public interface LoggerI {
+    public void logBasicBlockEntry(int arg);
+    public void logMethodEntry(String cname, String mname, Object[] args);
+    public void logMethodExit(String cname, String mname, Object[] args);
+    public void logAPIEntry(String cname, String mname, Object[] args);
+    public void logAPIExit(String cname, String mname, Object[] args);
 }

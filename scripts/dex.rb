@@ -93,8 +93,10 @@ class Dex
 
     # If multi-dex setup, only rewrite each dex file with prototypes,
     # not class definitions.
-    if (multi) then
-      str += " -protowhitelist data/logging-protos.txt"
+    # NEEDS WORK: Script claims -onlyprotos for multi-dex, but wasn't actually using it. Is it
+    # needed?
+    if (false) then #if (multi) then
+      str += " -onlyprotos"
     end
 
     case detail

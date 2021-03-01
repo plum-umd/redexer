@@ -156,12 +156,9 @@ class Apk
         end
       end
     else
-        puts "starting dex=" + start_dex
-        puts "starting class=" + start_class
         dxs.each do |dex|
           puts "rewriting #{dex}"
           if (File.basename(dex).eql?(start_dex))
-            puts "Apk.rb... starting dex " + start_dex + " on class " + start_class
             Dex.logging(dex,detail,multi,start_class,dex)
           else
             Dex.logging(dex,detail,multi,nil,dex)
@@ -182,7 +179,7 @@ class Apk
       nums.select! { |s| s }
       max = nums.max || 1
       file = File.join(@dir, "classes" + (max + 1).to_s + ".dex")
-      logging = File.join(HOME,"data/logging.dex")
+      logging = File.join(HOME,"data/loggingFull.dex")
       puts "multi-dex setup. Moving logging file to #{file}"
       `cp #{logging} #{file}`
     end

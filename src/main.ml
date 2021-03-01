@@ -339,9 +339,8 @@ let arg_specs = A.align
      " file containing activity names (default: "^(!act)^")");
     ("-pkg", A.Set_string pkg,
      " specify the package name of the app");
-    ("-start_on_class", A.Set_string V.start_name, " specify the class to start logging on");
-    ("-run_with_timeout", A.Set_float V.timeout, " specify the class to start logging on");
-
+    ("-start_on_class", A.Set_string V.start_name, " specify the class to start logging on (in Java class form)");
+    ("-run_with_timeout", A.Set_float V.timeout, " run the class instrumentation with a timeout, in seconds");
   ]
 
 (***********************************************************************)

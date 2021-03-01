@@ -346,9 +346,11 @@ let find_or_new_proto (dx: D.dex) (rety: string) (args: string list) : D.link =
     pid
 
 (* method signature exists? *)
-let mtd_sig_exists ?(is_relaxed=false) (dx: D.dex) (cid: D.link) (mname: string) : D.link =
+let mtd_sig_exists ?(is_relaxed=false) ?(shorty="") (dx: D.dex) (cid: D.link) (mname: string) : D.link =
   try
-    let mid, _ = D.get_the_mtd dx cid mname in
+    let mid, _ = if (shorty = "") then
+                   D.get_the_mtd dx cid mname else
+                   D.get_the_mtd_shorty dx cid mname shorty in
     if ((D.own_the_mtd dx cid mid) || is_relaxed) then mid else D.no_idx
   with D.Wrong_dex _ -> D.no_idx
 
@@ -364,13 +366,14 @@ let mtd_body_exists (dx: D.dex) (cid: D.link) (mname: string) : D.link =
 let make_method_overridable (dx: D.dex) ~(cid: D.link) ~(mid: D.link) : unit =
   let emtd = D.get_emtd dx cid mid in
   emtd.D.m_access_flag <- wipe_off_final emtd.D.m_access_flag
-
-(* new_sig : boolean -> D.dex -> D.link -> string -> string -> string list -> D.link *)
+ 
+(* new_sig : D.dex -> D.link -> string -> string -> string list -> D.link *)
 let new_sig (dx: D.dex) ?(is_relaxed=false) ~(cid: D.link) ~(mname: string)
-            ~(rety: string) ~(argv: string list) : D.link =
-  let old = mtd_sig_exists ~is_relaxed:is_relaxed dx cid mname in
+      ~(rety: string) ~(argv: string list) : D.link =
+  let shorty = J.to_shorty_descr (rety :: argv) in
+  let old = mtd_sig_exists ~is_relaxed:is_relaxed ~shorty:shorty dx cid mname in
   if old <> D.no_idx then old else
-  (
+    (
     let nid = D.to_idx (DA.length dx.D.d_method_ids)
     and mit = {
       D.m_class_id = cid;
