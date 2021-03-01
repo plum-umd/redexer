@@ -41,10 +41,9 @@
 (** {1 Combiner} *)
 
 (** Combine [d1] [d2] [p] appends all of the sections of the dex file
-   in [d1] to [d2], returning the resulting dex file. If
-   proto_whitelist is nonempty, the combiner will omit including class
-   definitions, and only include strings, types, and method
-   prototypes. Only method prototypes whose fully-qualified method
-   name begins with an entry on the specified whitelist. *)
+    in [d1] to [d2], returning the resulting dex file. If passed the
+    only_prototypes flag, the combiner will omit including class
+    definitions, and only include strings, type, and prototypes.
+ *)
 
-val combine : Dex.dex -> Dex.dex -> proto_whitelist:string -> Dex.dex
+val combine : Dex.dex -> Dex.dex -> only_prototypes:bool -> Dex.dex
