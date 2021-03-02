@@ -1261,6 +1261,8 @@ object
     cur_mid   <- emtd.D.method_idx;
     is_static <- D.is_static emtd.D.m_access_flag;
     mname <- D.get_mtd_name dx cur_mid;
+    (* NEEDS WORK: This is hardcoded for now, but would cause bugs if we weren't using the fine logger. In reality, skip functions should be moved to a separate module and accessed accordingly from there. That way, the logger can declare what got skipped and the skip module will remember *)
+    skip_mtd <- (L.mem mname [J.init; J.clinit; J.hashCode])
         
   (* to update goto instructions whose offset would be truncated
     due to aggressive instrumentations *)
