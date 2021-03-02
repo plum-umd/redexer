@@ -24,15 +24,15 @@ HOME = File.join(HERE, "..")
 CMD_LOC = File.join(HERE, "cmd.rb")
 OPT_DEX = "--opt-dex"
 RUN_WITH_TIMEOUT = "-run_with_timeout"
-START_ON_CLASS = "-start_on_class"
+START_ON_CLASS = "--start_on_class"
 CMD = "ruby " + CMD_LOC.to_s
 THIS_APK = ARGV[-1]
 TIMEOUT = ARGV[0].to_i
 TEMP_FILE = ".timeoutTemp.txt"
 TIMEOUT_REPORT = "Timeout on logging class "
 PIPEFAIL = "set -o pipefail; "
-DEX_CLASS_TO_START_WITH = nil
-# DEX_CLASS_TO_START_WITH = "classes.dex,androidx.constraintlayout.widget.ConstraintLayout"
+# DEX_CLASS_TO_START_WITH = nil
+DEX_CLASS_TO_START_WITH = "classes.dex,androidx.constraintlayout.widget.ConstraintLayout"
 SKIP = File.join(HOME, "data/skip.txt")
 SKIP_TEMP = File.join(HERE, ".skipTemp.txt")
 PERFORMANCE_REPORT = "redexer performance statistics"
@@ -76,15 +76,16 @@ ARGV[1..-1].each do |arg|
 end
 args[-1] = ""
 
+opt_str = OPT_DEX + " \"" + timeout_string + "\"" # options must be wrapped in quotes
 # Run redexer once. If it fails, go into the loop until it does terminate,
 # otherwise terminate happily
 if (DEX_CLASS_TO_START_WITH.nil?)
-    opt_str = OPT_DEX + " \"" + timeout_string + "\"" # options must be wrapped in quotes
     sys_cmd = CMD + " " + opt_str + " " + args
 else
-    opt_str = OPT_DEX + " \"" + START_ON_CLASS + " " + DEX_CLASS_TO_START_WITH + " " + timeout_string + "\""
-    sys_cmd = CMD + " " + opt_str + " " + args
+    sys_cmd = CMD + " " + opt_str + " " + START_ON_CLASS + " " + DEX_CLASS_TO_START_WITH +
+              " " + args
 end
+
 
 out, status = system_tee(sys_cmd)
 puts "From script: redexer complete. status is " + status.to_s
@@ -130,15 +131,15 @@ while (!succ)
     # Cut off the 'L' and ';', then swap all '/' for '.', as conversion Android -> Java type
     failed_class = failed_class[1..-2].gsub(/\//, '.')
     redexer_start = cur_dex + "," + failed_class
-    opt_str = OPT_DEX + " \"" + START_ON_CLASS + " " + redexer_start + " " + timeout_string + "\""
     puts "From script: Failing class is " + failed_class
 
     # Add class to skip file
     skip_fd = File.open(SKIP, "a")
     skip_fd.puts failed_class
     skip_fd.close
-    
-    sys_cmd = CMD + " " + opt_str + " " + args
+
+    opt_str = OPT_DEX + " \"" + timeout_string + "\""
+    sys_cmd = CMD + " " + opt_str + " " + START_ON_CLASS + " " + redexer_start + " " + args
     out, status = system_tee(sys_cmd)
     puts "From script: redexer complete. status is " + status.to_s
     succ = status == 0
@@ -148,7 +149,7 @@ puts "From script: Success. Moving skip file to alternative location and termina
 # Move the skip file back, and put the generated skip file somewhere safe
 if (skip_moved)
     apk = File.basename(THIS_APK, ".apk")
-    new_skip_file = File.join(HOME, apk + "-skip.txt")
+    new_skip_file = File.join(HOME, "data", apk + "-skip.txt")
     FileUtils.mv(SKIP, new_skip_file)
     FileUtils.mv(SKIP_TEMP, SKIP)
 end
