@@ -417,11 +417,6 @@ class virtual logger (dx: D.dex) =
       M.new_sig dx ~is_relaxed:true ~cid:cid ~mname:JL.v_of ~rety:(J.of_type_descr (D.get_ty_str dx cid)) ~argv:[descr]
   in
   let v_of_map = SM.mapi get_v_of c_map in
-  let map_iter descr mid =
-    Printf.eprintf "For type %s, the valueOf is...\n%!" descr;
-    Printf.eprintf "%s\n%!" (D.get_mtd_sig dx mid)
-  in
-  let _ = SM.iter map_iter v_of_map in
   let uri_ids = L.map (fun x -> D.find_ty_str dx x) ["Landroid/net/Uri;";
                                                      "Ljava/net/Uri;";
                                                      "[Landroid/net/Uri;";
@@ -1045,6 +1040,6 @@ let modify (dx: D.dex) : unit =
   (* log API uses and entry/exit of all methods, except for Logger itself *)
   Pf.eprintf "**** Beginning instrument\n%!";
   St.time "instrument" V.iter (logging : logger :> V.visitor  );
-  Pf.eprintf "**** Done instrument\n%!";
+  Pf.eprintf "**** Done instrument, on to static analysis\n%!";
   St.time "expand-opr" M.expand_opr dx;
-  Pf.eprintf "**** Done expand_opr\n%!";
+  Pf.eprintf "**** Done static analysis\n%!";

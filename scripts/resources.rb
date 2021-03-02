@@ -177,7 +177,7 @@ class Resources
     if (not fb_scheme.nil?)
       fb_scheme.content = FACEBOOK_SCHEME
     else
-      puts "Facebook App ID Scheme unable to be updated. String not found"
+      puts "Facebook Protocol Scheme unable to be updated. String not found"
     end
     f.close()
     f = File.open(@dir + "/values/strings.xml", 'w')
