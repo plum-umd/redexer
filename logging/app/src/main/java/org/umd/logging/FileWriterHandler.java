@@ -252,9 +252,21 @@ public class FileWriterHandler implements Runnable{
                         //            s_arg += processDialog((Dialog)arg);
                         //          }
                         //        }
-                        if (arg instanceof String && cname.equals("android.os.Bundle")) {
+                        if (arg instanceof String && (cname.equals("android.os.Bundle") || cname.equals("com.facebook.appevents.AppEventsLogger"))) {
                             curParam.setType("string");
                             curParam.addValue((String)arg);
+                        }
+                        if (arg instanceof Integer) {
+                            curParam.setType("integer");
+                            curParam.addValue(String.valueOf((Integer)arg));
+                        }
+                        if (arg instanceof Double) {
+                            curParam.setType("double");
+                            curParam.addValue(String.valueOf((Double)arg));
+                        }
+                        if (arg instanceof Boolean) {
+                            curParam.setType("boolean");
+                            curParam.addValue(String.valueOf((Boolean)arg));
                         }
                         if(arg instanceof Thread){
                             curParam.setType("thread");
