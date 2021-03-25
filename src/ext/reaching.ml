@@ -69,8 +69,26 @@ let get_cursor citm off =
 
 let compare_off citm off1 off2 = compare (get_cursor citm off1) (get_cursor citm off2)
 
-let meet_off citm off1 off2 =
-  if compare_off citm off1 off2 < 0 then off1 else off2
+let meet_off dx citm off1 off2 =
+  if (D.is_ins dx off1) && (D.is_ins dx off2) then
+    let (op1, opr1) = D.get_ins dx off1 in
+    let (op2, opr2) = D.get_ins dx off2 in
+    let hx1 = I.op_to_hx op1 in
+    let hx2 = I.op_to_hx op2 in
+    (* If hx1 is a const/ and hx2 is a move-object *)
+    if (0x12 <= hx1 && hx1 <= 0x15 && 0x07 <= hx2 && hx2 <= 0x09) then
+      match opr1 with
+      | I.OPR_REGISTER r :: I.OPR_CONST c :: [] when c = 0L -> off2
+      | _ -> if compare_off citm off1 off2 < 0 then off1 else off2
+    else
+      (* If hx2 is a const/ and hx1 is a move-object *)
+      if (0x12 <= hx2 && hx2 <= 0x15 && 0x07 <= hx1 && hx1 <= 0x09) then
+        (match opr2 with
+        | I.OPR_REGISTER r :: I.OPR_CONST c :: [] when c = 0L -> off1
+        | _ -> if compare_off citm off1 off2 < 0 then off1 else off2)
+      else if compare_off citm off1 off2 < 0 then off1 else off2
+  else
+    if compare_off citm off1 off2 < 0 then off1 else off2
 
 let all (n: int) v : D.link IM.t =
   L.fold_left (fun acc i -> IM.add i v acc) IM.empty (U.range 0 (n - 1) [])
@@ -108,7 +126,7 @@ let make_dfa (dx: D.dex) (citm: D.code_item) : reaching =
 
     let meet (l1:l) (l2:l) =
       let wrapper _ vo1 vo2 = match vo1, vo2 with
-        | Some v1, Some v2 -> Some (meet_off citm v1 v2)
+        | Some v1, Some v2 -> Some (meet_off dx citm v1 v2)
         | Some _, None -> vo1
         | None, Some _ -> vo2
         | _, _ -> None
@@ -124,7 +142,10 @@ let make_dfa (dx: D.dex) (citm: D.code_item) : reaching =
         if v <> D.no_off then
         (
           B.add_string buf ("v"^(string_of_int k)^": ");
-          B.add_string buf (Pf.sprintf "0x%08X\n" (D.of_off v))
+          if ((D.of_off v) = 0x7FFFFFFF) then
+            B.add_string buf (Pf.sprintf "null\n")
+          else
+            B.add_string buf (Pf.sprintf "(0x%08X) %s\n" (D.of_off v) (I.instr_to_string (D.get_ins dx v)))
         )
       in
       IM.iter per_kv l;
