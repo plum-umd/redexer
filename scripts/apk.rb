@@ -126,6 +126,10 @@ class Apk
     if (forking)
       pids = Array.new
       dxs.each_with_index do |dex, idx|
+        if (!start_dex.nil? && File.basename(dex) < start_dex)
+          puts "skipping rewrite of " + dex
+          next
+        end
         puts "rewriting #{dex}"
         pids[idx] = fork do
           if (File.basename(dex).eql?(start_dex))
@@ -157,6 +161,10 @@ class Apk
       end
     else
         dxs.each do |dex|
+          if (!start_dex.nil? && File.basename(dex) < start_dex)
+            puts "skipping rewrite of " + dex
+            next
+          end
           puts "rewriting #{dex}"
           if (File.basename(dex).eql?(start_dex))
             Dex.logging(dex,detail,multi,start_class,dex)
