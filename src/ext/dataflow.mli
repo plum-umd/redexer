@@ -110,6 +110,9 @@ sig
   (** return [IN] for the given {!st} *)
   val inn : st -> l
 
+  (** return all ins for the dfa *)
+  val all_inns : unit -> (st, l) Hashtbl.t
+
   (** return [OUT] for the given {!st} *)
   val out : st -> l
 
