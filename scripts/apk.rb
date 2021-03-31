@@ -133,9 +133,9 @@ class Apk
         puts "rewriting #{dex}"
         pids[idx] = fork do
           if (File.basename(dex).eql?(start_dex))
-            Dex.logging(dex,detail,multi,start_class,out_name=dex)
+            Dex.logging(dex,detail,multi,start_class,dex)
           else
-            Dex.logging(dex,detail,multi,out_name=dex)
+            Dex.logging(dex,detail,multi,nil,dex)
           end
           succ = @succ && Dex.succ
           if (!succ)

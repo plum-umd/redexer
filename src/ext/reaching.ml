@@ -55,6 +55,8 @@ module DA = DynArray
 module Pf = Printf
 module B = Buffer
 
+module H = Hashtbl
+
 (***********************************************************************)
 (* Reaching Definition Analysis                                        *)
 (***********************************************************************)
@@ -69,10 +71,20 @@ let get_cursor citm off =
 
 let compare_off citm off1 off2 = compare (get_cursor citm off1) (get_cursor citm off2)
 
+let off_hash = H.create 1000
+
+let get_ins_wrap dx off =
+  try
+    H.find off_hash off
+  with Not_found ->
+    let ins = D.get_ins dx off in
+    H.add off_hash off ins;
+    ins
+
 let meet_off dx citm off1 off2 =
-  if (D.is_ins dx off1) && (D.is_ins dx off2) then
-    let (op1, opr1) = D.get_ins dx off1 in
-    let (op2, opr2) = D.get_ins dx off2 in
+  try
+    let (op1, opr1) = get_ins_wrap dx off1 in
+    let (op2, opr2) = get_ins_wrap dx off2 in
     let hx1 = I.op_to_hx op1 in
     let hx2 = I.op_to_hx op2 in
     (* If hx1 is a const/ and hx2 is a move-object *)
@@ -87,8 +99,11 @@ let meet_off dx citm off1 off2 =
         | I.OPR_REGISTER r :: I.OPR_CONST c :: [] when c = 0L -> off1
         | _ -> if compare_off citm off1 off2 < 0 then off1 else off2)
       else if compare_off citm off1 off2 < 0 then off1 else off2
-  else
-    if compare_off citm off1 off2 < 0 then off1 else off2
+  with
+  | D.Wrong_match _ ->
+     if compare_off citm off1 off2 < 0 then off1 else off2
+  | D.Wrong_dex _ ->
+     if compare_off citm off1 off2 < 0 then off1 else off2
 
 let all (n: int) v : D.link IM.t =
   L.fold_left (fun acc i -> IM.add i v acc) IM.empty (U.range 0 (n - 1) [])
