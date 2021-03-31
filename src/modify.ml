@@ -1244,6 +1244,14 @@ class opr_expander (dx: D.dex) =
     | I.R_WIDE -> mv_wd_16
     | _        -> move_f16
   in
+  let dfa_init (citm : D.code_item) : ('a, 'b) H.t  =
+    let dfa = St.time "reach" (Rc.make_dfa dx) citm in
+    let module DFA = (val dfa: Dataflow.ANALYSIS
+      with type st = D.link and type l = (D.link IM.t))
+    in
+    St.time "reach" DFA.fixed_pt ();
+    DFA.all_inns ()
+      in
 object
   inherit V.iterator dx
 
@@ -1267,6 +1275,7 @@ object
   (* to update goto instructions whose offset would be truncated
     due to aggressive instrumentations *)
   val mutable cur_citm = D.empty_citm ()
+  val mutable cur_rc_inns = H.create 0
                                       
   method v_citm (citm: D.code_item) : unit =
     (* Crude solution to the implications of the TODO at line 652 *)
@@ -1282,6 +1291,7 @@ object
     in
     check_dbg;
     cur_citm <- citm;
+    cur_rc_inns <- H.create 0;
     (*Unparse.print_method dx citm;
     ignore (Rc.make_dfa dx cur_citm)*)
                   
@@ -1340,7 +1350,7 @@ object
       exp_cnt := !exp_cnt + (L.length inss)
     in
     if D.is_ins dx ins then
-    (
+      (
       let op, opr = D.get_ins dx ins in
       let hx = I.op_to_hx op
       and low = I.low_reg op in
@@ -1400,12 +1410,8 @@ object
             instruction that needs to be moved. *)
          let (I.OPR_INDEX cid)::l = L.rev l in 
          let l = L.rev l in
-         let dfa = St.time "reach" (Rc.make_dfa dx) cur_citm in
-         let module DFA = (val dfa: Dataflow.ANALYSIS
-                               with type st = D.link and type l = (D.link IM.t))
-         in
-         St.time "reach" DFA.fixed_pt ();
-         let inn = St.time "reach" DFA.inn ins in
+         let _ = if (H.length cur_rc_inns = 0) then (cur_rc_inns <- dfa_init cur_citm) else () in
+         let inn = H.find cur_rc_inns ins in
          (* Put each argument in {v0,...,v4} (at most) *)
          let mov_instrs = L.mapi (fun i (I.OPR_REGISTER reg) -> 
                               let sort = get_def_sort (IM.find reg inn) reg in
@@ -1450,12 +1456,8 @@ object
       | _, I.OPR_REGISTER a :: I.OPR_REGISTER b :: I.OPR_OFFSET off :: []
       when 0x32 <= hx && hx <= 0x37 && (a >= low || b >= low) ->
       (
-        let dfa = St.time "reach" (Rc.make_dfa dx) cur_citm in
-        let module DFA = (val dfa: Dataflow.ANALYSIS
-          with type st = D.link and type l = (D.link IM.t))
-        in
-        St.time "reach" DFA.fixed_pt ();
-        let inn = St.time "reach" DFA.inn ins in
+        let _ = if (H.length cur_rc_inns = 0) then (cur_rc_inns <- dfa_init cur_citm) else () in
+        let inn = H.find cur_rc_inns ins in
         let sort_a = get_def_sort (IM.find a inn) a
         and sort_b = get_def_sort (IM.find b inn) b in
         let op_a = mv_op sort_a
