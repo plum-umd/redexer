@@ -1348,10 +1348,14 @@ let get_reg_sorts (ins: instr) : (int * reg_sort) list =
   (
     let d_sorts =
       if L.mem hx [0x7d; 0x7e; 0x80; 0x81; 0x83; 0x86; 0x88; 0x89; 0x8b]
-      then [(d, R_WIDE); (d+1, R_WIDE_L)] else [(d, R_NORMAL)]
+      then if (d+1 = s)
+           then [(d, R_WIDE)] else[(d, R_WIDE); (d+1, R_WIDE_L)]
+      else [(d, R_NORMAL)]
     and s_sorts =
       if L.mem hx [0x7d; 0x7e; 0x80; 0x84; 0x85; 0x86; 0x8a; 0x8b; 0x8c]
-      then [(s, R_WIDE); (s+1, R_WIDE_L)] else [(s, R_NORMAL)]
+      then if (s+1 = d)
+           then [(s, R_WIDE)] else [(s, R_WIDE); (s+1, R_WIDE_L)]
+      else [(s, R_NORMAL)]
     in
     d_sorts @ s_sorts
   )
