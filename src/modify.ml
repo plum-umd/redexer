@@ -1244,14 +1244,47 @@ class opr_expander (dx: D.dex) =
     | I.R_WIDE -> mv_wd_16
     | _        -> move_f16
   in
-  let dfa_init (citm : D.code_item) : ('a, 'b) H.t  =
+  let dfa_init (citm : D.code_item) (mid : D.link) (is_static: bool) : ('a, 'b) H.t  =
     let dfa = St.time "reach" (Rc.make_dfa dx) citm in
     let module DFA = (val dfa: Dataflow.ANALYSIS
       with type st = D.link and type l = (D.link IM.t))
     in
     St.time "reach" DFA.fixed_pt ();
-    DFA.all_inns ()
-      in
+    let get_def_sort (d: D.link) (r: int) : I.reg_sort =
+      if D.is_ins dx d then L.hd (get_sort (D.get_ins dx d) [r])
+      else if D.is_param citm r then
+        (* parameters won't have def; rather, refer to method sig *)
+        let argv = D.get_argv dx (D.get_mit dx mid) in
+        let argv = if is_static then argv else
+                     (* including *this* unless static methods *)
+                     let cur_cid = D.get_cid_from_mid dx mid in cur_cid :: argv
+        in
+        let p_finder (i, sort) arg =
+          let tname = J.of_type_descr (D.get_ty_str dx arg) in
+          let i' = if L.mem tname [J.j; J.d] then i + 2 else i + 1 in
+          let sort' = if i <> r then sort else
+                        if L.mem tname [J.j; J.d] then I.R_WIDE
+                        else if L.mem tname J.shorties then I.R_NORMAL
+                        else I.R_OBJ
+          in (i', sort')
+        in
+        snd (L.fold_left p_finder (D.calc_this citm, I.R_OBJ) argv)
+      else I.R_NORMAL
+    in
+    let old_hash = DFA.all_inns () in
+    let new_hash = H.create (H.length old_hash) in
+    let dfa_iter (ins : D.link) (inn : D.link IM.t) : unit =
+      if not (H.mem new_hash ins) then
+        let inn_mapper reg r_def =
+          get_def_sort r_def reg
+        in
+        let new_inn = IM.mapi inn_mapper inn in
+        H.add new_hash ins new_inn
+      else ()
+    in
+    H.iter dfa_iter old_hash;
+    new_hash
+in
 object
   inherit V.iterator dx
 
@@ -1314,27 +1347,6 @@ object
        This function takes in {d}, the instruction that is the
        reaching definition (provided from the result of the reaching
        definitions analysis) and {r}, the register of interest.  *)
-    let get_def_sort (d: D.link) (r: int) : I.reg_sort =
-      if D.is_ins dx d then L.hd (get_sort (D.get_ins dx d) [r])
-      else if D.is_param cur_citm r then
-        (* parameters won't have def; rather, refer to method sig *)
-        let argv = D.get_argv dx (D.get_mit dx cur_mid) in
-        let argv = if is_static then argv else
-                     (* including *this* unless static methods *)
-                     let cur_cid = D.get_cid_from_mid dx cur_mid in cur_cid :: argv
-        in
-        let p_finder (i, sort) arg =
-          let tname = J.of_type_descr (D.get_ty_str dx arg) in
-          let i' = if L.mem tname [J.j; J.d] then i + 2 else i + 1 in
-          let sort' = if i <> r then sort else
-                        if L.mem tname [J.j; J.d] then I.R_WIDE
-                        else if L.mem tname J.shorties then I.R_NORMAL
-                        else I.R_OBJ
-          in (i', sort')
-        in
-        snd (L.fold_left p_finder (D.calc_this cur_citm, I.R_OBJ) argv)
-      else I.R_NORMAL
-    in
     let overwrite (inss: I.instr list) : unit =
       let cursor = get_cursor cur_citm ins in
       D.insrt_ins dx ins (L.hd inss);
@@ -1352,6 +1364,7 @@ object
     if D.is_ins dx ins then
       (
       let op, opr = D.get_ins dx ins in
+      (* Printf.printf "Visiting instruction %s\n%!" (I.instr_to_string (op, opr)); *)
       let hx = I.op_to_hx op
       and low = I.low_reg op in
       match op, opr with
@@ -1410,11 +1423,11 @@ object
             instruction that needs to be moved. *)
          let (I.OPR_INDEX cid)::l = L.rev l in 
          let l = L.rev l in
-         let _ = if (H.length cur_rc_inns = 0) then (cur_rc_inns <- dfa_init cur_citm) else () in
+         let _ = if (H.length cur_rc_inns = 0) then (cur_rc_inns <- dfa_init cur_citm cur_mid is_static) else () in
          let inn = H.find cur_rc_inns ins in
          (* Put each argument in {v0,...,v4} (at most) *)
          let mov_instrs = L.mapi (fun i (I.OPR_REGISTER reg) -> 
-                              let sort = get_def_sort (IM.find reg inn) reg in
+                              let sort = IM.find reg inn in
                               let op = mv_op sort in
                               I.new_move (mv_op sort) i reg) l in
          (* [0; ..; 4] *)
@@ -1456,12 +1469,14 @@ object
       | _, I.OPR_REGISTER a :: I.OPR_REGISTER b :: I.OPR_OFFSET off :: []
       when 0x32 <= hx && hx <= 0x37 && (a >= low || b >= low) ->
       (
-        let _ = if (H.length cur_rc_inns = 0) then (cur_rc_inns <- dfa_init cur_citm) else () in
+        let _ = if (H.length cur_rc_inns = 0) then (cur_rc_inns <- dfa_init cur_citm cur_mid is_static) else () in
         let inn = H.find cur_rc_inns ins in
-        let sort_a = get_def_sort (IM.find a inn) a
-        and sort_b = get_def_sort (IM.find b inn) b in
+        let sort_a = IM.find a inn
+        and sort_b = IM.find b inn in
         let op_a = mv_op sort_a
         and op_b = mv_op sort_b in
+        (* Printf.printf "a is 0x%x\n%!" op_a; *)
+        (* Printf.printf "b is 0x%x\n%!" op_b; *)
         let new_a = if a >= low then 0 else a
         and new_b = if b >= low then 1 else b in
         let mv_a = if a < low then [] else [I.new_move op_a new_a a]
