@@ -60,12 +60,12 @@ public class FileWriterHandler implements Runnable{
 
     final static String tag = Logger.class.getPackage().getName();
     
-    // An {@link AtomicInteger} that is attached to each intent that
-    // we print out. This allows us to label the intents so that when
-    // we see them reappear as arguments to other handlers, we can
-    // track them and associate them with the place in which they were
-    // sent into the framework.
-    static AtomicInteger mIntentKey = new AtomicInteger();
+    // // An {@link AtomicInteger} that is attached to each intent that
+    // // we print out. This allows us to label the intents so that when
+    // // we see them reappear as arguments to other handlers, we can
+    // // track them and associate them with the place in which they were
+    // // sent into the framework.
+    // static AtomicInteger mIntentKey = new AtomicInteger();
 
     private static AtomicInteger inc = new AtomicInteger();
     
@@ -287,7 +287,14 @@ public class FileWriterHandler implements Runnable{
                             List list_arg = (List)arg;
                             curParam.setType("string_list");
                             for (int j = 0; j < list_arg.size(); j++) {
-                                curParam.addValue((String)list_arg.get(j));
+                                String val;
+                                if (!(list_arg.get(j) instanceof String)) {
+                                    val = "not_string";
+                                }
+                                else {
+                                    val = (String)list_arg.get(j);
+                                }
+                                curParam.addValue(val);
                             }
                         }
                         // if(arg instanceof Intent && ((Intent)arg).getAction()!="android.intent.action.VIEW" && ((Intent)arg).getAction()!="android.intent.action.MAIN"){
