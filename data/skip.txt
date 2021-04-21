@@ -1,3 +1,4 @@
+com.fasterxml
 android.support
 a.a.a
 com.google.protobuf
