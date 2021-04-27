@@ -1,5 +1,5 @@
 (*
- * Copyright (c) 2010-2014,
+ * Copyright (c) 2010-2017,
  *  Jinseong Jeon <jsjeon@cs.umd.edu>
  *  Kris Micinski <micinski@cs.umd.edu>
  *  Jeff Foster   <jfoster@cs.umd.edu>
@@ -99,7 +99,7 @@ let call_dir = I.op_to_hx I.OP_INVOKE_DIRECT
 (* Utilities                                                           *)
 (***********************************************************************)
 
-let (@@) cl1 cl2 = CL.append cl1 cl2
+let (@+) cl1 cl2 = CL.append cl1 cl2
 
 let print_fit (dx: D.dex) (fid, fit) : unit =
   let f_str = Log.of_i (D.of_idx fid)
@@ -168,14 +168,14 @@ let new_str (dx: D.dex) (str: string) : D.link =
 let str_sub_cnt = ref 0
 
 (* replace_str : D.dex -> string -> string -> bool *)
-let replace_str (dx: D.dex) (prv: string) (nex: string) : bool =
-  let sid = D.find_str dx prv in
-  if sid = D.no_idx then (new_str dx nex; false)
+let replace_str (dx: D.dex) ~(oldstr: string) ~(newstr: string) : bool =
+  let sid = D.find_str dx oldstr in
+  if sid = D.no_idx then (new_str dx newstr; false)
   else (* exists; overwrite the old one *)
   (
     incr str_sub_cnt;
     let off = DA.get dx.D.d_string_ids (D.of_idx sid) in
-    D.insrt_str dx off nex; true
+    D.insrt_str dx off newstr; true
   )
 
 (* report_str_repl_cnt : unit -> unit *)
@@ -183,25 +183,25 @@ let report_str_repl_cnt () : unit =
   Log.i ("# of string replacement(s): "^(Log.of_i !str_sub_cnt))
 
 (* find or make new type_id *)
-let find_or_new_ty_str (dx: D.dex) (str: string) : D.link =
-  let tid = D.find_ty_str dx str in
+let find_or_new_ty_str (dx: D.dex) (tyname: string) : D.link =
+  let tid = D.find_ty_str dx tyname in
   if tid <> D.no_idx then tid else
   (
-    let sid = find_or_new_str dx str
+    let sid = find_or_new_str dx tyname
     and tid' = D.to_idx (DA.length dx.D.d_type_ids) in
     DA.add dx.D.d_type_ids sid;
     tid'
   )
 
 (* wrapper for above function *)
-let new_ty (dx: D.dex) (str: string) : D.link =
-  find_or_new_ty_str dx str
+let new_ty (dx: D.dex) ~(tyname: string) : D.link =
+  find_or_new_ty_str dx tyname
 
 let is_lib (cname: string) : bool =
   J.is_library cname || A.is_library cname
 
 (* new_class : D.dex -> ?string -> string -> J.access_flag list -> D.link *)
-let new_class (dx: D.dex) ?(super=Java.Lang.obj) (cname: string)
+let new_class (dx: D.dex) ?(super=Java.Lang.obj) ~(cname: string)
   (flags: D.access_flag list) : D.link =
   let cname = J.to_java_ty cname
   and super = J.to_java_ty super in
@@ -224,7 +224,7 @@ let new_class (dx: D.dex) ?(super=Java.Lang.obj) (cname: string)
   cid
 
 (* make_class_overridable : D.dex -> D.link -> unit *)
-let make_class_overridable (dx: D.dex) (cid: D.link) : unit =
+let make_class_overridable (dx: D.dex) ~(cid: D.link) : unit =
   let cdef = D.get_cdef dx cid in
   cdef.D.c_access_flag <- wipe_off_final cdef.D.c_access_flag
 
@@ -262,7 +262,7 @@ let append_itf (dx: D.dex) (cid: D.link) (itf_id: D.link) : unit =
   DA.iter itf_attacher dx.D.d_class_defs
 
 (* add_interface : D.dex -> D.link -> string -> unit *)
-let add_interface (dx: D.dex) (cid: D.link) (interface: string) : unit =
+let add_interface (dx: D.dex) ~(cid: D.link) ~(interface: string) : unit =
   let icid = D.get_cid dx interface in
   if icid = D.no_idx then
     raise (D.Wrong_dex ("no such interface exists: "^interface))
@@ -294,8 +294,8 @@ let fld_exists (dx: D.dex) (cid: D.link) (fname: string) : D.link =
 
 (* new_field : D.dex -> D.link -> string
   -> J.access_flag list -> string -> D.link *)
-let new_field (dx: D.dex) (cid: D.link) (fname: string)
-  (flags: D.access_flag list) (ty: string) : D.link =
+let new_field (dx: D.dex) ~(cid: D.link) ~(fname: string)
+  (flags: D.access_flag list) ~(ty: string) : D.link =
   let ty = J.to_type_descr ty in
   let old = fld_exists dx cid fname in
   if old <> D.no_idx then old else
@@ -346,10 +346,12 @@ let find_or_new_proto (dx: D.dex) (rety: string) (args: string list) : D.link =
     pid
 
 (* method signature exists? *)
-let mtd_sig_exists (dx: D.dex) (cid: D.link) (mname: string) : D.link =
+let mtd_sig_exists ?(is_relaxed=false) ?(shorty="") (dx: D.dex) (cid: D.link) (mname: string) : D.link =
   try
-    let mid, _ = D.get_the_mtd dx cid mname in
-    if D.own_the_mtd dx cid mid then mid else D.no_idx
+    let mid, _ = if (shorty = "") then
+                   D.get_the_mtd dx cid mname else
+                   D.get_the_mtd_shorty dx cid mname shorty in
+    if ((D.own_the_mtd dx cid mid) || is_relaxed) then mid else D.no_idx
   with D.Wrong_dex _ -> D.no_idx
 
 (* method implementation exists? *)
@@ -361,16 +363,17 @@ let mtd_body_exists (dx: D.dex) (cid: D.link) (mname: string) : D.link =
 
 
 (* make_method_overridable : D.dex -> D.link -> D.link -> unit *)
-let make_method_overridable (dx: D.dex) (cid: D.link) (mid: D.link) : unit =
+let make_method_overridable (dx: D.dex) ~(cid: D.link) ~(mid: D.link) : unit =
   let emtd = D.get_emtd dx cid mid in
   emtd.D.m_access_flag <- wipe_off_final emtd.D.m_access_flag
-
+ 
 (* new_sig : D.dex -> D.link -> string -> string -> string list -> D.link *)
-let new_sig (dx: D.dex) (cid: D.link) (mname: string)
-    (rety: string) (argv: string list) : D.link =
-  let old = mtd_sig_exists dx cid mname in
+let new_sig (dx: D.dex) ?(is_relaxed=false) ~(cid: D.link) ~(mname: string)
+      ~(rety: string) ~(argv: string list) : D.link =
+  let shorty = J.to_shorty_descr (rety :: argv) in
+  let old = mtd_sig_exists ~is_relaxed:is_relaxed ~shorty:shorty dx cid mname in
   if old <> D.no_idx then old else
-  (
+    (
     let nid = D.to_idx (DA.length dx.D.d_method_ids)
     and mit = {
       D.m_class_id = cid;
@@ -403,8 +406,8 @@ let new_sig (dx: D.dex) (cid: D.link) (mname: string)
 
 (* new_method : D.dex -> D.link -> string
   -> J.access_flag list -> string -> string list -> D.link *)
-let new_method (dx: D.dex) (cid: D.link) (mname: string)
-    (flags: D.access_flag list) (rety: string) (argv: string list) : D.link =
+let new_method (dx: D.dex) ~(cid: D.link) ~(mname: string)
+    (flags: D.access_flag list) ~(rety: string) ~(argv: string list) : D.link =
   let flags = if mname = J.init then D.ACC_CONSTRUCTOR::flags else flags in
   let old = mtd_body_exists dx cid mname in
   if old <> D.no_idx then old else
@@ -451,24 +454,26 @@ let get_cursor (citm: D.code_item) (ins: D.link) : cursor =
 (* get the cursor of the first instruction *)
 let get_fst_cursor () : cursor = 0
 
-(* get the cursor of the last instruction *)
-let get_last_cursor (dx: D.dex) (citm: D.code_item) : cursor =
+let get_last_links (dx: D.dex) (citm: D.code_item) : D.link list = 
   let cfg  = St.time "cfg"  (Cf.make_cfg dx) citm in
   let pdom = St.time "pdom"  Cf.pdoms cfg in
   let inss = St.time "pdom" (Cf.get_last_inss cfg) pdom in
-  (* TODO: actually, this func should return cursor list *)
   let find_return_or_throw ins =
     let op, _ = D.get_ins dx ins in
     let hx = I.op_to_hx op in
     op = I.OP_THROW || (0x0e <= hx && hx <= 0x11) (* OP_RETURN_* *)
   in
-  let ins =
+  let last_inss =
     if 0 = L.length inss then (raise D.No_return)
     else
-    (if 1 = L.length inss then L.hd inss
-     else L.find find_return_or_throw inss)
+    (if 1 = L.length inss then [L.hd inss]
+     else L.filter find_return_or_throw inss)
   in
-  get_cursor citm ins
+  last_inss
+    
+(* get the cursor of the last instruction *)
+let get_last_cursors (dx: D.dex) (citm: D.code_item) : cursor list =
+  L.map (fun x -> get_cursor citm x) (get_last_links dx citm)
 
 (* get_ins : D.dex -> D.code_item -> cursor -> I.instr *)
 let get_ins (dx: D.dex) (citm: D.code_item) (c: cursor) : I.instr =
@@ -480,8 +485,8 @@ let get_fst_ins (dx: D.dex) (citm: D.code_item) : I.instr =
   get_ins dx citm (get_fst_cursor ())
 
 (* get_last_ins : D.dex -> D.code_item -> I.instr *)
-let get_last_ins (dx: D.dex) (citm: D.code_item) : I.instr =
-  get_ins dx citm (get_last_cursor dx citm)
+let get_last_inss (dx: D.dex) (citm: D.code_item) : I.instr list =
+  L.map (fun x -> get_ins dx citm x) (get_last_cursors dx citm)
 
 let next_off off : D.link =
   D.to_off ((D.of_off off) + 1)
@@ -529,7 +534,7 @@ let insrt_insns (dx: D.dex) (citm: D.code_item) cur (insns: I.instr list) =
 *)
 (* insrt_insns_under_off : D.dex -> D.code_item -> cursor -> I.instr list -> cursor *)
 let insrt_insns_under_off dx (citm: D.code_item) cur (insns: I.instr list) =
-  let hd::tl = insns
+  let hd::tl = insns 
   and nxt_cur = next cur
   and off = DA.get citm.D.insns cur in
   let ins = D.get_ins dx off
@@ -541,8 +546,17 @@ let insrt_insns_under_off dx (citm: D.code_item) cur (insns: I.instr list) =
   D.insrt_ins dx off hd;
   incr_insns_size citm hd;
   (* insert the remaining instructions from the next cursor *)
-  insrt_insns dx citm nxt_cur tl
-
+  let new_c = insrt_insns dx citm nxt_cur tl in
+  let new_off = DA.get citm.D.insns new_c in
+  let fixup_try try_item =
+    if try_item.D.end_addr = off then
+      { try_item with D.end_addr = new_off }
+    else 
+      try_item
+  in
+  citm.D.tries <- L.map fixup_try citm.D.tries;
+  new_c
+                        
 (*
                                               +---------+
                                               |  instr  |
@@ -565,7 +579,46 @@ let insrt_insns_over_off dx (citm: D.code_item) cur (insns: I.instr list) =
   D.insrt_ins dx off last;
   incr_insns_size citm last;
   (* insert the remaining instructions from the previous cursor *)
-  insrt_insns dx citm nxt_cur rest
+  let c = insrt_insns dx citm nxt_cur rest in
+  let new_off = DA.get citm.D.insns cur in
+  let fixup_try try_item =
+    if try_item.D.start_addr = off then
+      { try_item with D.start_addr = new_off }
+    else 
+      try_item
+  in
+  citm.D.tries <- L.map fixup_try citm.D.tries;
+  c
+
+
+(* insrt_insns_meth_entry : D.dex -> D.code_item -> I.instr list -> cursor *)
+let insrt_insns_meth_entry dx (citm: D.code_item) (insns: I.instr list) =
+  let cur = get_fst_cursor () in
+  let off = DA.get citm.D.insns cur in
+  let new_c = insrt_insns dx citm cur insns in
+  let new_off = DA.get citm.D.insns new_c in
+  let fixup_try try_item =
+    if try_item.D.start_addr = off then
+      { try_item with D.start_addr = new_off }
+    else 
+      try_item
+  in
+  citm.D.tries <- L.map fixup_try citm.D.tries;
+  new_c
+
+
+
+(*(*
+                                              +---------+
+                                       off -> |  instr  |
+                                              +---------+
+         +---------+                          |  added  |
+  off -> |  instr  |         ==>              | snippet |
+         +---------+                          +---------+
+*)
+(* insrt_insns_after_off : D.dex -> D.code_item -> cursor -> I.instr list -> cursor *)
+let insrt_insns_after_off dx (citm: D.code_item) cur (insns: I.instr list) = 
+ *)  
 
 (* insrt_insns_before_start : D.dex -> D.code_item -> I.instr list -> cursor *)
 let insrt_insns_before_start dx (citm: D.code_item) (insns: I.instr list) =
@@ -581,13 +634,21 @@ let insrt_insns_after_start dx (citm: D.code_item) (insns: I.instr list) =
 
 (* insrt_insns_before_end : D.dex -> D.code_item -> I.instr list -> cursor *)
 let insrt_insns_before_end dx (citm: D.code_item) (insns: I.instr list) =
-  let cur = get_last_cursor dx citm in
-  insrt_insns_under_off dx citm cur insns
-
+  let offsets = get_last_links dx citm in
+  L.map
+    (fun curoffset -> 
+      (insrt_insns_under_off dx citm (get_cursor citm curoffset) insns))
+    offsets
+    
 (* insrt_insns_after_end : D.dex -> D.code_item -> I.instr list -> cursor *)
 let insrt_insns_after_end dx (citm: D.code_item) (insns: I.instr list) =
-  insrt_insns dx citm (next (get_last_cursor dx citm)) insns
-
+  let offsets = L.map (fun x -> DA.get citm.D.insns x)
+                      (get_last_cursors dx citm) in
+  L.map
+    (fun curoffset -> 
+      (insrt_insns dx citm (next (get_cursor citm curoffset)) insns))
+    offsets
+    
 (* insrt_return_void : D.dex -> D.link -> string -> unit *)
 let insrt_return_void dx (cid: D.link) (mname: string) : unit =
   let mid, _ = D.get_the_mtd dx cid mname in
@@ -609,7 +670,8 @@ let shift_reg_cond dx (citm: D.code_item) (sft: int) cond : unit =
   in
   DA.iter ins_iter citm.D.insns;
   citm.D.registers_size <- citm.D.registers_size + sft;
-  (* TODO: should also update register occurrences in debug_info *)
+  (* TODO: should also update register occurrences in debug_info. When updated, modify TODO on
+   * line 1248 as well *)
   (* stopgap: just delete debug_info if modified *)
   if citm.D.debug_info_off <> D.no_off then
   (
@@ -796,7 +858,6 @@ object (self)
     fit.D.f_type_id <- l2l maps.cmap fit.D.f_type_id
 
   method v_mit (mit: D.method_id_item) : unit =
-    let cname = D.get_ty_str dx mit.D.m_class_id in
     if target_in_hierarchy dx maps.cmap mit.D.m_class_id
     then
     (
@@ -1183,32 +1244,127 @@ class opr_expander (dx: D.dex) =
     | I.R_WIDE -> mv_wd_16
     | _        -> move_f16
   in
+  let dfa_init (citm : D.code_item) (mid : D.link) (is_static: bool) : ('a, 'b) H.t  =
+    let dfa = St.time "reach" (Rc.make_dfa dx) citm in
+    let module DFA = (val dfa: Dataflow.ANALYSIS
+      with type st = D.link and type l = (D.link IM.t))
+    in
+    St.time "reach" DFA.fixed_pt ();
+    let get_def_sort (d: D.link) (r: int) : I.reg_sort =
+      if D.is_ins dx d then L.hd (get_sort (D.get_ins dx d) [r])
+      else if D.is_param citm r then
+        (* parameters won't have def; rather, refer to method sig *)
+        let argv = D.get_argv dx (D.get_mit dx mid) in
+        let argv = if is_static then argv else
+                     (* including *this* unless static methods *)
+                     let cur_cid = D.get_cid_from_mid dx mid in cur_cid :: argv
+        in
+        let p_finder (i, sort) arg =
+          let tname = J.of_type_descr (D.get_ty_str dx arg) in
+          let i' = if L.mem tname [J.j; J.d] then i + 2 else i + 1 in
+          let sort' = if i <> r then sort else
+                        if L.mem tname [J.j; J.d] then I.R_WIDE
+                        else if L.mem tname J.shorties then I.R_NORMAL
+                        else I.R_OBJ
+          in (i', sort')
+        in
+        snd (L.fold_left p_finder (D.calc_this citm, I.R_OBJ) argv)
+      else I.R_NORMAL
+    in
+    let old_hash = DFA.all_inns () in
+    let new_hash = H.create (H.length old_hash) in
+    let dfa_iter (ins : D.link) (inn : D.link IM.t) : unit =
+      if not (H.mem new_hash ins) then
+        let inn_mapper reg r_def =
+          get_def_sort r_def reg
+        in
+        let new_inn = IM.mapi inn_mapper inn in
+        H.add new_hash ins new_inn
+      else ()
+    in
+    H.iter dfa_iter old_hash;
+    new_hash
+in
 object
   inherit V.iterator dx
 
   (* to keep track of parameters types *)
   val mutable cur_mid = D.no_idx
   val mutable is_static = false
+  val mutable mname = ""
+  val mutable cname = ""
+
+  method v_cdef cdef = 
+    cname <- D.get_ty_str dx cdef.D.c_class_id;
+    skip_cls <- false
+                          
   method v_emtd (emtd: D.encoded_method) : unit =
     cur_mid   <- emtd.D.method_idx;
-    is_static <- D.is_static emtd.D.m_access_flag
-
+    is_static <- D.is_static emtd.D.m_access_flag;
+    mname <- D.get_mtd_name dx cur_mid;
+    (* NEEDS WORK: This is hardcoded for now, but would cause bugs if we weren't using the fine logger. In reality, skip functions should be moved to a separate module and accessed accordingly from there. That way, the logger can declare what got skipped and the skip module will remember *)
+    skip_mtd <- (L.mem mname [J.init; J.clinit; J.hashCode])
+        
   (* to update goto instructions whose offset would be truncated
     due to aggressive instrumentations *)
   val mutable cur_citm = D.empty_citm ()
+  val mutable cur_rc_inns = H.create 0
+                                      
   method v_citm (citm: D.code_item) : unit =
-    cur_citm <- citm
-
+    (* Crude solution to the implications of the TODO at line 652 *)
+    (* TODO: Probably a crude use of a try as well *)
+    let check_dbg = 
+      if citm.D.debug_info_off <> D.no_off then
+      try 
+        D.get_data_item dx citm.D.debug_info_off;
+        ();
+      with D.Wrong_dex str -> 
+        citm.D.debug_info_off <- D.no_off;
+        ();
+    in
+    check_dbg;
+    cur_citm <- citm;
+    cur_rc_inns <- H.create 0;
+    (*Unparse.print_method dx citm;
+    ignore (Rc.make_dfa dx cur_citm)*)
+                  
   method v_ins (ins: D.link) : unit =
+    (* Get the sort of register definition for a given point. 
+       
+       In various places, we need to choose which sort of move
+       instruction to use. For example, if we need to move v19 to v1,
+       we need to know whether or not to use a regular move, or
+       move-object instruction.
+
+       We do this by running a reaching definitions analysis for a
+       given point, and then looking up that instruction to see which
+       sort it uses. For plain instructions, we can ascertain from the
+       instruction type which sort it is. Under some circumstances, no
+       instruction definitions may reach a point, but a parameter
+       will. In this case, we use the method definition to look up the
+       register sort.
+
+       This function takes in {d}, the instruction that is the
+       reaching definition (provided from the result of the reaching
+       definitions analysis) and {r}, the register of interest.  *)
     let overwrite (inss: I.instr list) : unit =
       let cursor = get_cursor cur_citm ins in
       D.insrt_ins dx ins (L.hd inss);
-      insrt_insns dx cur_citm (next cursor) (L.tl inss);
+      let cur = insrt_insns dx cur_citm (next cursor) (L.tl inss) - 1 in
+      let inserted_idx = DA.get cur_citm.D.insns cur in
+      let cleanup_try (try_itm:D.try_item) = 
+        if try_itm.D.end_addr = ins then
+          { try_itm with D.end_addr = inserted_idx }
+        else
+          try_itm
+      in
+      cur_citm.D.tries <- L.map cleanup_try (cur_citm.D.tries);
       exp_cnt := !exp_cnt + (L.length inss)
     in
     if D.is_ins dx ins then
-    (
+      (
       let op, opr = D.get_ins dx ins in
+      (* Printf.printf "Visiting instruction %s\n%!" (I.instr_to_string (op, opr)); *)
       let hx = I.op_to_hx op
       and low = I.low_reg op in
       match op, opr with
@@ -1260,6 +1416,26 @@ object
         overwrite inss
       )
 
+      (* registers for filled-new-array *)
+      | I.OP_FILLED_NEW_ARRAY, l -> 
+         (* Calculate reaching definitions for this point. Then use
+            that analysis to lookup the register sorts for each
+            instruction that needs to be moved. *)
+         let (I.OPR_INDEX cid)::l = L.rev l in 
+         let l = L.rev l in
+         let _ = if (H.length cur_rc_inns = 0) then (cur_rc_inns <- dfa_init cur_citm cur_mid is_static) else () in
+         let inn = H.find cur_rc_inns ins in
+         (* Put each argument in {v0,...,v4} (at most) *)
+         let mov_instrs = L.mapi (fun i (I.OPR_REGISTER reg) -> 
+                              let sort = IM.find reg inn in
+                              let op = mv_op sort in
+                              I.new_move (mv_op sort) i reg) l in
+         (* [0; ..; 4] *)
+         let args = (U.range 0 (L.length l - 1) []) in
+         let farr_instr = [I.new_filled_arr args cid] in
+         let inss = mov_instrs @ farr_instr in
+         overwrite inss
+                  
       (* registers for new-array *)
       | I.OP_NEW_ARRAY, I.OPR_REGISTER a :: I.OPR_REGISTER s :: I.OPR_INDEX cid :: []
       when a >= low || s >= low ->
@@ -1293,37 +1469,14 @@ object
       | _, I.OPR_REGISTER a :: I.OPR_REGISTER b :: I.OPR_OFFSET off :: []
       when 0x32 <= hx && hx <= 0x37 && (a >= low || b >= low) ->
       (
-        let dfa = St.time "reach" (Rc.make_dfa dx) cur_citm in
-        let module DFA = (val dfa: Dataflow.ANALYSIS
-          with type st = D.link and type l = (D.link IM.t))
-        in
-        St.time "reach" DFA.fixed_pt ();
-        let inn = St.time "reach" DFA.inn ins in
-        let get_def_sort (d: D.link) (r: int) : I.reg_sort =
-          if D.is_ins dx d then L.hd (get_sort (D.get_ins dx d) [r])
-          (* parameters won't have def; rather, refer to method sig *)
-          else if D.is_param cur_citm r then
-            let argv = D.get_argv dx (D.get_mit dx cur_mid) in
-            let argv = if is_static then argv else
-              (* including *this* unless static methods *)
-              let cur_cid = D.get_cid_from_mid dx cur_mid in cur_cid :: argv
-            in
-            let p_finder (i, sort) arg =
-              let tname = J.of_type_descr (D.get_ty_str dx arg) in
-              let i' = if L.mem tname [J.j; J.d] then i + 2 else i + 1 in
-              let sort' = if i <> r then sort else
-                if L.mem tname [J.j; J.d] then I.R_WIDE
-                else if L.mem tname J.shorties then I.R_NORMAL
-                else I.R_OBJ
-              in (i', sort')
-            in
-            snd (L.fold_left p_finder (D.calc_this cur_citm, I.R_OBJ) argv)
-          else I.R_NORMAL
-        in
-        let sort_a = get_def_sort (IM.find a inn) a
-        and sort_b = get_def_sort (IM.find b inn) b in
+        let _ = if (H.length cur_rc_inns = 0) then (cur_rc_inns <- dfa_init cur_citm cur_mid is_static) else () in
+        let inn = H.find cur_rc_inns ins in
+        let sort_a = IM.find a inn
+        and sort_b = IM.find b inn in
         let op_a = mv_op sort_a
         and op_b = mv_op sort_b in
+        (* Printf.printf "a is 0x%x\n%!" op_a; *)
+        (* Printf.printf "b is 0x%x\n%!" op_b; *)
         let new_a = if a >= low then 0 else a
         and new_b = if b >= low then 1 else b in
         let mv_a = if a < low then [] else [I.new_move op_a new_a a]
@@ -1377,17 +1530,17 @@ object
             if not (J.is_primitive tname) then
             (
               let ins = I.new_move mv_obj16 dst src in
-              acc @@ CL.single ins, (d_tl, s_tl)
+              acc @+ CL.single ins, (d_tl, s_tl)
             )
             else if J.is_wide tname then
             (
               let ins = I.new_move mv_wd_16 dst src in
-              acc @@ CL.single ins, (L.tl d_tl, L.tl s_tl)
+              acc @+ CL.single ins, (L.tl d_tl, L.tl s_tl)
             )
             else
             (
               let ins = I.new_move move_f16 dst src in
-              acc @@ CL.single ins, (d_tl, s_tl)
+              acc @+ CL.single ins, (d_tl, s_tl)
             )
           in
           let argn = L.length argv in
@@ -1395,7 +1548,7 @@ object
           and srcs = L.map I.of_reg argv in
           let inss = CL.toList (
             fst (L.fold_left copy_argv (CL.empty, (dsts, srcs)) argv_ty)
-            @@ CL.single (I.new_invoke (hx + 6) [0; argn-1; D.of_idx mid])
+            @+ CL.single (I.new_invoke (hx + 6) [0; argn-1; D.of_idx mid])
           ) in
           overwrite inss
         )
@@ -1474,7 +1627,7 @@ let hello () : D.dex =
   let _ = override dx cid J.init in
   let iid, _ = D.get_the_mtd dx cid J.init in
   let _, iitm = D.get_citm dx cid iid in
-  let last = get_last_cursor dx iitm in
+  let last = L.hd (get_last_cursors dx iitm) in
   let _ = insrt_ins dx iitm (next last) I.rv
   and argv = ["["^Java.Lang.str] in
   let main = new_method dx cid "main" D.spub J.v argv in

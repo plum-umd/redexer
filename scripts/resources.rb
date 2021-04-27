@@ -36,6 +36,9 @@ class Resources
 
   attr_reader :out
 
+  FACEBOOK_ID = "614969759089263"
+  FACEBOOK_SCHEME = "fb" + FACEBOOK_ID
+
   def initialize(dir)
     @dir = dir + "/res"
   end
@@ -158,6 +161,31 @@ class Resources
     f = File.open(File.join(xml_dir, A11Y_META+".xml"), 'w')
     doc.write_xml_to(f)
     f.close
+  end
+
+  def update_fb_id
+    f = File.open(@dir + "/values/strings.xml", 'r')
+    doc = Nokogiri::XML(f)
+    fb_id = doc.at_xpath("//string[@name='facebook_app_id']")
+    fb_scheme = doc.at_xpath("//string[@name='fb_login_protocol_scheme']")
+    if (not fb_id.nil?)
+      fb_id.content = FACEBOOK_ID
+    else
+      puts "Facebook App ID unable to be updated. String not found"
+    end
+    fb_scheme = doc.at_xpath("//string[@name='fb_login_protocol_scheme']")
+    if (not fb_scheme.nil?)
+      fb_scheme.content = FACEBOOK_SCHEME
+    else
+      puts "Facebook Protocol Scheme unable to be updated. String not found"
+    end
+    f.close()
+    f = File.open(@dir + "/values/strings.xml", 'w')
+    f.puts doc.to_xml
+    f.close
+
+    # app = doc.xpath(APP)[0]
+    # app["android:requestLegacyExternalStorage"] = true
   end
 
 private

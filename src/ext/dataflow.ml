@@ -92,6 +92,7 @@ sig
   type st
   val to_s : l -> string
   val inn : st -> l
+  val all_inns : unit -> (st, l) H.t
   val out : st -> l
   val fixed_pt : unit -> unit
 end
@@ -111,6 +112,7 @@ struct
   let outs = H.create 29
 
   let inn s = H.find ins  s
+  let all_inns () = ins
   let out s = H.find outs s
 
   let fixed_pt () =
@@ -158,6 +160,7 @@ struct
   let outs = H.create 29
 
   let inn s = H.find ins  s
+  let all_inns () = ins
   let out s = H.find outs s
 
   let fixed_pt () =

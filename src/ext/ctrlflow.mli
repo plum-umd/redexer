@@ -78,6 +78,9 @@ val cpdom : pdom -> int list
 (** get the last instructions *)
 val get_last_inss : cfg -> pdom -> Dex.link list
 
+(** get the entries of each basic block *)
+val get_bb_entries : cfg -> Dex.link list
+
 (** {2 Control-flow Module for Data-flow Analysis} *)
 
 (** Control-flow *)

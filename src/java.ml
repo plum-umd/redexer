@@ -108,14 +108,23 @@ with Invalid_argument _ -> false
 let rec to_type_descr typ : string =
   match typ with
   | "void"    -> "V"
+  | "V"       -> "V"
   | "boolean" -> "Z"
+  | "Z"       -> "Z"
   | "byte"    -> "B"
+  | "B"       -> "B"
   | "short"   -> "S"
+  | "S"       -> "S"
   | "char"    -> "C"
+  | "C"       -> "C"
   | "int"     -> "I"
+  | "I"       -> "I"
   | "long"    -> "J"
+  | "J"       -> "J"
   | "float"   -> "F"
+  | "F"       -> "F"
   | "double"  -> "D"
+  | "D"       -> "D"
   | _ -> to_java_ty typ
 
 (* to_shorty_descr : string list -> string *)

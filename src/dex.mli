@@ -662,3 +662,4 @@ val insrt_stt : dex -> link -> encoded_value list -> unit
 (** insert {!code_item} into the data pool *)
 val insrt_citm : dex -> link -> code_item -> unit
 
+val print_header : dex -> out_channel -> unit

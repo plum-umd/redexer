@@ -50,7 +50,13 @@ module A = Array
 (* Basic Types/Elements                                                *)
 (***********************************************************************)
 
-module OS = Set.Make(D.OffKey)
+module CurKey =
+struct
+  type t = int
+  let compare o1 o2 = o1 - o2
+end
+
+module OS = Set.Make(CurKey)
 
 type cfg = bb array
 
@@ -88,8 +94,8 @@ let is_changed bef aft : bool =
 (* make_cfg : D.dex -> D.code_item -> cfg *)
 let rec make_cfg (dx: D.dex) (citm: D.code_item) : cfg =
   let inss = L.filter (D.is_ins dx) (DA.to_list citm.D.insns) in
-  let leaders = calc_leaders dx citm.D.tries inss in
-  let spl = split leaders inss
+  let leaders = calc_leaders dx citm.D.tries inss citm in
+  let spl = split leaders inss 
   and toBB b = { kind = NORM; insns = b; pred = []; succ = []; } in
   let bbs = L.map toBB spl
   and bb0 = { kind = STRT; insns = []; pred = []; succ = [1]; }
@@ -98,60 +104,72 @@ let rec make_cfg (dx: D.dex) (citm: D.code_item) : cfg =
   make_edges dx citm g;
   g
 
-and calc_leaders (dx: D.dex) (tries: D.try_item list) inss : D.link list =
-  let rec iter (acc: OS.t) = function
+and calc_leaders (dx: D.dex) (tries: D.try_item list) inss citm : D.link list =
+  let get_cursor (ins: D.link) : int =
+    DA.index_of (fun e -> e = ins) citm.D.insns
+  in
+  let rec iter (cur:int) (acc: OS.t) il = 
+    let cur' = cur+1 in
+    match il with
     | ins1 :: tl ->
     (
       let op, opr = D.get_ins dx ins1 in
       let hx = I.op_to_hx op in
       if 0x0d = hx then (* move-exception: start pt. of exception *)
-        iter (OS.add ins1 acc) tl
+        iter cur' (OS.add cur acc) tl
       else if L.mem hx (U.range 0x0e 0x11 [0x27]) then (* return or throw *)
       (
         let acc' =
           try
             let ins2 = L.hd tl in
-            if D.is_ins dx ins2 then OS.add ins2 acc else acc
+            if D.is_ins dx (DA.get citm.D.insns (cur+1)) then OS.add (cur+1) acc else acc
           with Failure "hd" -> acc
         in
-        iter acc' tl
+        iter cur' acc' tl
       )
       else if L.mem hx (U.range 0x28 0x2a []) then (* goto *)
       (
         let off = D.opr2off (L.hd opr) in
-        iter (OS.add off acc) tl
+        let c = get_cursor off in
+        iter cur' (OS.add c acc) tl
       )
       else if L.mem hx [0x2b; 0x2c] then (* switch *)
       (
         let ins2 = L.hd tl (* default case *)
         and off = D.opr2off (U.get_last opr) in
         let tgt = ins2 :: (get_sw_tagets dx off) in
-        iter (L.fold_left (fun a l -> OS.add l a) acc tgt) tl
+        iter cur' (L.fold_left (fun a l -> OS.add (get_cursor l) a) acc tgt) tl
       )
       else if L.mem hx (U.range 0x32 0x3d []) then (* if-test *)
       (
         let ins2 = L.hd tl (* false branch *)
         and off = D.opr2off (U.get_last opr) in
-        iter (OS.add ins2 (OS.add off acc)) tl
+        iter cur' (OS.add (get_cursor ins2) (OS.add (get_cursor off) acc)) tl
       )
-      else iter acc tl
+      else iter cur' acc tl
     )
     | _ -> acc
   in
   let fold_try (acc: OS.t) (ti: D.try_item) : OS.t =
     let s = ti.D.start_addr and e = ti.D.end_addr in
-    let n = (* [s...e] n, but n could be out of bound *)
-      let op, _ = D.get_ins dx e in
-      let _, sz = I.op_to_hx_and_size op in
-      D.to_off ((D.of_off e) + sz)
-    in
-    let scc = OS.add s acc in
-    if L.mem n inss then OS.add n scc else scc
+    let scc = OS.add (get_cursor s) acc in
+    (* Try to add the cursor just after the end of the `try` block. It
+       may not exist. First, check to ensure that that cursor
+       exists. If so, add it to the set. *)
+    try 
+      (* Check to ensure this is in the set of instructions.. *)
+      let instr = DA.get citm.D.insns ((get_cursor e) + 1) in
+      if (D.is_ins dx instr) then
+        OS.add ((get_cursor e) + 1) scc
+      else
+        scc
+    with _ -> scc
   in
 try
   (* the 1st instr is also a leader *)
-  let ld = iter (OS.singleton (L.hd inss)) inss in
-  OS.elements (L.fold_left fold_try ld tries)
+  let ld = iter 0 (OS.singleton (get_cursor (L.hd inss))) inss in
+  L.map (fun cur -> DA.get citm.D.insns cur) 
+        (OS.elements (L.fold_left fold_try ld tries))
 with Failure "hd" -> [] (* empty body? *)
 
 and split (pts: 'a list) (pool: 'a list) : 'a list list =
@@ -309,7 +327,7 @@ let pdoms (g: cfg) : pdom =
     chg := false;
     for i = 0 to len - 2 do
       let p' = if g.(i).succ = [] then IS.empty else
-        L.fold_left (fun a s -> IS.inter a pdom.(s)) bigN g.(i).succ
+                 L.fold_left (fun a s -> IS.inter a pdom.(s)) bigN g.(i).succ
       in
       let aft = IS.union (IS.singleton i) p' in
       let chged = is_changed pdom.(i) aft in
@@ -334,6 +352,13 @@ let get_last_inss (g: cfg) pdom : D.link list =
   let e = (A.length g) - 1 in
   let last_bbs = L.filter (fun bb -> ipdom pdom bb = e) g.(e).pred in
   L.map (fun bb -> U.get_last g.(bb).insns) last_bbs
+
+(* get_bb_entries : cfg -> Dex.link list *)
+let get_bb_entries (g: cfg) : D.link list = 
+  let is : D.link list = Array.fold_left (fun acc hd -> 
+                             match hd.insns with []    -> acc 
+                                               | h::_  -> h::acc) [] g in
+  L.rev is
 
 (***********************************************************************)
 (* Control-flow Module for Data-flow Analysis                          *)

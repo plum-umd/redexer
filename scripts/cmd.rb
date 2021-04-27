@@ -42,7 +42,7 @@ HOME = File.join(HERE, "..")
 RES = File.join(HOME, "results")
 $tmp_dir = "tmp_dir_" + rand(36**8).to_s(36) # random string with size 8
 
-require "#{File.join(HERE, "apk")}"
+require_relative "apk"
 
 cmds = [
   "unparse", "htmlunparse", "jsonunparse", "id", "combine",
@@ -52,7 +52,7 @@ cmds = [
   "exported", "permissions", "sdk", "launcher",
   "activity", "service", "provider", "receiver",
   "custom_views", "fragments", "buttons",
-  "hello", "logging", "logging_ui", "directed", "remove_permissions"
+  "hello", "logging", "logging_ui", "directed", "remove_permissions", "add_permission"
 ]
 
 cmd = ""
@@ -64,6 +64,10 @@ to = nil
 perms = []
 detail = :none
 outputdir = nil
+$logging = false
+forking = false
+start_dex = nil
+start_class = nil
 
 option_parser = OptionParser.new do |opts|
   opts.banner = "Usage: ruby #{__FILE__} target.(apk|dex) [options]"
@@ -102,6 +106,13 @@ option_parser = OptionParser.new do |opts|
   end
   opts.on("--perms permissions", "comma-separated list of permissions") do |p|
     perms = p.split(',')
+  end
+  opts.on("--fork", "Enable concurrent calls to redexer through child processes") do
+    forking = true
+  end
+  opts.on("--start_on_class dex,class", "Start on a specific class in the specified dex file") do |pair|
+      start_dex = pair.split(',')[0]
+      start_class = pair.split(',')[1]
   end
   opts.on_tail("-h", "--help", "show this message") do
     puts opts
@@ -156,30 +167,41 @@ end
 
 def finish_repackaging(apk,fn,to,res)
   if not apk.succ
-    puts apk.out
+    puts "******** Encountered error. flushing the output buffer"
+    puts apk.out if not $logging
     close(apk)
     raise "rewriting dex failed"
   end
-  #apk.add_permission
+  if $logging then
+    begin
+      apk.update_fb_id
+      apk.add_legacy_external_storage
+      apk.add_permission
+    rescue
+      $stderr.puts "******** Failed to alter apk-level attributes. Check the facebook_app_id, " + 
+      "legacy_external_storage, and permission.external_storage attributes in the apk ********"
+    end
+  end
   if to
     apk.repack(to)
   else
-    apk.repack
+    apk.repack(File.join(res,fn))
   end
   if not apk.succ
-    puts apk.out
+    puts "******** Encountered error. flushing the output buffer"
+    puts apk.out if not $logging
     close(apk)
     raise "repacking apk failed"
   end
-  # for debugging, leave rewritten dex and xml files
-  system("cp -f #{File.join($tmp_dir, "classes.dex")} #{res}")
-  system("cp -f #{File.join($tmp_dir, "AndroidManifest.xml")} #{res}")
-  # and move the rewritten apk
-  if not to
-    rewritten = File.basename(fn)
-    system("mv -f #{rewritten} #{res}") if apk.succ
+
+  if apk.succ
+    puts "Success. flushing the output buffer"
+    puts apk.out if not $logging
   end
-  puts apk.out if apk.succ
+
+  if (apk)
+    puts "Launcher is: " + apk.launcher.to_s
+  end
 end
 
 case cmd
@@ -296,7 +318,12 @@ when "custom_views", "fragments", "buttons"
     PP.pp res
   end
 when "logging", "logging_ui"
-  apk.send(cmd.to_sym,detail)
+  $logging = true
+  if (start_dex.nil?)  
+    apk.send(cmd.to_sym,detail,forking)
+  else
+    apk.send(cmd.to_sym,detail,forking,start_dex,start_class)
+  end
   finish_repackaging(apk,fn,to,RES)
 when "directed"
   apk.directed
@@ -306,6 +333,9 @@ when "hello"
   system("mv -f classes.dex #{RES}") if dex_succ?(apk, cmd)
 when "remove_permissions"
   apk.remove_permissions(perms)
+  finish_repackaging(apk,fn,to,RES)
+when "add_permission"
+  apk.add_permission()
   finish_repackaging(apk,fn,to,RES)
 end
 

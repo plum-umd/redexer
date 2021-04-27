@@ -908,7 +908,11 @@ let get_the_mtd_shorty dx cid mname shorty : link * method_id_item =
     0 = ty_comp dx mit.m_class_id cid' &&
     0 = S.compare mname (get_str dx mit.m_name_id)
   in
-  get_the_mtd_abstr dx cid finder
+  try
+    get_the_mtd_abstr dx cid finder
+  with (Wrong_dex _) ->
+    raise (Wrong_dex ("get_the_mtd_shorty: can't find method: "^mname))
+
 
 (* own_the_mtd : dex -> link -> link -> bool *)
 let own_the_mtd dx (cid: link) (mid: link) : bool =
@@ -1050,4 +1054,37 @@ let insrt_stt dx (off: link) (evl : encoded_value list) : unit =
 (* insrt_citm : dex -> link -> code_item -> unit *)
 let insrt_citm dx (off: link) (citm: code_item) : unit =
   insrt_data dx off (CODE_ITEM citm)
+
+let print_header (dx: dex) (ch: out_channel) : unit =
+  let h = dx.header in
+  Printf.fprintf  ch
+("DEX HEADER
+file_size      : %d
+link_size      : %d
+link_off       : %d
+map_off        : %d
+string_ids_size: %d vs. %d
+string_ids_off : %d
+type_ids_size  : %d vs. %d
+type_ids_off   : %d
+proto_ids_size : %d vs. %d
+proto_ids_off  : %d
+field_ids_size : %d vs. %d
+field_ids_off  : %d
+method_ids_size: %d vs. %d
+method_ids_off : %d
+class_defs_size: %d vs. %d
+class_defs_off : %d
+data_size      : %d
+data_off       : %d")
+h.file_size
+h.link.size (of_off h.link.offset)
+(of_off h.map_off)
+h.h_string_ids.size (DA.length dx.d_string_ids) (of_off h.h_string_ids.offset)
+h.h_type_ids.size (DA.length dx.d_type_ids) (of_off h.h_type_ids.offset)
+h.h_proto_ids.size (DA.length dx.d_proto_ids) (of_off h.h_proto_ids.offset)
+h.h_field_ids.size (DA.length dx.d_field_ids) (of_off h.h_field_ids.offset)
+h.h_method_ids.size (DA.length dx.d_method_ids) (of_off h.h_method_ids.offset)
+h.h_class_defs.size (DA.length dx.d_class_defs) (of_off h.h_class_defs.offset)
+h.h_data.size (of_off h.h_data.offset)
 

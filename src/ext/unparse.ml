@@ -397,6 +397,10 @@ and print_ins (op: I.opcode) (opr: I.operand list) : unit =
     pp "]"
   )
 
+(* print_insns : I.instr list -> unit *)
+and print_insns (l: I.instr list) : unit =
+  L.iter (function (opr,ops) -> print_ins opr ops; pp "\n") l
+
 (* print_encoded_value : D.encoded_value -> unit *)
 and print_encoded_value (ev: D.encoded_value) : unit =
   match ev with
@@ -434,6 +438,10 @@ let print_method (dx : D.dex) (mtd: D.code_item) : unit =
     if D.is_ins dx ins then
     (
       let op, opr = D.get_ins dx ins in
+      (match ins with 
+       | Off i32 -> 
+          pp "%x: " (I32.to_int i32)
+       | _ -> ());
       print_ins op opr; pp "\n"
     )
   in
@@ -441,7 +449,7 @@ let print_method (dx : D.dex) (mtd: D.code_item) : unit =
   pp "[Instructions:\n";
   DA.iter dump_instr mtd.D.insns;
   pp "]\n"
-  
+
 (***********************************************************************)
 (* Info. gathering                                                     *)
 (***********************************************************************)

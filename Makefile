@@ -8,10 +8,11 @@ redexer: main.native
 
 # debugging code targets; could also (more likely) build *.d.byte separately
 debug: main.d.byte
+	mv main.d.byte redexer
 
 # auxiliary targets
 doc:
-	ocamlbuild -use-ocamlfind redexer.docdir/index.html
+	ocamlbuild -no-hygiene -use-ocamlfind redexer.docdir/index.html
 	mkdir -p docs
 	rm -rf docs/api
 	mv redexer.docdir docs/api
@@ -27,12 +28,12 @@ allclean: clean
 
 # x.native; strip the .native extension after building
 %.native:
-	ocamlbuild -use-ocamlfind $@
+	ocamlbuild -no-hygiene -use-ocamlfind -tag thread $@
 	mv $@ $*
 
 # x.d.byte or x.byte
 %.byte:
-	ocamlbuild $@
+	ocamlbuild -use-ocamlfind -tag thread $@
 
 .PHONY: doc debug all model test clean modelclean allclean default
 

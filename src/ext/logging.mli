@@ -40,8 +40,8 @@
 
 (** Set the granularity for logging *)
 type detail =
-  | Default              (** Default granularity *)
-  | Fine                 (** Fine grained granularity *)
+  | Default                   (** Default granularity *)
+  | Fine                      (** Fine grained granularity *)
   | Regex of Yojson.Safe.json (** Log all methods matching a configured set of regular expressions *)
 
 (** conclude more logging *)

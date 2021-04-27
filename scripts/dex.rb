@@ -1,4 +1,4 @@
-# Copyright (c) 2010-2014,
+## Copyright (c) 2010-2014,
 ##  Jinseong Jeon <jsjeon@cs.umd.edu>
 ##  Kris Micinski <micinski@cs.umd.edu>
 ##  Jeff Foster   <jfoster@cs.umd.edu>
@@ -82,17 +82,31 @@ class Dex
   
   LOGREGEXES = File.join(DAT, "logging-regexes.txt")
 
-  def self.logging(dex_name=DEX, detail=:none, *out_name)
+  def self.logging(dex_name=DEX, detail=:none, multi=:false, start_class=nil, *out_name)
     opt = self.out_opt(out_name)
     str = ""
+
+    if (!start_class.nil?)
+        str += " -start_on_class " + start_class
+        puts "Starting on class: " + start_class
+    end
+
+    # If multi-dex setup, only rewrite each dex file with prototypes,
+    # not class definitions.
+    # NEEDS WORK: Script claims -onlyprotos for multi-dex, but wasn't actually using it. Is it
+    # needed?
+    if (false) then #if (multi) then
+      str += " -onlyprotos"
+    end
+
     case detail
     when :regex
-      str = "-logging-regex #{LOGREGEXES}"
+      str += " -logging-regex #{LOGREGEXES}"
     when :fine
-      str = "-logging-detail"
+      str += " -logging-detail"
     end
-    puts "#{REDEXER} #{opt} #{dex_name} -logging #{str} #{TOO}"
-    self.runcmd("#{REDEXER} #{opt} #{dex_name} -logging #{str} #{TOO}")
+    
+    self.runcmdloud("#{REDEXER} #{opt} #{dex_name} -logging #{str} #{TOO}")
   end
 
   def self.directed(dex_name, acts, pkg, *out_name)
@@ -259,9 +273,17 @@ private
     @@out = ""
     cmd = "#{cmd} #{@@opt}" if @@opt
     @@out << cmd + "\n"
+    puts cmd
     @@out << `#{cmd}`
     @@succ = $?.exitstatus == 0
   end
+
+  def self.runcmdloud(cmd)
+    cmd = "#{cmd} #{@@opt}" if @@opt
+    puts cmd
+    system(cmd)
+    @@succ = $?.exitstatus == 0
+  end      
 
   def self.out_opt(out_name)
     if out_name.length > 0

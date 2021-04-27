@@ -81,12 +81,21 @@ class Apk
     File.join(@dir, "classes.dex")
   end
 
+  def dexes 
+    Dir.glob(File.join(@dir, "*.dex"))
+  end
+  
+  def multidex 
+    dexes.length > 1
+  end
+
   def xml
     File.join(@dir, "AndroidManifest.xml")
   end
 
   TOOL = File.join(HOME, "tools")
   APKT = File.join(TOOL, "apktool.jar")
+  NUMPROCS = 4
 
   def unpack
     if @manifest == nil
@@ -103,10 +112,85 @@ class Apk
     @manifest == nil
   end
 
-  def logging(detail)
-    Dex.logging(dex,detail,dex)
-    @out << Dex.out
-    @succ = Dex.succ
+  def logging(detail, forking, start_dex=nil, start_class=nil)
+    if dexes.length > 1 then
+      dxs = dexes
+      multi = true
+    else 
+      dxs = [dex]
+      multi = false
+    end
+    multi = true
+    # set multi = true to test, even with a single dex file (say)
+    # warning: multi has implications for code after invoking redexer
+    if (forking)
+      pids = Array.new
+      dxs.each_with_index do |dex, idx|
+        if (!start_dex.nil? && File.basename(dex) < start_dex)
+          puts "skipping rewrite of " + dex
+          next
+        end
+        puts "rewriting #{dex}"
+        pids[idx] = fork do
+          if (File.basename(dex).eql?(start_dex))
+            Dex.logging(dex,detail,multi,start_class,dex)
+          else
+            Dex.logging(dex,detail,multi,nil,dex)
+          end
+          succ = @succ && Dex.succ
+          if (!succ)
+            exit 1
+          else
+            exit 0
+          end
+        end # end of fork body
+      end
+
+      # Wait on all processes here.
+      while(!pids.empty?)
+        pid_out = Process.wait
+        pids.delete(pid_out)
+        if (!$?.exited? || $?.exitstatus > 0)
+          puts "Error: System call on pid #{pid_out} did not execute properly"
+          @succ = false
+          pids.each do |pid|
+            Process.kill(:TERM, pid)
+          end
+          return
+        end
+      end
+    else
+        dxs.each do |dex|
+          if (!start_dex.nil? && File.basename(dex) < start_dex)
+            puts "skipping rewrite of " + dex
+            next
+          end
+          puts "rewriting #{dex}"
+          if (File.basename(dex).eql?(start_dex))
+            Dex.logging(dex,detail,multi,start_class,dex)
+          else
+            Dex.logging(dex,detail,multi,nil,dex)
+          end
+          @succ = @succ && Dex.succ
+          if (not @succ) then return end
+      end
+    end
+
+    if multi then
+      nums = dexes.map do |s| 
+        s = s.match(/classes(\d+).dex/)
+        if s == nil 
+        then nil
+        else Integer(s.captures[0])
+        end
+      end
+      nums.select! { |s| s }
+      max = nums.max || 1
+      file = File.join(@dir, "classes" + (max + 1).to_s + ".dex")
+      logging = File.join(HOME,"data/loggingFull.dex")
+      puts "multi-dex setup. Moving logging file to #{file}"
+      `cp #{logging} #{file}`
+    end
   end
   
   DAT = File.join(HOME, "data")
@@ -168,7 +252,7 @@ class Apk
 
   PERMISSION = "\t<uses-permission android:name=\"android.permission.WRITE_EXTERNAL_STORAGE\"/>"
   MANIFEST_START = "<manifest.*>"
-  def add_permission()
+  def add_permission
     file_path = manifest_path
     if not (File.readlines(file_path).grep(/#{PERMISSION}/).size > 0)
       temp_file = Tempfile.new(@dir)
@@ -185,6 +269,11 @@ class Apk
     end
   end
 
+  def add_legacy_external_storage
+    @manifest.add_legacy_external_storage
+    @manifest.save_to(manifest_path())
+  end
+  
   def remove_permissions(permissions)
     permissions.each { |x| @manifest.remove_permission(x) }
     @manifest.save_to(manifest_path())
@@ -208,6 +297,10 @@ class Apk
 
   def fragments
     @res.fragments
+  end
+
+  def update_fb_id
+    @res.update_fb_id
   end
 
   def buttons
@@ -234,7 +327,9 @@ private
     puts cmd
     @out = "" if not @out
     @out << cmd + "\n"
-    @out << `#{cmd} 2>&1`
+    cmd_out =  `#{cmd} 2>&1`
+    puts cmd_out
+    @out << cmd_out
     @succ = $?.exitstatus == 0
   end
 
