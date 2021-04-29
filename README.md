@@ -405,3 +405,18 @@ the following paper:
     * Brahmastra: Driving Apps to Test the Security of Third-Party Components.
     R. Bhoraskar, et al., In 23rd Usenix Security Symposium (Security '14).
 
+withTimeout.rb can build a skip file for an app automatically. This script
+runs cmd.rb with a specific timeout, used to limit the time spent
+instrumenting any single class. This is a temporary work-around for the
+occasional class that gets stuck in a loop during instrumentation. When 
+this script finds a class that crashes, it adds it to the skip file and 
+continues from where it left off. Once withTimeout has terminated, there
+will be a file called {apk name}-skip.txt in the data directory, which
+can be used to build a fully-instrumented app for that apk. To use
+withTimeout, simply call
+
+    $ ruby scripts/withTimeout.rb TIMEOUT COMMANDS
+     
+Where TIMEOUT is the length of the timeout you want in seconds (300
+is recommended) and COMMANDS are all the regular command-line inputs
+you would pass to scripts/cmd.rb for the apk.
