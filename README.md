@@ -28,7 +28,7 @@ Dr. Android, which stands for Dalvik Rewriting for Android).
 
 * OCaml and Ruby
 
-This tool is tested under [OCaml][ml] 4.02.2 and [Ruby][rb] 1.8.6(7),
+This tool is tested under [OCaml][ml] 4.09.0 and [Ruby][rb] 1.8.6(7),
 so you need to install them (or higher versions of them).
 
 * OCaml package/library manager and SHA library
