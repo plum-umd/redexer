@@ -1,10 +1,5 @@
 [![Build Status](https://travis-ci.org/plum-umd/redexer.svg?branch=master)](https://travis-ci.org/plum-umd/redexer)
 
-# This branch
-
-This branch is to support logging with Hogarth. A system for sparse
-logging of Android apps and subsequent analysis of those logs. 
-
 # redexer
 
 Redexer is a reengineering tool that manipulates Android app binaries.
@@ -411,7 +406,7 @@ instrumenting any single class. This is a temporary work-around for the
 occasional class that gets stuck in a loop during instrumentation. When 
 this script finds a class that crashes, it adds it to the skip file and 
 continues from where it left off. Once withTimeout has terminated, there
-will be a file called {apk name}-skip.txt in the data directory, which
+will be a file called \[apk name\]-skip.txt in the data directory, which
 can be used to build a fully-instrumented app for that apk. To use
 withTimeout, simply call
 
